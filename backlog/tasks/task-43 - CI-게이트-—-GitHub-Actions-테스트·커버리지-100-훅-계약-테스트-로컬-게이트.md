@@ -1,10 +1,10 @@
 ---
 id: TASK-43
 title: CI 게이트 — GitHub Actions 테스트·커버리지 100% + 훅 계약 테스트 + 로컬 게이트
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 17:51'
+updated_date: '2026-10-03 18:10'
 labels:
   - ci
   - tests
