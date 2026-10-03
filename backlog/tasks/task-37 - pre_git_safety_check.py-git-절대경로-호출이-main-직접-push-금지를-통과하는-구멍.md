@@ -4,7 +4,7 @@ title: 'pre_git_safety_check.py: git 절대경로 호출이 main 직접 push 금
 status: In Progress
 assignee: []
 created_date: '2026-10-03 08:12'
-updated_date: '2026-10-03 12:39'
+updated_date: '2026-10-03 12:43'
 labels:
   - hooks
   - security
@@ -23,8 +23,8 @@ TASK-34 조사 중 발견. pre_git_safety_check.py의 git_args_after_subcommand�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 git 실행 파일을 basename으로 비교해 절대·상대 경로 호출도 같은 규칙을 적용한다
-- [ ] #2 명령 위치의 git만 판정하고 따옴표 인자·heredoc 안 글자는 무시한다(TASK-29/34 헬퍼 재사용, REGISTRY 등록)
-- [ ] #3 파싱 실패 시 보수적으로 판정하고 그 근거를 docstring에 남긴다
+- [x] #1 git 실행 파일을 basename으로 비교해 절대·상대 경로 호출도 같은 규칙을 적용한다
+- [x] #2 명령 위치의 git만 판정하고 따옴표 인자·heredoc 안 글자는 무시한다(TASK-29/34 헬퍼 재사용, REGISTRY 등록)
+- [x] #3 파싱 실패 시 보수적으로 판정하고 그 근거를 docstring에 남긴다
 - [ ] #4 재현 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
 <!-- AC:END -->
