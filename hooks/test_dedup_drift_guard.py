@@ -307,6 +307,14 @@ def test_command_invokes_git_subcommand_handles_dash_c():
     assert ddg.command_invokes_git_subcommand("git -C /p commit -m x", "commit") is True
 
 
+def test_command_invokes_git_subcommand_skips_flag_without_arg():
+    assert ddg.command_invokes_git_subcommand("git --no-pager commit", "commit") is True
+
+
+def test_command_invokes_git_subcommand_unbalanced_quote_falls_back_to_substring():
+    assert ddg.command_invokes_git_subcommand("git commit -m 'x", "commit") is True
+
+
 def test_command_invokes_git_subcommand_false_for_other_subcommand():
     assert ddg.command_invokes_git_subcommand("git -C /p push", "commit") is False
 
@@ -386,3 +394,169 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "require_active_task.py",
         "pipeline_trace.py",
     ]
+
+
+# TASK-40: the installed guard must check the repo with the repo's own
+# REGISTRY (read as data via ast.literal_eval, never imported/executed), so a
+# commit that edits the repo REGISTRY isn't judged by the stale installed copy.
+
+
+def append_repo_registry(hooks_dir, registry_source):
+    """Appends a REGISTRY assignment to the fake repo's own
+    dedup_drift_guard.py (build_full_hooks_dir already wrote it, since it is
+    registered under command_invokes_git_subcommand)."""
+    path = hooks_dir / "dedup_drift_guard.py"
+    path.write_text(path.read_text() + "\n" + textwrap.dedent(registry_source))
+
+
+def registry_without(function_name, filename):
+    registry = {name: list(files) for name, files in ddg.REGISTRY.items()}
+    registry[function_name].remove(filename)
+    return registry
+
+
+def test_load_repo_registry_reads_literal_with_comments(tmp_path):
+    (tmp_path / "dedup_drift_guard.py").write_text(
+        textwrap.dedent(
+            """
+            import os
+            REGISTRY = {
+                # 주석은 ast가 버린다
+                "f": ["a.py", "b.py"],
+                "g": [],
+            }
+            """
+        )
+    )
+    assert ddg.load_repo_registry(str(tmp_path)) == {"f": ["a.py", "b.py"], "g": []}
+
+
+def test_load_repo_registry_uses_last_top_level_assignment(tmp_path):
+    (tmp_path / "dedup_drift_guard.py").write_text(
+        'REGISTRY = {"f": ["a.py"]}\nOTHER = 1\nREGISTRY = {"g": ["b.py"]}\n'
+    )
+    assert ddg.load_repo_registry(str(tmp_path)) == {"g": ["b.py"]}
+
+
+def test_load_repo_registry_matches_real_repo_module():
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.load_repo_registry(real_hooks_dir) == ddg.REGISTRY
+
+
+def test_load_repo_registry_none_when_file_missing(tmp_path):
+    assert ddg.load_repo_registry(str(tmp_path)) is None
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "def broken(:\n",  # syntax error
+        "x = 1\0\n",  # null byte: ast.parse raises ValueError
+        "OTHER = {'f': ['a.py']}\n",  # no REGISTRY
+        "REGISTRY = dict(f=['a.py'])\n",  # call, not a literal
+        "FILES = ['a.py']\nREGISTRY = {'f': FILES}\n",  # name, not a literal
+        "REGISTRY = {'f': ['a.py']}\nREGISTRY = build()\n",  # last one non-literal
+        "REGISTRY = ['a.py']\n",  # not a dict
+        "REGISTRY = {'f': 'a.py'}\n",  # value not a list
+        "REGISTRY = {'f': ('a.py',)}\n",  # tuple, not a list
+        "REGISTRY = {1: ['a.py']}\n",  # non-str key
+        "REGISTRY = {'f': ['a.py', 2]}\n",  # non-str file
+        "REGISTRY = {'f': ['']}\n",  # empty file name
+        "if True:\n    REGISTRY = {'f': ['a.py']}\n",  # not top-level
+        "REGISTRY = OTHER = {'f': ['a.py']}\n",  # chained target
+    ],
+)
+def test_load_repo_registry_none_for_unusable_source(tmp_path, source):
+    (tmp_path / "dedup_drift_guard.py").write_text(source)
+    assert ddg.load_repo_registry(str(tmp_path)) is None
+
+
+def test_load_repo_registry_never_executes_repo_file(tmp_path):
+    marker = tmp_path / "executed"
+    (tmp_path / "dedup_drift_guard.py").write_text(
+        f"open({str(marker)!r}, 'w').close()\nREGISTRY = {{'f': ['a.py']}}\n"
+    )
+    assert ddg.load_repo_registry(str(tmp_path)) == {"f": ["a.py"]}
+    assert not marker.exists()
+
+
+def test_repo_registry_removal_no_longer_blocks(monkeypatch, tmp_path):
+    # The bug: session_start.py stopped using is_backlog_project and the repo
+    # REGISTRY dropped it, but the installed copy still listed it -> blocked.
+    hooks_dir = make_fake_registry_dir(
+        tmp_path, monkeypatch, {"session_start.py": NO_FUNCTION_BODY}
+    )
+    registry = registry_without("is_backlog_project", "session_start.py")
+    append_repo_registry(hooks_dir, f"REGISTRY = {registry!r}\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 0
+
+
+def test_repo_registry_still_blocks_drift_it_lists(monkeypatch, capsys, tmp_path):
+    hooks_dir = make_fake_registry_dir(
+        tmp_path, monkeypatch, {"session_start.py": DIFFERENT_BODY}
+    )
+    registry = registry_without("is_backlog_project", "pre_push_check.py")
+    append_repo_registry(hooks_dir, f"REGISTRY = {registry!r}\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
+    assert "session_start.py" in capsys.readouterr().err
+
+
+def test_repo_registry_new_entry_is_checked(monkeypatch, capsys, tmp_path):
+    hooks_dir = build_full_hooks_dir(tmp_path)
+    (hooks_dir / "new_a.py").write_text("def helper():\n    return 1\n")
+    (hooks_dir / "new_b.py").write_text("def helper():\n    return 2\n")
+    registry = dict(ddg.REGISTRY, helper=["new_a.py", "new_b.py"])
+    append_repo_registry(hooks_dir, f"REGISTRY = {registry!r}\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
+    assert "helper()" in capsys.readouterr().err
+
+
+def test_repo_registry_missing_files_means_not_this_repo(monkeypatch, tmp_path):
+    # registry_files_present() self-guard now follows the repo REGISTRY too.
+    hooks_dir = build_full_hooks_dir(tmp_path)
+    registry = dict(ddg.REGISTRY, helper=["absent.py"])
+    append_repo_registry(hooks_dir, f"REGISTRY = {registry!r}\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 0
+
+
+def test_repo_registry_emptied_is_trusted(monkeypatch, tmp_path):
+    # Drift detector, not a security control: the repo REGISTRY is the
+    # reviewed source of truth, so an emptied one disables the check.
+    hooks_dir = make_fake_registry_dir(
+        tmp_path, monkeypatch, {"session_start.py": DIFFERENT_BODY}
+    )
+    append_repo_registry(hooks_dir, "REGISTRY = {}\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 0
+
+
+def test_malformed_repo_registry_falls_back_to_embedded(monkeypatch, capsys, tmp_path):
+    hooks_dir = make_fake_registry_dir(
+        tmp_path, monkeypatch, {"session_start.py": DIFFERENT_BODY}
+    )
+    append_repo_registry(hooks_dir, "REGISTRY = dict(nothing=[])\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
+    assert "session_start.py" in capsys.readouterr().err
+
+
+def test_repo_registry_read_from_working_tree_not_index(monkeypatch, tmp_path):
+    # Hook copies have always been read from the working tree, so the
+    # REGISTRY comes from the same snapshot (never mix index and worktree).
+    import subprocess
+
+    hooks_dir = make_fake_registry_dir(
+        tmp_path, monkeypatch, {"session_start.py": NO_FUNCTION_BODY}
+    )
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+    # index: no REGISTRY (embedded would block); worktree: entry removed
+    registry = registry_without("is_backlog_project", "session_start.py")
+    append_repo_registry(hooks_dir, f"REGISTRY = {registry!r}\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 0
+
+    # inverse: index has the reduced REGISTRY, worktree file reverts to none
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+    path = hooks_dir / "dedup_drift_guard.py"
+    path.write_text(path.read_text().split("\nREGISTRY = ")[0] + "\n")
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2

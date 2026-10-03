@@ -15,7 +15,9 @@ the same check physically block `git commit` at commit time.
 REGISTRY maps a function name to the list of hook files (relative to
 hooks/) in which it must appear byte-for-byte-equivalent (compared via
 normalized AST, so comments/formatting differences don't matter, but any
-behavioral difference does).
+behavioral difference does). The checked repo's own REGISTRY (read as data
+from its hooks/dedup_drift_guard.py) takes precedence over the one embedded
+here; see load_repo_registry() (TASK-40).
 
 Fully self-contained: no imports from any other file in this repo."""
 
@@ -137,11 +139,61 @@ def command_invokes_git_subcommand(command, subcommand):
     return False
 
 
-def registry_files_present(hooks_dir):
+def valid_registry(value):
+    """True if `value` has REGISTRY's shape: dict of str -> list of
+    non-empty str."""
+    return isinstance(value, dict) and all(
+        isinstance(name, str)
+        and isinstance(files, list)
+        and all(isinstance(f, str) and f for f in files)
+        for name, files in value.items()
+    )
+
+
+def load_repo_registry(hooks_dir):
+    """TASK-40: returns the REGISTRY of the checked repo's own
+    hooks/dedup_drift_guard.py, or None if it can't be used. The installed
+    copy otherwise judges the repo with its own (possibly stale) REGISTRY,
+    which blocks every commit that edits the repo REGISTRY.
+
+    Read as data only - the file is parsed with `ast` and just the last
+    top-level `REGISTRY = {...}` is evaluated with ast.literal_eval, so
+    nothing from the repo is imported or executed (self-contained design,
+    decision-3). Read from the working tree, the same snapshot find_drift()
+    reads the hook copies from.
+
+    The repo REGISTRY is trusted as-is, even if emptied or weakened: it is
+    the reviewed source of truth, and this guard is a drift detector, not a
+    security control."""
+    path = os.path.join(hooks_dir, "dedup_drift_guard.py")
+    try:
+        with open(path) as f:
+            tree = ast.parse(f.read(), filename=path)
+    except (OSError, SyntaxError, ValueError):
+        return None
+    value_node = None
+    for node in tree.body:
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "REGISTRY"
+        ):
+            value_node = node.value
+    if value_node is None:
+        return None
+    try:
+        value = ast.literal_eval(value_node)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return None
+    return value if valid_registry(value) else None
+
+
+def registry_files_present(hooks_dir, registry=REGISTRY):
     """Self-guard: only act inside claude-rails' own hooks/ directory. If
     any file the REGISTRY references is missing, this isn't that repo -
     stay quiet."""
-    all_files = {f for files in REGISTRY.values() for f in files}
+    all_files = {f for files in registry.values() for f in files}
     return all(os.path.isfile(os.path.join(hooks_dir, f)) for f in all_files)
 
 
@@ -161,12 +213,12 @@ def function_ast_dump(path, function_name):
     return None
 
 
-def find_drift(hooks_dir):
+def find_drift(hooks_dir, registry=REGISTRY):
     """Returns a list of human-readable problem descriptions, one per
     (function, files) registry entry that has drifted or is missing
     somewhere. Empty list means everything matches."""
     problems = []
-    for function_name, files in REGISTRY.items():
+    for function_name, files in registry.items():
         dumps = {}
         for filename in files:
             path = os.path.join(hooks_dir, filename)
@@ -214,10 +266,13 @@ def main():
         sys.exit(0)
 
     hooks_dir = os.path.join(cwd, "hooks")
-    if not registry_files_present(hooks_dir):
+    registry = load_repo_registry(hooks_dir)
+    if registry is None:
+        registry = REGISTRY
+    if not registry_files_present(hooks_dir, registry):
         sys.exit(0)
 
-    problems = find_drift(hooks_dir)
+    problems = find_drift(hooks_dir, registry)
     if problems:
         deny(
             "[claude-rails] 복붙된 훅 함수가 사본 간에 어긋났습니다 (dedup drift). "
