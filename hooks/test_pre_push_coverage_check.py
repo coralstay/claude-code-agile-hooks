@@ -228,6 +228,7 @@ PUSH_TEXT_ONLY = [
     "cat <<EOF\n  git -C /p push\nEOF\necho done",
     "git -C /p status",
     "git log --grep push",
+    "git --no-pager",
     "",
 ]
 

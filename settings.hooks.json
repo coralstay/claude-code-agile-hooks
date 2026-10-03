@@ -75,8 +75,7 @@
           },
           {
             "type": "command",
-            "command": "python3 $HOME/.claude/hooks/claude-rails/backlog_commit_scope.py",
-            "if": "Bash(git *)"
+            "command": "python3 $HOME/.claude/hooks/claude-rails/backlog_commit_scope.py"
           },
           {
             "type": "command",

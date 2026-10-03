@@ -37,10 +37,6 @@ REGISTRY = {
         "require_draft_first.py",
         "backlog_commit_scope.py",
     ],
-    "command_invokes_git_subcommand": [
-        "dedup_drift_guard.py",
-        "backlog_commit_scope.py",
-    ],
     "has_command": [
         "block_stop_if_dirty.py",
         "pre_commit_check.py",
@@ -88,6 +84,7 @@ REGISTRY = {
         "pre_git_safety_check.py",
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
     ],
     # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
     # pipeline_trace.py의 명령 위치 판정(env 할당·래퍼 건너뛰기)을 그대로 복사해 쓴다
@@ -101,14 +98,17 @@ REGISTRY = {
         "pre_git_safety_check.py",
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
     ],
     "git_subcommand_index": [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
     ],
     "command_runs_git": [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
     ],
     "is_outside_project": [
         "require_active_task.py",
@@ -126,6 +126,10 @@ REGISTRY = {
 FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
 
 
+# TASK-39: once copied into four hooks; the other three now use the
+# command-position helpers (command_runs_git), so this single copy is no
+# longer in REGISTRY. It still looks at the word after any `git` token, so
+# `echo git commit` runs the (cheap, read-only) drift check - accepted.
 def command_invokes_git_subcommand(command, subcommand):
     """True if `command` runs `git <subcommand>` anywhere, regardless of
     global flags (like `-C <path>`) placed before the subcommand."""
