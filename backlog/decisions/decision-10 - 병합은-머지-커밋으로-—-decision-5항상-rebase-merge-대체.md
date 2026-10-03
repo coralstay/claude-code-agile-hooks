@@ -2,8 +2,11 @@
 id: decision-10
 title: 병합은 머지 커밋으로 — decision-5(항상 rebase merge) 대체
 date: '2026-09-26 13:16'
-status: accepted
+status: superseded
 ---
+> **2026-10-03: decision-11로 대체됨.** 로컬 통합은 rebase 후 fast-forward, 원격(GitHub PR)
+> 병합은 머지 커밋으로 한다. 금지선은 공개(push)된 이력이다.
+
 ## Context
 
 decision-5(2026-09-19)는 "이후 모든 PR은 rebase merge로 병합한다"고 정했고, 그 정책을

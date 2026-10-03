@@ -7,6 +7,9 @@ status: accepted
 > **2026-09-26: decision-10으로 대체됨.** 이 decision의 관찰(병합이 committer를
 > 재작성한다)은 정확했으나 결론이 뒤집혀 있었다 — rebase merge는 그 재작성을 없애지 않고
 > 모든 커밋에 적용한다. 병합은 머지 커밋으로 한다.
+>
+> **2026-10-03: decision-11로 다시 정리됨.** 머지 커밋은 원격(GitHub PR) 병합에만 쓰고,
+> 로컬은 `main`에 rebase 후 fast-forward한다.
 
 ## Context
 
