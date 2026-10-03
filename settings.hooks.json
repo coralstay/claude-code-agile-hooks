@@ -44,6 +44,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/dead_end_registry.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/pipeline_trace.py"
           }
         ]
       }
@@ -155,6 +159,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/nerf_receipts.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/pipeline_trace.py"
           }
         ]
       },
@@ -221,6 +229,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/context_flags.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/pipeline_trace.py"
           }
         ]
       }
