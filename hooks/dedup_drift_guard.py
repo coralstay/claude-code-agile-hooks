@@ -64,12 +64,14 @@ REGISTRY = {
         "backlog_commit_scope.py",
         "pipeline_trace.py",
         "pre_push_check.py",
+        "config_guard.py",
     ],
     "split_segments": [
         "require_draft_first.py",
         "backlog_commit_scope.py",
         "pipeline_trace.py",
         "pre_push_check.py",
+        "config_guard.py",
     ],
     # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
     # 프로젝트 안/밖 판정(TASK-27 realpath 로직)을 그대로 복사해 쓴다
@@ -83,6 +85,7 @@ REGISTRY = {
     "command_head": [
         "pipeline_trace.py",
         "pre_push_check.py",
+        "config_guard.py",
     ],
     "is_outside_project": [
         "require_active_task.py",

