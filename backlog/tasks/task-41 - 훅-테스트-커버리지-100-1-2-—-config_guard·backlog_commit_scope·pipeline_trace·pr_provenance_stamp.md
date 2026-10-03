@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 17:43'
+updated_date: '2026-10-03 17:50'
 labels:
   - tests
   - coverage
@@ -28,7 +28,7 @@ priority: high
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 네 훅의 줄·분기 커버리지가 100%다
-- [ ] #2 추가한 테스트는 각각 해당 분기의 기대 동작(차단/통과/fail-open)을 단언한다
-- [ ] #3 도달 불가능한 코드는 제거하고 그 근거를 커밋 메시지에 남긴다
+- [x] #1 네 훅의 줄·분기 커버리지가 100%다
+- [x] #2 추가한 테스트는 각각 해당 분기의 기대 동작(차단/통과/fail-open)을 단언한다
+- [x] #3 도달 불가능한 코드는 제거하고 그 근거를 커밋 메시지에 남긴다
 <!-- AC:END -->
