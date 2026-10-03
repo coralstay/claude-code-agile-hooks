@@ -80,11 +80,29 @@ main/master is allowed only as a *first push*.
   refspec has an explicit non-protected `:<dst>` - makes no subprocess
   call. `git push origin task/x` costs one local `git config` call.
 
+TASK-45: gh is judged like git. In each segment, every gh executable (by
+basename: `/usr/bin/gh`) at or after the command head - unquoted runner
+arguments included, the same conservative choice as for git - has its
+first two subcommand words read, skipping gh's flags (`-R/--repo` and
+`--hostname` take a value; `-R` after the subcommand doesn't matter). Only
+an exact (noun, verb) pair from GH_DESTRUCTIVE blocks, so `gh pr list; git
+merge --ff-only x` (words spread over segments - the old whole-line scan
+blocked it) and `gh pr view merge` pass. `gh api` is checked for the same
+operations: a non-GET call to `repos/<o>/<r>/pulls/<n>/merge`, DELETE on
+`repos/<o>/<r>` or `.../releases/<id>` (`releases/tags/<t>` too), PATCH on
+`.../pulls|issues/<n>` with `state=closed` or an unseen `--input` body,
+and GraphQL text naming mergePullRequest/closePullRequest/closeIssue/
+deleteRepository. The method defaults as gh's does (POST with fields).
+An unparsable line is blocked when it has the word `gh` plus a noun/verb
+pair, or `api` plus `/merge`, DELETE, `state=closed` or such a mutation.
+
 Known gaps (decision-1): `bash -c "git push origin main"`, `eval`, aliases,
 scripts, and backtick/`$(...)` substitution are not seen. Neither are
 refspecs supplied at run time (`... | xargs git push origin`,
 `find -exec git push origin {} ;`) or `export GIT_DIR=...` in an earlier
-command. The `gh` checks are unchanged by TASK-37/38.
+command. For gh: `gh alias`/extensions, an unknown value-taking flag before
+the subcommand, GraphQL queries read from a file (`query=@q.graphql`), and
+other REST endpoints (e.g. deleting refs) are not covered.
 
 Fully self-contained: no imports from any other file in this repo."""
 
