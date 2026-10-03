@@ -699,3 +699,151 @@ def test_parse_push_args_edge_cases():
     assert not info["remote"]
     info = gsc.parse_push_args(["-", "main"])
     assert info["remote"] == "-" and info["refspecs"] == ["main"]
+
+
+# --- TASK-45: gh 파괴 명령도 세그먼트별 명령 위치 + basename으로 판정 ---
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # decision-1: the gh executable is compared by basename
+        "/usr/bin/gh pr merge 1",
+        "/opt/homebrew/bin/gh pr close 2",
+        "../bin/gh release delete v1",
+        # TASK-46 incident: gh in a later segment of a compound line
+        "cd x && gh pr merge 1",
+        "cd repo && gh pr merge 46 --merge 2>&1 | tail -3; gh pr view 46",
+        "gh pr view 5 && gh pr merge 5",
+        "(gh issue close 3)",
+        # -R/--repo before or after the subcommand
+        "gh -R o/r pr merge 1",
+        "gh --repo o/r pr merge 1",
+        "gh --repo=o/r pr merge 1",
+        "gh pr merge 1 -R o/r",
+        "gh --hostname example.com repo delete o/r --yes",
+        # env assignments / wrappers / runners in front
+        "sudo gh repo delete o/r",
+        "GH_TOKEN=x gh pr merge 1",
+        "env GH_REPO=o/r /usr/bin/gh pr merge 1",
+        "timeout 60 gh pr merge 1",
+        "echo 1 | xargs gh pr close",
+        # backslash-newline continuation
+        "gh pr \\\nmerge 1",
+    ],
+)
+def test_blocks_gh_destructive_in_any_command_form(monkeypatch, capsys, command):
+    assert run_main(monkeypatch, command) == 2
+    assert "[git-safety]" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # 2026-10-03 false positive: gh and merge in different segments
+        "gh pr list; git merge --ff-only x",
+        "gh pr list --state open; git merge --ff-only origin/main",
+        "gh pr checkout 5 && git merge task/x",
+        "gh issue list | grep close",
+        "gh repo view && backlog task edit TASK-1 --notes delete",
+        # merge/close as arguments of a non-destructive subcommand
+        "gh pr view merge",
+        "gh pr create --title close --body merge",
+        "gh issue create --title 'pr merge'",
+        "gh release view delete",
+        # quoted text and heredoc bodies are not commands
+        'echo "gh pr merge 1"',
+        "git commit -m 'never gh pr merge 1 by hand'",
+        'backlog task edit TASK-45 --notes "gh repo delete o/r 금지"',
+        "cat <<EOF\ngh pr merge 1\nEOF",
+        "gh pr create --body-file - <<'EOF'\ngh pr merge 1\ngh repo delete o/r\nEOF",
+        # not the gh executable
+        "ghq get x/merge",
+        "./gh-tool pr merge 1",
+    ],
+)
+def test_allows_gh_words_outside_a_destructive_invocation(monkeypatch, command):
+    assert run_main(monkeypatch, command) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # REST equivalents of pr merge / repo delete / release delete
+        "gh api -X PUT repos/o/r/pulls/1/merge",
+        "gh api --method PUT /repos/o/r/pulls/1/merge -f merge_method=merge",
+        "gh api --method=put repos/{owner}/{repo}/pulls/7/merge",
+        "gh api -XPUT repos/o/r/pulls/1/merge",
+        "gh api repos/o/r/pulls/1/merge -X PUT",
+        "gh api --method DELETE repos/o/r",
+        "gh api -X DELETE /repos/o/r/",
+        "gh api -X DELETE repos/o/r/releases/123",
+        "gh api -X DELETE repos/o/r/releases/tags/v1",
+        # REST equivalents of pr close / issue close
+        "gh api -X PATCH repos/o/r/pulls/1 -f state=closed",
+        "gh api --method PATCH repos/o/r/issues/2 -F state=closed",
+        "gh api -X PATCH repos/o/r/issues/2 --raw-field state=closed",
+        "gh api -X PATCH repos/o/r/issues/2 --input body.json",
+        # GraphQL mutations (the query is quoted, so its text is checked)
+        "gh api graphql -f query='mutation { mergePullRequest(input: {}) { clientMutationId } }'",
+        'gh api graphql -f query="mutation { closeIssue(input: {}) { clientMutationId } }"',
+        "gh api graphql -f query='mutation { deleteRepository(input: {}) { x } }'",
+        # path and wrappers like any other gh call
+        "cd x && /usr/bin/gh -R o/r api -X PUT repos/o/r/pulls/1/merge",
+        "gh -R api api -X=PUT repos/o/r/pulls/1/merge",  # flag value named api
+        "gh api -X PATCH repos/o/r/pulls/1 -fstate=closed",
+        "gh api -X DELETE https://api.github.com/repos/o/r",
+    ],
+)
+def test_blocks_gh_api_destructive_calls(monkeypatch, capsys, command):
+    assert run_main(monkeypatch, command) == 2
+    assert "gh api" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "gh api repos/o/r/pulls/1/merge",  # GET: is it merged?
+        "gh api -X GET repos/o/r/pulls/1/merge",
+        "gh api repos/o/r",
+        "gh api repos/o/r/releases/123",
+        "gh api -X PATCH repos/o/r/issues/2 -f title=x",
+        "gh api -X PATCH repos/o/r/pulls/1 -f state=open",
+        "gh api -X POST repos/o/r/issues -f title=merge",
+        "gh api -X DELETE repos/o/r/git/refs/heads/task/x",
+        "gh api -X DELETE repos/o/r/issues/comments/9",
+        "gh api graphql -f query='query { viewer { login } }'",
+        "gh api --paginate -H 'Accept: x' repos/o/r/pulls",
+    ],
+)
+def test_allows_non_destructive_gh_api_calls(monkeypatch, command):
+    assert run_main(monkeypatch, command) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'gh pr merge 1 "unterminated',
+        "/usr/bin/gh repo delete o/r 'x",
+        "echo 'x; gh issue close 3",
+        "gh api -X PUT repos/o/r/pulls/1/merge 'x",
+        'gh api -X DELETE repos/o/r "x',
+    ],
+)
+def test_blocks_unparsable_line_that_may_be_gh_destructive(
+    monkeypatch, capsys, command
+):
+    assert run_main(monkeypatch, command) == 2
+    assert "해석" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'gh pr view 1 "unterminated',
+        "gh api repos/o/r 'x",
+        "echo 'merge it",
+    ],
+)
+def test_allows_unparsable_line_without_gh_destructive(monkeypatch, command):
+    assert run_main(monkeypatch, command) == 0
