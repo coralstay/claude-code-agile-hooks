@@ -1,10 +1,10 @@
 ---
 id: TASK-38
 title: pre_git_safety_check.py — 신규 저장소 최초 push가 main 가드에 막히는 문제와 우회 경로 기록
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-09-25 19:52'
-updated_date: '2026-10-03 12:56'
+updated_date: '2026-10-03 12:57'
 labels: []
 dependencies:
   - TASK-37
@@ -46,3 +46,9 @@ check_push() 는 주석에 명시된 대로 refspec 이 명시된 형태만 검�
 - [x] #2 refspec 없는 bare push도 현재 브랜치를 확인해 같은 규칙을 적용해 알려진 우회 경로를 닫는다
 - [ ] #3 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+pre_git_safety_check.py에 최초 push 예외와 bare push 판정을 넣었다. main/master 대상 push는 git ls-remote --exit-code --heads가 2(원격 브랜치 없음)일 때만 허용하고, 0이면 차단, 그 밖(원격 없음·타임아웃·git 없음·pushInsteadOf 설정)은 fail-closed로 차단. 대상 판정은 src:dst, refs/heads/ 제거, HEAD/@ 해석, --all/--mirror/matching을 반영해 HEAD:refs/heads/main, --all 같은 기존 우회도 막는다. refspec 없는 push는 git 규칙(remote.<r>.mirror → remote.<r>.push → push.default, pushRemote 등)으로 대상 브랜치를 구해 같은 규칙을 적용 — upstream 설정 후 bare push 우회를 닫았다. 최초 push라도 force/delete는 차단. 훅 자신의 git 호출에 git -c/GIT_* 접두는 넘기지 않는다(승인 전 사용자 설정 실행 방지). push가 아닌 명령은 subprocess 0회. 테스트는 사용자 git 설정·네트워크와 격리, 임시 bare 원격으로 실측. 912 passed, 파일 커버리지 100%(__main__ 줄 제외). 알려진 한계: 실행 시점 refspec(xargs/find -exec), 앞 명령의 export GIT_DIR, bash -c/eval. 후속 검토: git -C로 지정된 저장소가 악성 설정(core.sshCommand 등)을 가지면 훅의 ls-remote가 승인 전에 실행한다. AC #3 설치는 일괄.
+<!-- SECTION:FINAL_SUMMARY:END -->
