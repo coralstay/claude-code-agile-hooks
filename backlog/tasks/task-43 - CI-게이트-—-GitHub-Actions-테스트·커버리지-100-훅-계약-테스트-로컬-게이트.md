@@ -4,7 +4,7 @@ title: CI 게이트 — GitHub Actions 테스트·커버리지 100% + 훅 계약
 status: To Do
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 12:39'
+updated_date: '2026-10-03 17:33'
 labels:
   - ci
   - tests
@@ -25,4 +25,5 @@ priority: high
 - [ ] #2 계약 테스트: 모든 훅을 실제 subprocess로 빈 stdin·깨진 JSON·정상 payload로 실행해 크래시 없이 정해진 종료 코드(0 또는 의도된 2)를 낸다 — 실제 HOME을 건드리지 않는다
 - [ ] #3 GitHub Actions 워크플로가 PR·main push마다 테스트와 커버리지 100%(미달 시 실패)를 돌린다
 - [ ] #4 이 저장소에 .claude-rails.json(testCommand, coverageCommand)을 두고 README·doc-2에 CI·로컬 게이트를 문서화한다
+- [ ] #5 동시에 두 번 실행하거나 병렬(pytest-xdist)로 실행해도 통과한다 — 테스트가 tmp 밖 공유 경로를 쓰지 않는다(2026-10-04 동시 실행 중 1회 실패 관측)
 <!-- AC:END -->
