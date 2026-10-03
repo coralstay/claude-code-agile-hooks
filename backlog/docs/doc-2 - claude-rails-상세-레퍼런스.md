@@ -653,9 +653,23 @@ cd ~/githubs/claude-rails   # 이 저장소
 ./install.sh
 ```
 
-전제조건: `backlog` CLI (`npm i -g backlog.md`), `jq`, `python3`. 재실행 안전
-(settings.json은 매번 백업 후 병합, CLAUDE.md는 마커로 중복 방지, 훅 스크립트는 그냥
-덮어쓰기).
+전제조건: `backlog` CLI (`npm i -g backlog.md`), `python3` (`jq`는 더 이상 필요 없음).
+재실행 안전 (CLAUDE.md는 마커로 중복 방지, 훅 스크립트는 그냥 덮어쓰기).
+
+settings.json 병합은 `scripts/merge_settings.py`가 **추가 전용**으로 한다 (TASK-36 —
+이전의 `jq -s '.[0] * .[1]'`은 배열을 통째로 교체해 같은 이벤트의 다른 도구 훅을 지웠다):
+
+- 훅 항목은 (이벤트, matcher, command)로 식별한다. 없으면 같은 matcher의 첫 그룹에
+  덧붙이고, 그런 그룹이 없으면 새로 만든다. 다른 도구의 항목과 `hooks` 외 최상위 키는
+  건드리지 않고, 아무것도 지우지 않는다.
+- 같은 command가 이미 있는데 `if`/`timeout` 등이 저장소와 다르면 그 자리에서 저장소
+  값으로 갱신한다 (command가 `~/.claude/hooks/claude-rails/`를 가리키므로 저장소가 원본).
+- 변경이 있을 때만 `settings.json.bak.<timestamp>` 백업 → 임시 파일에 쓰고 JSON 재검증 →
+  원자적 교체. 기존 파일이 깨진 JSON이면 손대지 않고 중단한다. 추가/갱신 목록을 출력한다.
+- 한계: 저장소에서 어떤 훅의 matcher나 이벤트를 바꾸면 옛 위치의 항목은 남는다(삭제하지
+  않으므로). 그런 경우 백업과 비교해 수동으로 지운다.
+- 테스트: `scripts/test_merge_settings.py` (임시 `HOME`에 대한 `install.sh` 종단 테스트
+  포함). 훅 테스트와 함께 저장소 루트에서 `uvx pytest -q hooks scripts`로 돌린다.
 
 **삭제**:
 
@@ -667,7 +681,7 @@ cd ~/githubs/claude-rails   # 이 저장소
 **검증**:
 
 ```bash
-jq empty ~/.claude/settings.json && echo OK
+python3 -m json.tool ~/.claude/settings.json >/dev/null && echo OK
 echo '{"cwd":"<backlog 프로젝트 경로>","transcript_path":"/nonexistent"}' \
   | python3 ~/.claude/hooks/claude-rails/require_active_task.py; echo "exit: $?"
 ```
@@ -692,6 +706,8 @@ claude-rails/
 ├── settings.hooks.json       # ~/.claude/settings.json에 병합되는 hooks 블록
 ├── CLAUDE.md.snippet         # ~/.claude/CLAUDE.md에 추가되는 워크플로 안내
 ├── .claude-rails.json.example
+├── scripts/                   # 훅이 아닌 보조 스크립트 (설치되지 않음)
+│   └── merge_settings.py / test_merge_settings.py   # install.sh의 추가 전용 settings 병합
 └── hooks/                     # 33개 훅 + 33개 test_*.py = 66개 파일, 전부 flat
     ├── session_start.py / test_session_start.py                    # 🔒 backlog 전용
     ├── require_active_task.py / test_require_active_task.py        # 🔒 backlog 전용

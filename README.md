@@ -157,6 +157,11 @@ flowchart TB
 cd ~/githubs/claude-rails && ./install.sh
 ```
 
+`~/.claude/settings.json`에는 [`scripts/merge_settings.py`](scripts/merge_settings.py)로
+**추가 전용 병합**을 합니다. 다른 도구의 훅은 그대로 두고, 빠진 claude-rails 항목만
+(이벤트, matcher) 그룹에 추가하므로 다시 실행해도 중복되지 않습니다. 쓰기 전에
+`settings.json.bak.<timestamp>`로 백업하고, 추가/갱신된 항목을 목록으로 보여 드립니다.
+
 ## 더 자세한 내용이 궁금하시다면
 
 - **전체 스펙**(Phase 명세, HITL 표, 설치/삭제, 파일 구성)은 `backlog doc view doc-2`
