@@ -1,10 +1,10 @@
 ---
 id: TASK-38
 title: pre_git_safety_check.py — 신규 저장소 최초 push가 main 가드에 막히는 문제와 우회 경로 기록
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-09-25 19:52'
-updated_date: '2026-10-03 12:39'
+updated_date: '2026-10-03 12:44'
 labels: []
 dependencies:
   - TASK-37
