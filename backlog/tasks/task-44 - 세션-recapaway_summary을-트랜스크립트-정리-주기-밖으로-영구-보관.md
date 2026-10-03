@@ -1,11 +1,11 @@
 ---
 id: TASK-44
 title: 세션 recap(away_summary)을 트랜스크립트 정리 주기 밖으로 영구 보관
-status: To Do
+status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-24 11:19'
-updated_date: '2026-10-03 12:39'
+updated_date: '2026-10-03 18:35'
 labels:
   - hooks
   - observability
