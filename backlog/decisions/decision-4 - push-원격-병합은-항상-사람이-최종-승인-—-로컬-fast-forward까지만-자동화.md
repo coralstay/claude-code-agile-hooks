@@ -6,6 +6,9 @@ status: accepted
 ---
 > **2026-09-26: decision-10이 부분 대체.** "push·원격 병합은 사람이 최종 승인"은
 > 유효하다. "로컬 fast-forward까지만 자동화" 문구만 대체됐다 — 병합은 머지 커밋으로 한다.
+>
+> **2026-10-03: decision-11로 다시 정리됨.** 로컬은 `main`에 rebase 후 fast-forward,
+> 머지 커밋은 원격(GitHub PR) 병합에만 쓴다. 이 decision의 본문은 다시 유효하다.
 
 ## Context
 
