@@ -3,10 +3,10 @@ id: TASK-41
 title: >-
   훅 테스트 커버리지 100% (1/2) —
   config_guard·backlog_commit_scope·pipeline_trace·pr_provenance_stamp
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 17:50'
+updated_date: '2026-10-03 17:51'
 labels:
   - tests
   - coverage
@@ -32,3 +32,9 @@ priority: high
 - [x] #2 추가한 테스트는 각각 해당 분기의 기대 동작(차단/통과/fail-open)을 단언한다
 - [x] #3 도달 불가능한 코드는 제거하고 그 근거를 커밋 메시지에 남긴다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+config_guard·backlog_commit_scope·pipeline_trace·pr_provenance_stamp 네 파일을 줄·분기 커버리지 100%로 맞췄다(남은 것은 TASK-42가 설정으로 제외할 if __name__ 줄뿐). 추가한 테스트는 모두 차단/통과/fail-open/반환값을 단언한다. config_guard는 코드 제거 없이 모든 분기를 실제 입력으로 도달시켰다. 제거한 코드: backlog_commit_scope.staging_plan의 도달 불가 elif 조건(앞에서 add/commit 외는 continue하므로 항상 commit) → else, 동작 동일. pipeline_trace의 fcntl ImportError 폴백에 붙어 있던 pragma: no cover를 실제 테스트로 대체. 네 파일 모두 pragma 없음. 1330 passed, 동시 2회 실행도 모두 통과. 발견: config_guard가 uv run --with x rm <보호 경로>를 통과시킨다(uv run 플래그 인자 처리 누락) — 후속 드래프트.
+<!-- SECTION:FINAL_SUMMARY:END -->
