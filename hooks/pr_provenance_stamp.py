@@ -11,6 +11,14 @@ rather than editing after the fact. Uses PermissionRequest-style
 `updatedInput` isn't available on PreToolUse, so this hook edits the command
 string itself directly.
 
+Only a PR-creation command in actual command position is stamped (text in
+a quoted argument of some other command is ignored). In a compound command
+(&&, ||, ;, |, newline) only that segment's span is rewritten and every
+other byte is kept as-is. Anything not provably safe to rewrite - command
+substitution, heredocs, subshells, $-expansions, globs, redirections,
+comments - is passed through unchanged: a missing stamp beats a broken
+command.
+
 Reads session facts from nerf_receipts.py's log if present (session prompt
 count via session_logger.py's log) - falls back to a minimal stamp with
 just a timestamp and model if those logs don't exist yet.
