@@ -4,7 +4,7 @@ title: 'install.sh: settings 병합이 다른 도구의 훅을 지우는 문제'
 status: In Progress
 assignee: []
 created_date: '2026-10-03 07:58'
-updated_date: '2026-10-03 12:22'
+updated_date: '2026-10-03 12:28'
 labels:
   - hooks
   - install
@@ -22,7 +22,7 @@ install.sh는 jq -s '.[0] * .[1]'로 settings.hooks.json을 ~/.claude/settings.j
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 settings 병합이 추가 전용이 된다 — 기존 항목(다른 도구 훅 포함)은 그대로 두고 빠진 claude-rails 항목만 (이벤트, matcher) 그룹에 추가한다
-- [ ] #2 이미 있는 항목은 중복 추가하지 않아 재실행해도 결과가 같다
-- [ ] #3 병합 로직을 테스트로 검증한다(다른 도구 훅 보존, 중복 없음, 새 이벤트 추가)
+- [x] #1 settings 병합이 추가 전용이 된다 — 기존 항목(다른 도구 훅 포함)은 그대로 두고 빠진 claude-rails 항목만 (이벤트, matcher) 그룹에 추가한다
+- [x] #2 이미 있는 항목은 중복 추가하지 않아 재실행해도 결과가 같다
+- [x] #3 병합 로직을 테스트로 검증한다(다른 도구 훅 보존, 중복 없음, 새 이벤트 추가)
 <!-- AC:END -->
