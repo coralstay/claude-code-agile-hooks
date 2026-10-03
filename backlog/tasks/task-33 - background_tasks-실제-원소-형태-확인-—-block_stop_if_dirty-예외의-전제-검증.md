@@ -1,14 +1,18 @@
 ---
-id: DRAFT-10
+id: TASK-33
 title: background_tasks 실제 원소 형태 확인 — block_stop_if_dirty 예외의 전제 검증
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 07:58'
-updated_date: '2026-10-03 07:58'
+updated_date: '2026-10-03 08:01'
 labels:
   - hooks
   - measure
 dependencies: []
+references:
+  - TASK-31
+documentation:
+  - backlog/docs/doc-3 - 훅-시스템-구조적-문제-5가지와-컨텍스트-플래그-1차-구현.md
 priority: high
 ---
 

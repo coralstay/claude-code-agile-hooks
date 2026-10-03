@@ -1,14 +1,17 @@
 ---
-id: DRAFT-11
+id: TASK-35
 title: 'config_guard.py: 설정 파일을 읽기만 하는 명령까지 막는 오탐 수정'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 08:01'
-updated_date: '2026-10-03 08:01'
+updated_date: '2026-10-03 08:02'
 labels:
   - hooks
   - bug
 dependencies: []
+references:
+  - TASK-3
+  - decision-1
 priority: high
 ---
 
