@@ -4,7 +4,7 @@ title: pre_git_safety_check.py — 신규 저장소 최초 push가 main 가드�
 status: In Progress
 assignee: []
 created_date: '2026-09-25 19:52'
-updated_date: '2026-10-03 12:44'
+updated_date: '2026-10-03 12:56'
 labels: []
 dependencies:
   - TASK-37
@@ -42,7 +42,7 @@ check_push() 는 주석에 명시된 대로 refspec 이 명시된 형태만 검�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 원격에 대상 브랜치가 없을 때(git ls-remote로 확인)의 최초 push는 main 가드를 통과한다 — 원격 확인 실패 시에는 막는다
-- [ ] #2 refspec 없는 bare push도 현재 브랜치를 확인해 같은 규칙을 적용해 알려진 우회 경로를 닫는다
+- [x] #1 원격에 대상 브랜치가 없을 때(git ls-remote로 확인)의 최초 push는 main 가드를 통과한다 — 원격 확인 실패 시에는 막는다
+- [x] #2 refspec 없는 bare push도 현재 브랜치를 확인해 같은 규칙을 적용해 알려진 우회 경로를 닫는다
 - [ ] #3 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
 <!-- AC:END -->
