@@ -1,7 +1,7 @@
 ---
-id: DRAFT-5
+id: TASK-47
 title: 'config_guard: uv run 등 러너의 인자를 받는 플래그를 명령으로 오인하는 구멍'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 17:51'
 updated_date: '2026-10-03 17:51'
@@ -9,6 +9,10 @@ labels:
   - hooks
   - security
 dependencies: []
+references:
+  - TASK-35
+  - TASK-41
+  - decision-1
 priority: high
 ---
 

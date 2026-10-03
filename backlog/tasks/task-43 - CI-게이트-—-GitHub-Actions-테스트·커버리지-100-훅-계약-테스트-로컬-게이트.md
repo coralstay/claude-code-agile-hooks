@@ -4,12 +4,13 @@ title: CI 게이트 — GitHub Actions 테스트·커버리지 100% + 훅 계약
 status: To Do
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 17:33'
+updated_date: '2026-10-03 17:51'
 labels:
   - ci
   - tests
 dependencies:
   - TASK-42
+  - TASK-47
 priority: high
 ---
 
