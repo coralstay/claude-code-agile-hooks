@@ -1,10 +1,10 @@
 ---
 id: TASK-25
 title: 'decision-11: 로컬은 rebase merge, 원격은 머지 커밋 — decision-10 대체'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-03 03:23'
-updated_date: '2026-10-03 03:27'
+updated_date: '2026-10-03 03:32'
 labels:
   - policy
   - git
@@ -46,3 +46,17 @@ decision-5(항상 rebase)와 decision-10(항상 머지 커밋)은 둘 다 로컬
 - [x] #3 decision-4가 decision-11과 일치하는지 확인하고, 어긋나는 문구가 있으면 decision-11 Consequences에 명시한다
 - [x] #4 README.md와 backlog/docs에서 병합 방식 서술을 찾아 decision-11과 맞춘다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+decision-11을 만들어 decision-10을 대체했다. 로컬은 트렁크 기반 — task 브랜치는 항상 main에 rebase해서 따라가고(push 후에도), 통합은 --ff-only. 원격 GitHub PR은 gh pr merge --merge로 머지 커밋을 남기고 rebase/squash는 쓰지 않는다. 다시 쓰면 안 되는 것은 main의 이력이다.
+
+근거는 이 저장소의 실측(decision-5: PR 병합 시 committer가 coralstay로 재작성되고 해시가 바뀜)만 쓰고 다른 저장소는 참조하지 않는다.
+
+- decision-10: superseded로 표시, decision-11을 가리키는 주석 추가
+- decision-4/5: 상단에 decision-11 주석 추가(본문은 이력으로 보존)
+- doc-1/doc-2: 병합 방식 서술에 decision-11 대체 표시
+
+미결: 로컬 ff-only를 훅으로 다시 강제할지(TASK-24에서 pre_merge_check.py 제거)는 별도 판단.
+<!-- SECTION:FINAL_SUMMARY:END -->
