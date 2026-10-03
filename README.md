@@ -17,10 +17,10 @@ CLAUDE.md에 "이렇게 해주세요"라고 적어두는 약속만으로는 매�
 ## 무엇을 만들었는지 말씀드립니다
 
 Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 동작하는
-28개의 스크립트를 만들었습니다.
+30개의 스크립트를 만들었습니다.
 [Backlog.md](https://github.com/MrLesk/Backlog.md)(Git 저장소 안에 마크다운 파일로
 태스크·문서·의사결정을 관리하는 CLI 기반 프로젝트 관리 도구입니다) 워크플로 전용
-5개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 23개로 이루어져
+7개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 23개로 이루어져
 있습니다. 모든 훅은 개인 fork 안에서만 강하게 적용되며, 운영 레포로 올리는 PR은
 항상 사람이 직접 열도록 하였습니다.
 
@@ -39,7 +39,7 @@ Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 �
 
 Claude Code의 훅은 [공식 문서](https://code.claude.com/docs/ko/hooks)에 정의된
 특정 이벤트(생애주기 단계)에 등록되어, 그 시점에만 실행됩니다. 전체 흐름을 먼저
-그림으로 보여드린 뒤, 이 저장소에 있는 28개의 훅이 각각 어느 단계에서 동작하는지
+그림으로 보여드린 뒤, 이 저장소에 있는 30개의 훅이 각각 어느 단계에서 동작하는지
 표로 정리해 드리겠습니다.
 
 ```mermaid
@@ -91,7 +91,7 @@ flowchart TB
 
 이 저장소의 훅은 이 흐름 중 필요한 지점마다 걸려 있습니다 — 예를 들어
 `require_active_task.py`는 `PreToolUse`(Edit\|Write)에, `block_stop_if_dirty.py`는
-`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 28개 훅 전체가 정확히
+`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 30개 훅 전체가 정확히
 어느 단계에 걸려 있는지 나열한 것입니다. 훅 이름을 누르시면 실제 소스 파일로
 이동합니다.
 
@@ -108,10 +108,12 @@ flowchart TB
 | PreToolUse: Edit\|Write             | [`require_active_task.py`](hooks/require_active_task.py)           | 🔒 backlog | In Progress 태스크 없으면 차단 (프로젝트 밖 경로는 제외) |
 | PreToolUse: Edit\|Write             | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 죽은 접근 재시도 경고             |
 | PreToolUse: Bash(git *)             | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
+| PreToolUse: Bash(git *)             | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격 커밋에 다른 변경 섞이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
 | PreToolUse: Bash(git *)             | [`pre_push_check.py`](hooks/pre_push_check.py)                     | 🔒 backlog | Done+summary 확인 후 push 허용    |
 | PreToolUse: Bash(git *)             | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
 | PreToolUse: Bash(git *)             | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
+| PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
 | PreToolUse: Bash(gh pr create*)     | [`pr_provenance_stamp.py`](hooks/pr_provenance_stamp.py)           | 범용       | PR 본문에 provenance 삽입         |
