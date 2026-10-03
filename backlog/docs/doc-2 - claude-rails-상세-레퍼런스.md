@@ -685,3 +685,5 @@ claude-rails/
 강제했다. decision-10이 병합을 머지 커밋으로 바꾸면서 이 훅이 정책의 정반대를 강제하게 됐다.
 `decision-5`(항상 rebase merge)의 관찰은 정확했으나 결론이 뒤집혀 있었다 — rebase merge는
 committer 재작성을 없애지 않고 모든 커밋에 적용한다.
+이후 `decision-11`(2026-10-03)이 decision-10을 대체했다 — 로컬 통합은 rebase 후
+`git merge --ff-only`, 원격(GitHub PR) 병합은 머지 커밋(`gh pr merge --merge`)으로 한다.
