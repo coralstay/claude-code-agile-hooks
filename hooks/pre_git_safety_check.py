@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""PreToolUse (matcher: Bash, if: Bash(git *))
+"""PreToolUse (matcher: Bash, no `if` filter)
+TASK-37: registered without `if: Bash(git *)` on purpose - that permission-rule
+filter matches the command text, so `/usr/bin/git push origin main` would never
+reach this hook and the basename normalization below would be moot.
 Branch-aware git guardrails + destructive gh CLI protection. Ported from
 karanb192/claude-code-hooks' git-safety plugin (MIT license). Owns every
 git-specific destructive rule exclusively (including "force push to main",
