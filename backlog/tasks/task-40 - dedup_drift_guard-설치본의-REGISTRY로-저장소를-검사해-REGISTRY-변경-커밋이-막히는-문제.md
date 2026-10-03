@@ -1,14 +1,18 @@
 ---
-id: DRAFT-10
+id: TASK-40
 title: 'dedup_drift_guard: 설치본의 REGISTRY로 저장소를 검사해 REGISTRY 변경 커밋이 막히는 문제'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 08:12'
-updated_date: '2026-10-03 08:12'
+updated_date: '2026-10-03 12:39'
 labels:
   - hooks
   - bug
 dependencies: []
+references:
+  - TASK-34
+  - decision-2
+  - decision-3
 priority: high
 ---
 

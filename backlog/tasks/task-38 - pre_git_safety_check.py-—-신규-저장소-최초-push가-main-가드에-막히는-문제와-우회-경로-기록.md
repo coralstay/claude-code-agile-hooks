@@ -1,11 +1,16 @@
 ---
-id: DRAFT-7
+id: TASK-38
 title: pre_git_safety_check.py — 신규 저장소 최초 push가 main 가드에 막히는 문제와 우회 경로 기록
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-25 19:52'
+updated_date: '2026-10-03 12:39'
 labels: []
-dependencies: []
+dependencies:
+  - TASK-37
+references:
+  - decision-4
+priority: high
 ---
 
 ## Description
@@ -34,3 +39,10 @@ check_push() 는 주석에 명시된 대로 refspec 이 명시된 형태만 검�
 2. bare `git push` 갭 자체를 메우기 (현재 브랜치 확인 후 동일 규칙 적용) — 갭을 닫으면 위 우회 경로도 사라지므로 1번과 같이 가야 함.
 3. 현상 유지 + 문서화: 최초 push 는 사람이 직접 실행하는 것을 정식 절차로 README 에 명시.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 원격에 대상 브랜치가 없을 때(git ls-remote로 확인)의 최초 push는 main 가드를 통과한다 — 원격 확인 실패 시에는 막는다
+- [ ] #2 refspec 없는 bare push도 현재 브랜치를 확인해 같은 규칙을 적용해 알려진 우회 경로를 닫는다
+- [ ] #3 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
+<!-- AC:END -->

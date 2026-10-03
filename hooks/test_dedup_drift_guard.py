@@ -239,8 +239,20 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pipeline_trace.py",
         "pre_push_check.py",
         "config_guard.py",  # TASK-35
+        "pre_git_safety_check.py",  # TASK-37
     ]
     assert "pre_push_check.py" not in ddg.REGISTRY["command_invokes_git_subcommand"]
+
+
+def test_registry_covers_task37_git_safety_command_position_helpers():
+    # TASK-37: pre_git_safety_check.py judges only command-position git with
+    # the same four verbatim helpers; every copy must be registered.
+    for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+        assert ddg.REGISTRY[name][-1] == "pre_git_safety_check.py"
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
 
 
 def test_registry_covers_task35_config_guard_command_position_helpers():
@@ -362,11 +374,13 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pipeline_trace.py",
             "pre_push_check.py",  # TASK-34
             "config_guard.py",  # TASK-35
+            "pre_git_safety_check.py",  # TASK-37
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
         "pipeline_trace.py",
         "pre_push_check.py",  # TASK-34
+        "pre_git_safety_check.py",  # TASK-37
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",

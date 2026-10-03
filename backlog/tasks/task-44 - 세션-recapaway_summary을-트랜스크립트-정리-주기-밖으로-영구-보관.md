@@ -1,15 +1,17 @@
 ---
-id: DRAFT-6
+id: TASK-44
 title: 세션 recap(away_summary)을 트랜스크립트 정리 주기 밖으로 영구 보관
-status: Draft
+status: To Do
 assignee:
   - '@claude'
 created_date: '2026-09-24 11:19'
-updated_date: '2026-09-24 11:19'
+updated_date: '2026-10-03 12:39'
 labels:
   - hooks
   - observability
-dependencies: []
+dependencies:
+  - TASK-43
+priority: medium
 ---
 
 ## Description
@@ -40,3 +42,11 @@ SessionStart(또는 SessionEnd) 훅에서 이 저장소의 훅 규약대로 away
 - 이 저장소의 훅은 Python으로 포팅된 상태이니 Python으로 작성한다
 - 프라이버시: recap 본문에 작업 내용이 그대로 들어가므로 홈 디렉터리 밖으로 내보내지 않는다
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 away_summary 레코드를 (sessionId, uuid) 기준 중복 없이 append-only JSONL로 적재하는 훅을 만든다
+- [ ] #2 적재 시점(SessionStart/SessionEnd)을 실측으로 정하고 근거를 남긴다
+- [ ] #3 프로젝트·기간 필터로 조회하는 얇은 CLI를 둔다
+- [ ] #4 테스트(커버리지 100% 유지)를 추가하고 설치본을 갱신한다
+<!-- AC:END -->
