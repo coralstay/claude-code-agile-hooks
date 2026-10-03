@@ -1,14 +1,15 @@
 ---
-id: DRAFT-13
+id: TASK-43
 title: CI 게이트 — GitHub Actions 테스트·커버리지 100% + 훅 계약 테스트 + 로컬 게이트
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 12:38'
+updated_date: '2026-10-03 12:39'
 labels:
   - ci
   - tests
-dependencies: []
+dependencies:
+  - TASK-42
 priority: high
 ---
 

@@ -1,15 +1,16 @@
 ---
-id: DRAFT-6
+id: TASK-44
 title: 세션 recap(away_summary)을 트랜스크립트 정리 주기 밖으로 영구 보관
-status: Draft
+status: To Do
 assignee:
   - '@claude'
 created_date: '2026-09-24 11:19'
-updated_date: '2026-10-03 12:38'
+updated_date: '2026-10-03 12:39'
 labels:
   - hooks
   - observability
-dependencies: []
+dependencies:
+  - TASK-43
 priority: medium
 ---
 

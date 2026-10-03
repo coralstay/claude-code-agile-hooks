@@ -1,16 +1,20 @@
 ---
-id: DRAFT-11
+id: TASK-41
 title: >-
   훅 테스트 커버리지 100% (1/2) —
   config_guard·backlog_commit_scope·pipeline_trace·pr_provenance_stamp
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 12:38'
+updated_date: '2026-10-03 12:39'
 labels:
   - tests
   - coverage
-dependencies: []
+dependencies:
+  - TASK-37
+  - TASK-38
+  - TASK-39
+  - TASK-40
 priority: high
 ---
 

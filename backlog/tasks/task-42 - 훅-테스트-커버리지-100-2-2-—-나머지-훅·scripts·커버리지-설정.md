@@ -1,14 +1,15 @@
 ---
-id: DRAFT-12
+id: TASK-42
 title: 훅 테스트 커버리지 100% (2/2) — 나머지 훅·scripts·커버리지 설정
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 12:38'
+updated_date: '2026-10-03 12:39'
 labels:
   - tests
   - coverage
-dependencies: []
+dependencies:
+  - TASK-41
 priority: high
 ---
 

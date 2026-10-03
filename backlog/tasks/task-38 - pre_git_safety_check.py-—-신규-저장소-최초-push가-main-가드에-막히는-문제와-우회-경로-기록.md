@@ -1,12 +1,15 @@
 ---
-id: DRAFT-7
+id: TASK-38
 title: pre_git_safety_check.py — 신규 저장소 최초 push가 main 가드에 막히는 문제와 우회 경로 기록
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-25 19:52'
-updated_date: '2026-10-03 12:38'
+updated_date: '2026-10-03 12:39'
 labels: []
-dependencies: []
+dependencies:
+  - TASK-37
+references:
+  - decision-4
 priority: high
 ---
 

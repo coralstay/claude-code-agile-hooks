@@ -1,14 +1,17 @@
 ---
-id: DRAFT-8
+id: TASK-37
 title: 'pre_git_safety_check.py: git 절대경로 호출이 main 직접 push 금지를 통과하는 구멍'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 08:12'
-updated_date: '2026-10-03 08:12'
+updated_date: '2026-10-03 12:39'
 labels:
   - hooks
   - security
 dependencies: []
+references:
+  - decision-1
+  - TASK-34
 priority: high
 ---
 
