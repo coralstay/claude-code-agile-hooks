@@ -339,3 +339,38 @@ def test_task_view_returns_none_on_malformed_json(tmp_path, monkeypatch):
     script.chmod(0o755)
     monkeypatch.setenv("PATH", str(bin_dir) + ":" + os.environ.get("PATH", ""))
     assert ppc.task_view(str(tmp_path), "TASK-3") is None
+
+
+# --- TASK-46: no `if` filter any more, so this runs on every Bash call ---
+
+
+@pytest.mark.parametrize(
+    "command", ["ls -la", "git status", "cd x && gh pr view 1", "echo git push", ""]
+)
+def test_non_push_line_exits_before_any_lookup(monkeypatch, command):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("must not run before a push is detected")
+
+    monkeypatch.setattr(ppc.subprocess, "run", forbidden)
+    monkeypatch.setattr(ppc, "has_command", forbidden)
+    stdin_data = {"cwd": "/x", "tool_input": {"command": command}}
+    assert run_main(monkeypatch, stdin_data) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["/usr/bin/git push origin x", "true && git push origin x", "cd y && git push"],
+)
+def test_path_and_compound_push_reach_the_gate(monkeypatch, capsys, command):
+    """The forms the old `if: Bash(git *)` filter hid (path call) or that
+    it matched only per subcommand are still judged by main()."""
+    monkeypatch.setattr(ppc, "has_command", lambda name: True)
+    monkeypatch.setattr(ppc, "is_backlog_project", lambda cwd: True)
+    monkeypatch.setattr(ppc, "current_branch", lambda cwd: "task/TASK-3")
+    monkeypatch.setattr(
+        ppc,
+        "task_view",
+        lambda cwd, tid: {"task": {"status": "In Progress", "finalSummary": ""}},
+    )
+    assert run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": command}}) == 2
+    assert "TASK-3" in capsys.readouterr().err

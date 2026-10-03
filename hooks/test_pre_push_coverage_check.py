@@ -294,3 +294,31 @@ def test_fires_on_prefixed_absolute_push_in_chain(tmp_path, monkeypatch, capsys)
     assert code == 0
     hso = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
     assert hso["permissionDecision"] == "deny"
+
+
+# --- TASK-46: no `if` filter any more, so this runs on every Bash call ---
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["ls -la", "git status", "cd x && gh pr view 1", "echo git push", ""],
+)
+def test_non_push_line_exits_before_config_or_subprocess(
+    tmp_path, monkeypatch, capsys, command
+):
+    """A line without a push must stay cheap: no config read, no
+    subprocess, no output."""
+    (tmp_path / ".claude-rails.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("must not run before a push is detected")
+
+    monkeypatch.setattr(ppc.subprocess, "run", forbidden)
+    monkeypatch.setattr(ppc, "configured_coverage_command", forbidden)
+    code = run_main(
+        monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
+    )
+    assert code == 0
+    assert capsys.readouterr().out == ""
