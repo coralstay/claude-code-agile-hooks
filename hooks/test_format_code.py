@@ -125,3 +125,27 @@ def test_run_real_subprocess():
     code, output = fc.run(["echo", "hi"])
     assert code == 0
     assert "hi" in output
+
+
+def test_typescript_file_no_op_when_no_tools(monkeypatch, tmp_path, capsys):
+    f = tmp_path / "main.ts"
+    f.write_text("const x: number = 1")
+    calls = []
+    monkeypatch.setattr(fc, "run", lambda cmd, cwd=None: calls.append(cmd) or (0, ""))
+    monkeypatch.setattr(fc.shutil, "which", lambda name: None)
+
+    assert run_main(monkeypatch, "Write", {"file_path": str(f)}) == 0
+    assert calls == []
+    assert capsys.readouterr().err == ""
+
+
+def test_typescript_file_uses_npx_prettier_and_is_silent_when_tsc_clean(monkeypatch, tmp_path, capsys):
+    f = tmp_path / "main.ts"
+    f.write_text("const x: number = 1")
+    calls = []
+    monkeypatch.setattr(fc, "run", lambda cmd, cwd=None: calls.append(cmd) or (0, ""))
+    monkeypatch.setattr(fc.shutil, "which", lambda name: None if name == "prettier" else f"/usr/bin/{name}")
+
+    assert run_main(monkeypatch, "Write", {"file_path": str(f)}) == 0
+    assert calls == [["npx", "--yes", "prettier", "--write", str(f)], ["tsc", "--noEmit", str(f)]]
+    assert capsys.readouterr().err == ""

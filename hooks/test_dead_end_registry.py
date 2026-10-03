@@ -98,3 +98,37 @@ def test_dead_ends_for_file_empty_when_no_registry():
 
 def test_recent_files_for_session_empty_when_missing():
     assert der.recent_files_for_session("no-such-session") == []
+
+
+def test_recent_files_skips_malformed_and_non_edit_records(isolate_paths):
+    sessions = isolate_paths["sessions"]
+    sessions.mkdir()
+    with open(sessions / "s9.jsonl", "w") as f:
+        f.write("not json\n")
+        f.write(json.dumps({"event": "prompt", "file_path": "/x/prompt.py"}) + "\n")
+        f.write(json.dumps({"event": "tool_use"}) + "\n")
+        f.write(json.dumps({"event": "tool_use", "file_path": "/x/real.py"}) + "\n")
+    assert der.recent_files_for_session("s9") == ["/x/real.py"]
+
+
+def test_dead_ends_for_file_skips_malformed_and_other_files(isolate_paths):
+    with open(isolate_paths["registry"], "w") as f:
+        f.write("not json\n")
+        f.write(json.dumps({"file_path": "/x/other.py", "reason": "r1"}) + "\n")
+        f.write(json.dumps({"file_path": "/x/a.py", "reason": "r2"}) + "\n")
+    assert der.dead_ends_for_file("/x/a.py") == [{"file_path": "/x/a.py", "reason": "r2"}]
+
+
+def test_pretooluse_without_file_path_is_silent(monkeypatch, isolate_paths, capsys):
+    with open(isolate_paths["registry"], "w") as f:
+        f.write(json.dumps({"file_path": "", "reason": "r"}) + "\n")
+    code = run_main(monkeypatch, {"hook_event_name": "PreToolUse", "tool_input": {"command": "ls"}})
+    assert code == 0
+    assert capsys.readouterr().err == ""
+
+
+def test_unknown_event_is_ignored(monkeypatch, isolate_paths, capsys):
+    code = run_main(monkeypatch, {"hook_event_name": "Stop", "prompt": "revert because broken"})
+    assert code == 0
+    assert capsys.readouterr().err == ""
+    assert not os.path.exists(isolate_paths["registry"])

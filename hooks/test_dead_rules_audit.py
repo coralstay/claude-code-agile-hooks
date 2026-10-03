@@ -1,5 +1,6 @@
 import io
 import json
+import os
 
 import pytest
 
@@ -88,3 +89,27 @@ def test_find_claude_md_present_and_absent(tmp_path):
     assert dra.find_claude_md(str(tmp_path)) is None
     (tmp_path / "CLAUDE.md").write_text("x")
     assert dra.find_claude_md(str(tmp_path)) == str(tmp_path / "CLAUDE.md")
+
+
+def test_session_end_without_log_writes_zero_scorecard(monkeypatch, isolate_log):
+    run_main(monkeypatch, {"hook_event_name": "SessionEnd", "session_id": "s7"})
+    [record] = read_records(isolate_log)
+    assert record["event"] == "scorecard"
+    assert record["rule_count"] == 0
+    assert record["edit_count"] == 0
+
+
+def test_session_end_skips_malformed_lines_and_old_scorecards(monkeypatch, isolate_log):
+    with open(isolate_log, "w") as f:
+        f.write("not json\n")
+        f.write(json.dumps({"event": "session_start", "session_id": "s8", "rule_count": 4}) + "\n")
+        f.write(json.dumps({"event": "scorecard", "session_id": "s8", "rule_count": 99, "edit_count": 99}) + "\n")
+        f.write(json.dumps({"event": "edit", "session_id": "s8"}) + "\n")
+    run_main(monkeypatch, {"hook_event_name": "SessionEnd", "session_id": "s8"})
+    record = json.loads(open(isolate_log).read().splitlines()[-1])
+    assert (record["rule_count"], record["edit_count"]) == (4, 1)
+
+
+def test_unknown_event_writes_nothing(monkeypatch, isolate_log):
+    assert run_main(monkeypatch, {"hook_event_name": "Stop", "session_id": "s9"}) == 0
+    assert not os.path.exists(isolate_log)
