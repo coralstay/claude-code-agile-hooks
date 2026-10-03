@@ -140,3 +140,63 @@ def test_is_dirty_real_git_dirty(tmp_path):
     _git(tmp_path, "commit", "-q", "-m", "init")
     (tmp_path / "f.txt").write_text("changed")
     assert bsd.is_dirty(str(tmp_path)) is True
+
+
+def _dirty_project(monkeypatch):
+    monkeypatch.setattr(bsd, "has_command", lambda name: True)
+    monkeypatch.setattr(bsd, "is_backlog_project", lambda cwd: True)
+    monkeypatch.setattr(bsd, "has_active_task", lambda cwd: True)
+    monkeypatch.setattr(bsd, "is_dirty", lambda cwd: True)
+
+
+def test_passes_when_background_tasks_running(monkeypatch, capsys):
+    """TASK-31 재현 시나리오: 백그라운드 서브에이전트가 같은 작업 트리를
+    수정 중일 때 메인 세션의 Stop을 막으면, 메인은 서브에이전트가 끝날
+    때까지 busy-wait만 할 수 있다(실제로 3회 연속 차단됨). 그 변경은 실행
+    중인 백그라운드 작업 몫일 수 있으므로 통과시킨다."""
+    _dirty_project(monkeypatch)
+    code = run_main(
+        monkeypatch,
+        {"cwd": "/x", "background_tasks": [{"id": "a1", "type": "agent"}]},
+    )
+    assert code == 0
+    assert "커밋하지" not in capsys.readouterr().err
+
+
+def test_still_denies_when_background_tasks_empty(monkeypatch):
+    _dirty_project(monkeypatch)
+    assert run_main(monkeypatch, {"cwd": "/x", "background_tasks": []}) == 2
+
+
+def test_still_denies_when_background_tasks_null(monkeypatch):
+    _dirty_project(monkeypatch)
+    assert run_main(monkeypatch, {"cwd": "/x", "background_tasks": None}) == 2
+
+
+def test_still_denies_when_stop_hook_active(monkeypatch):
+    """stop_hook_active여도 계속 막는다 — 커밋은 언제나 Claude가 할 수 있는
+    일이라 반복 차단이 곧 강제력이다(경고 1회로 약화하지 않는다)."""
+    _dirty_project(monkeypatch)
+    assert run_main(monkeypatch, {"cwd": "/x", "stop_hook_active": True}) == 2
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (None, False),
+        ([], False),
+        ({}, False),
+        ("", False),
+        (0, False),
+        (["task-1"], True),
+        ([{"id": "x"}], True),
+        ({"x": {"status": "running"}}, True),
+        ("not-a-container", False),
+    ],
+)
+def test_background_tasks_running_shapes(value, expected):
+    assert bsd.background_tasks_running({"background_tasks": value}) is expected
+
+
+def test_background_tasks_running_missing_key():
+    assert bsd.background_tasks_running({}) is False

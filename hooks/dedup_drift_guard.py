@@ -68,6 +68,11 @@ REGISTRY = {
         "require_draft_first.py",
         "backlog_commit_scope.py",
     ],
+    # TASK-31: Stop payload의 background_tasks로 parallel_session을 판정하는 헬퍼
+    "background_tasks_running": [
+        "block_stop_if_dirty.py",
+        "context_flags.py",
+    ],
     # current_branch()는 파일마다 반환값 계약이 다르다(빈 문자열 vs None) —
     # 의도된 차이로 보이므로 REGISTRY에 등록하지 않는다.
 }
