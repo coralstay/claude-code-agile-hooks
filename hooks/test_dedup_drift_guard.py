@@ -87,6 +87,14 @@ BASELINE_BODIES = {
         def command_head(segment):
             return 0
         """,
+    "git_subcommand_index": """
+        def git_subcommand_index(segment):
+            return None
+        """,
+    "command_runs_git": """
+        def command_runs_git(command, subcommand):
+            return False
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -192,8 +200,8 @@ def test_registry_covers_newly_added_dedup_functions():
     # empty string vs None), so it must never appear.
     # TASK-34: pre_push_check.py left this list - it now uses the
     # command-position helpers (tokenize/split_segments/command_head).
+    # TASK-39: pre_commit_check.py left it too.
     assert ddg.REGISTRY["command_invokes_git_subcommand"] == [
-        "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "dedup_drift_guard.py",
         "backlog_commit_scope.py",
@@ -240,6 +248,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_push_check.py",
         "config_guard.py",  # TASK-35
         "pre_git_safety_check.py",  # TASK-37
+        "pre_commit_check.py",  # TASK-39
     ]
     assert "pre_push_check.py" not in ddg.REGISTRY["command_invokes_git_subcommand"]
 
@@ -248,7 +257,7 @@ def test_registry_covers_task37_git_safety_command_position_helpers():
     # TASK-37: pre_git_safety_check.py judges only command-position git with
     # the same four verbatim helpers; every copy must be registered.
     for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
-        assert ddg.REGISTRY[name][-1] == "pre_git_safety_check.py"
+        assert "pre_git_safety_check.py" in ddg.REGISTRY[name]
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
@@ -383,12 +392,14 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_push_check.py",  # TASK-34
             "config_guard.py",  # TASK-35
             "pre_git_safety_check.py",  # TASK-37
+            "pre_commit_check.py",  # TASK-39
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
         "pipeline_trace.py",
         "pre_push_check.py",  # TASK-34
         "pre_git_safety_check.py",  # TASK-37
+        "pre_commit_check.py",  # TASK-39
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",

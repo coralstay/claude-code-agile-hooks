@@ -38,7 +38,6 @@ REGISTRY = {
         "backlog_commit_scope.py",
     ],
     "command_invokes_git_subcommand": [
-        "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "dedup_drift_guard.py",
         "backlog_commit_scope.py",
@@ -68,6 +67,7 @@ REGISTRY = {
         "pre_push_check.py",
         "config_guard.py",
         "pre_git_safety_check.py",
+        "pre_commit_check.py",
     ],
     "split_segments": [
         "require_draft_first.py",
@@ -76,6 +76,7 @@ REGISTRY = {
         "pre_push_check.py",
         "config_guard.py",
         "pre_git_safety_check.py",
+        "pre_commit_check.py",
     ],
     # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
     # 프로젝트 안/밖 판정(TASK-27 realpath 로직)을 그대로 복사해 쓴다
@@ -84,15 +85,25 @@ REGISTRY = {
         "pipeline_trace.py",
         "pre_push_check.py",
         "pre_git_safety_check.py",
+        "pre_commit_check.py",
     ],
     # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
     # pipeline_trace.py의 명령 위치 판정(env 할당·래퍼 건너뛰기)을 그대로 복사해 쓴다
     # TASK-37: pre_git_safety_check.py도 같은 4개 헬퍼를 그대로 복사해 쓴다
+    # TASK-39: pre_commit_check.py·pre_push_coverage_check.py·
+    # backlog_commit_scope.py도 같은 헬퍼로 명령 위치의 git 하위 명령만 판정한다
     "command_head": [
         "pipeline_trace.py",
         "pre_push_check.py",
         "config_guard.py",
         "pre_git_safety_check.py",
+        "pre_commit_check.py",
+    ],
+    "git_subcommand_index": [
+        "pre_commit_check.py",
+    ],
+    "command_runs_git": [
+        "pre_commit_check.py",
     ],
     "is_outside_project": [
         "require_active_task.py",

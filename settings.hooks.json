@@ -71,8 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $HOME/.claude/hooks/claude-rails/pre_commit_check.py",
-            "if": "Bash(git *)"
+            "command": "python3 $HOME/.claude/hooks/claude-rails/pre_commit_check.py"
           },
           {
             "type": "command",
