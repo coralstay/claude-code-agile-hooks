@@ -1,10 +1,10 @@
 ---
 id: TASK-32
 title: 계획 수립부터 승격까지 작업 파이프라인 전체를 훅으로 강제한다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-09-26 08:08'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 07:29'
 labels:
   - backlog
   - workflow
