@@ -1,10 +1,10 @@
 ---
 id: TASK-45
 title: 'pre_git_safety_check: gh 검사가 줄 전체 토큰을 훑어 생기는 오탐·미탐'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 13:13'
-updated_date: '2026-10-03 13:13'
+updated_date: '2026-10-03 17:21'
 labels:
   - hooks
   - bug
