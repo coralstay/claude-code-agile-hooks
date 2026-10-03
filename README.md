@@ -105,6 +105,7 @@ flowchart TB
 | SessionStart                        | [`standup_autopilot.py`](hooks/standup_autopilot.py)               | 범용       | 전날 미해결 항목 재주입           |
 | SessionStart                        | [`bounty_board.py`](hooks/bounty_board.py)                         | 범용       | TODO/FIXME 부채 현황 표시         |
 | SessionStart                        | [`context_flags.py`](hooks/context_flags.py)                       | 범용       | post_compact 플래그 기록          |
+| SessionStart                        | [`recap_archive.py`](hooks/recap_archive.py)                       | 범용       | recap(away_summary) 아카이브 적재 |
 | UserPromptSubmit                    | [`instructions_audit.py`](hooks/instructions_audit.py)             | 범용       | 적대적 지시 탐지 시 프롬프트 차단 |
 | UserPromptSubmit                    | [`session_logger.py`](hooks/session_logger.py)                     | 범용       | 프롬프트 로그                     |
 | UserPromptSubmit                    | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 되돌림 패턴 감지                  |
@@ -143,6 +144,7 @@ flowchart TB
 | SessionEnd                          | [`session_logger.py`](hooks/session_logger.py)                     | 범용       | 세션 종료 로그                    |
 | SessionEnd                          | [`dead_rules_audit.py`](hooks/dead_rules_audit.py)                 | 범용       | 규칙 준수 집계 마무리             |
 | SessionEnd                          | [`standup_autopilot.py`](hooks/standup_autopilot.py)               | 범용       | 스탠드업 파일 마무리              |
+| SessionEnd                          | [`recap_archive.py`](hooks/recap_archive.py)                       | 범용       | recap(away_summary) 아카이브 적재 |
 | ConfigChange                        | [`config_watch.py`](hooks/config_watch.py)                         | 범용       | 아웃오브밴드 설정 변경 감지       |
 | PreCompact                          | [`pre_compact_backup.py`](hooks/pre_compact_backup.py)             | 범용       | 압축 전 transcript 백업           |
 | PreCompact                          | [`context_flags.py`](hooks/context_flags.py)                       | 범용       | 압축 trigger 플래그 기록          |

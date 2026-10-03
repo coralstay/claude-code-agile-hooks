@@ -397,6 +397,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 | [`standup_autopilot.py`](../../../hooks/standup_autopilot.py) |     | 전날 `session_logger.py` 로그에서 미해결 항목을 다음 세션 시작 시 다시 주입                                                                                              |
 | [`bounty_board.py`](../../../hooks/bounty_board.py)      |     | 세션 시작 시 저장소의 TODO/FIXME/HACK 부채 현황을 보여줌(아래 PostToolUse 항목과 동일 스크립트)                                                                          |
 | [`context_flags.py`](../../../hooks/context_flags.py)     |     | 세션별 컨텍스트 플래그 파일(`~/.claude/hooks-logs/flags/<session_id>.json`, `CC_HOOK_FLAGS_DIR`로 변경 가능)에 `source`를 기록하고, `compact`면 `post_compact`=true·압축 횟수 증가(TASK-31, 스키마는 doc-3). fail-open |
+| [`recap_archive.py`](../../../hooks/recap_archive.py)     |     | 모든 트랜스크립트(`~/.claude/projects/*/*.jsonl`)에서 recap(`type: system, subtype: away_summary`)을 골라 `~/.claude/hooks-logs/recap-archive.jsonl`(`CC_RECAP_ARCHIVE_DIR`로 변경 가능)에 (sessionId, uuid) 기준 중복 없이 append — cleanupPeriodDays로 트랜스크립트가 지워져도 recap은 남는다. SessionStart·SessionEnd마다 전체 트랜스크립트를 증분 스윕(트랜스크립트별 바이트 오프셋을 상태 파일에 기록), fcntl 락, fail-open. 조회: `python3 recap_archive.py query --project <부분문자열> --since YYYY-MM-DD [--until YYYY-MM-DD] [--limit N] [--json]`(TASK-44) |
 
 ### UserPromptSubmit
 
@@ -499,6 +500,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 | [`session_logger.py`](../../../hooks/session_logger.py)    | 세션 종료를 로그에 기록              |
 | [`dead_rules_audit.py`](../../../hooks/dead_rules_audit.py)  | 세션 종료 시점 규칙 준수 집계 마무리 |
 | [`standup_autopilot.py`](../../../hooks/standup_autopilot.py) | 스탠드업 파일 마무리                 |
+| [`recap_archive.py`](../../../hooks/recap_archive.py)     | recap 아카이브 스윕(위 SessionStart 항목과 동일 스크립트) |
 
 ### ConfigChange (matcher: `user_settings\|project_settings\|local_settings\|policy_settings\|skills`)
 
