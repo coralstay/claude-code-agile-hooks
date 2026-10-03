@@ -4,7 +4,7 @@ title: 'pr_provenance_stamp.py: 복합 명령(&&, |)을 깨뜨리는 버그 수�
 status: Done
 assignee: []
 created_date: '2026-10-03 03:38'
-updated_date: '2026-10-03 07:10'
+updated_date: '2026-10-03 08:01'
 labels:
   - hooks
   - bug
@@ -27,7 +27,7 @@ pr_provenance_stamp.py는 'gh' 'pr create'가 포함된 Bash 명령 전체를 sh
 - [x] #2 문자열 인자 안에만 그 글자가 있는 무관한 명령은 건드리지 않는다
 - [x] #3 단일 PR 생성 명령에는 기존처럼 스탬프가 들어간다
 - [x] #4 재현 케이스를 테스트로 추가하고 전체 스위트가 통과한다
-- [ ] #5 설치된 사본을 갱신한다
+- [x] #5 설치된 사본을 갱신한다
 <!-- AC:END -->
 
 ## Final Summary

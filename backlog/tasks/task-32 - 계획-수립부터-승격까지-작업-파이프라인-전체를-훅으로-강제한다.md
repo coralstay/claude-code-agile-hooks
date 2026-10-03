@@ -4,7 +4,7 @@ title: 계획 수립부터 승격까지 작업 파이프라인 전체를 훅으�
 status: Done
 assignee: []
 created_date: '2026-09-26 08:08'
-updated_date: '2026-10-03 07:36'
+updated_date: '2026-10-03 08:01'
 labels:
   - backlog
   - workflow
@@ -184,7 +184,7 @@ DRAFT-9는 이 파이프라인의 4/6/7단계(드래프트 경유 + 생성/승�
 - [x] #5 DRAFT-9와의 범위 분담 확정 — 흡수할지, 4/6/7단계는 DRAFT-9에 남길지
 - [x] #6 결정(2026-10-03): 1~3단계는 차단하지 않고 관측·기록만 한다. 세션별로 plan mode 진입·ExitPlanMode 승인·드래프트 생성·승격·커밋 여부를 기록하고, 계획 기록 없이 프로젝트 파일을 고친 세션은 Stop에서 경고(비차단)한다
 - [x] #7 4/6/7단계는 DRAFT-9 범위로 남긴다(흡수하지 않는다)
-- [ ] #8 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
+- [x] #8 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
 <!-- AC:END -->
 
 ## Implementation Notes
