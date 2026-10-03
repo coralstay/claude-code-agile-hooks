@@ -156,44 +156,147 @@ def test_no_op_when_command_is_not_a_push(monkeypatch):
     assert run_main(monkeypatch, stdin_data) == 0
 
 
-def test_command_invokes_git_subcommand_handles_dash_c():
+def test_command_invokes_git_push_handles_dash_c():
     cmd = "git -C /some/path push -u origin task/TASK-3"
-    assert ppc.command_invokes_git_subcommand(cmd, "push") is True
+    assert ppc.command_invokes_git_push(cmd) is True
 
 
-def test_command_invokes_git_subcommand_false_for_other_subcommand():
+def test_command_invokes_git_push_false_for_other_subcommand():
     cmd = "git -C /some/path status"
-    assert ppc.command_invokes_git_subcommand(cmd, "push") is False
+    assert ppc.command_invokes_git_push(cmd) is False
 
 
-def test_command_invokes_git_subcommand_plain():
-    assert ppc.command_invokes_git_subcommand("git push", "push") is True
+def test_command_invokes_git_push_plain():
+    assert ppc.command_invokes_git_push("git push") is True
 
 
-def test_command_invokes_git_subcommand_in_compound_command():
-    assert ppc.command_invokes_git_subcommand("npm test && git push", "push") is True
+def test_command_invokes_git_push_in_compound_command():
+    assert ppc.command_invokes_git_push("npm test && git push") is True
 
 
-def test_command_invokes_git_subcommand_skips_bare_flag():
-    assert ppc.command_invokes_git_subcommand("git -q push", "push") is True
+def test_command_invokes_git_push_skips_bare_flag():
+    assert ppc.command_invokes_git_push("git -q push") is True
 
 
-def test_command_invokes_git_subcommand_falls_back_on_unparsable_command():
-    unbalanced = 'git commit -m "unterminated'
-    assert ppc.command_invokes_git_subcommand(unbalanced, "commit") is True
-    assert ppc.command_invokes_git_subcommand(unbalanced, "push") is False
+def test_command_invokes_git_push_detects_absolute_path_bypass():
+    assert ppc.command_invokes_git_push("/usr/bin/git push") is True
 
 
-def test_command_invokes_git_subcommand_detects_absolute_path_bypass():
-    assert ppc.command_invokes_git_subcommand("/usr/bin/git push", "push") is True
+def test_command_invokes_git_push_detects_relative_path_bypass():
+    assert ppc.command_invokes_git_push("./git push") is True
 
 
-def test_command_invokes_git_subcommand_detects_relative_path_bypass():
-    assert ppc.command_invokes_git_subcommand("./git push", "push") is True
+def test_command_invokes_git_push_ignores_git_outside_verb_position():
+    assert ppc.command_invokes_git_push("echo /usr/bin/git") is False
 
 
-def test_command_invokes_git_subcommand_ignores_git_outside_verb_position():
-    assert ppc.command_invokes_git_subcommand("echo /usr/bin/git", "push") is False
+# --- TASK-34: only a command-position `git push` counts ---------------------
+#
+# Before TASK-34 the whole command was shlex-split as one flat token list, so
+# `git` `push` appearing as two adjacent words *anywhere* (an echo argument,
+# a heredoc body) counted as a push, and an unbalanced quote anywhere (an
+# apostrophe in a heredoc body) fell back to "is 'push' a substring?".
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # heredoc body mentioning it (quoted and unquoted delimiter)
+        "cat > /tmp/notes.md <<'EOF'\nnext: git push origin task/TASK-3\nEOF",
+        "cat > /tmp/notes.md <<EOF\ngit push\nEOF\necho done",
+        # heredoc body with an apostrophe (unbalanced for shlex) + the word
+        "cat > /tmp/notes.md <<'EOF'\ndon't git push yet\nEOF",
+        # commit message built from a heredoc (the usual Claude Code pattern)
+        "git commit -m \"$(cat <<'EOF'\nTASK-3: git push 전에 Done 처리\n\nit's fine\nEOF\n)\"",
+        # commit message as a plain quoted argument
+        'git commit -m "git push 전에 확인"',
+        # backlog doc / notes text containing the words
+        'backlog doc create "릴리스 절차" -c "1. 테스트 2. git push 3. PR"',
+        "backlog task edit TASK-3 --notes 'Done 후에 git push 한다'",
+        # unquoted words as arguments of another command
+        "echo git push",
+        "printf '%s\\n' x && echo run git push later",
+        # status edit chained with text-only mentions
+        'backlog task edit TASK-3 -s Done && echo "이제 git push 가능"',
+    ],
+)
+def test_command_invokes_git_push_ignores_text_mentions(command):
+    assert ppc.command_invokes_git_push(command) is False
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git push",
+        "git push -u origin task/TASK-3",
+        "/usr/bin/git push",
+        "/opt/homebrew/bin/git -C /repo push origin HEAD",
+        "git -c push.default=current push",
+        "git --git-dir=/repo/.git --work-tree=/repo push",
+        "FOO=1 git push",
+        "env FOO=1 git push",
+        "sudo git push",
+        "command git push",
+        "time git push",
+        "cd /repo && git push",
+        "git status; git push",
+        "npm test || git push",
+        "(cd /repo && git push)",
+        "{ git push; }",
+        "echo $(git push)",
+        "git add . && git commit -m 'x' && git push",
+        "git status\ngit push",
+        "git \\\n  push origin task/TASK-3",
+        # a heredoc earlier in the line does not hide a later real push
+        "cat > /tmp/n <<'EOF'\nbody\nEOF\ngit push",
+        # chained after a status edit: still a push (judged before the edit
+        # runs - PreToolUse sees the pre-command state)
+        "backlog task edit TASK-3 -s Done && git push",
+    ],
+)
+def test_command_invokes_git_push_detects_real_pushes(command):
+    assert ppc.command_invokes_git_push(command) is True
+
+
+def test_command_invokes_git_push_falls_back_conservatively_when_unparsable():
+    # Unbalanced quote outside any heredoc: can't tell command position from
+    # text, so any 'push' in the (heredoc-stripped) line counts as a push.
+    assert ppc.command_invokes_git_push('git push origin "unterminated') is True
+    assert ppc.command_invokes_git_push('echo "about to push') is True
+    assert ppc.command_invokes_git_push('git commit -m "unterminated') is False
+
+
+def _in_progress(monkeypatch):
+    monkeypatch.setattr(ppc, "has_command", lambda name: True)
+    monkeypatch.setattr(ppc, "is_backlog_project", lambda cwd: True)
+    monkeypatch.setattr(ppc, "current_branch", lambda cwd: "task/TASK-3")
+    monkeypatch.setattr(
+        ppc,
+        "task_view",
+        lambda cwd, task_id: {"task": {"status": "In Progress", "finalSummary": ""}},
+    )
+
+
+def test_main_passes_heredoc_mentioning_push_while_in_progress(monkeypatch):
+    _in_progress(monkeypatch)
+    cmd = "backlog doc create x <<'EOF'\nDon't git push before Done\nEOF"
+    assert run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": cmd}}) == 0
+
+
+def test_main_passes_commit_message_mentioning_push_while_in_progress(monkeypatch):
+    _in_progress(monkeypatch)
+    cmd = "git commit -m \"$(cat <<'EOF'\nTASK-3: git push 준비\nEOF\n)\""
+    assert run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": cmd}}) == 0
+
+
+def test_main_still_denies_push_chained_after_status_edit(monkeypatch, capsys):
+    # Known limitation, kept on purpose: PreToolUse runs before the whole
+    # line, so the `-s Done` edit hasn't happened yet when this is judged.
+    _in_progress(monkeypatch)
+    cmd = "backlog task edit TASK-3 -s Done && git push"
+    code = run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": cmd}})
+    assert code == 2
+    assert "Done 상태가 아닙니다" in capsys.readouterr().err
 
 
 def test_current_branch_real_git(tmp_path):
