@@ -393,7 +393,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 
 | 훅                       | 🔒  | 설명                                                                                                                                          |
 | ------------------------ | --- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`require_active_task.py`](../../../hooks/require_active_task.py) | 🔒  | In Progress 태스크가 있고 이번 세션에 `backlog task view`로 그 내용을 읽은 적이 있어야만 편집 허용. bash 시절 `require-active-task.sh`의 후신 |
+| [`require_active_task.py`](../../../hooks/require_active_task.py) | 🔒  | In Progress 태스크가 있고 이번 세션에 `backlog task view`로 그 내용을 읽은 적이 있어야만 편집 허용. 대상 경로(realpath 기준)가 프로젝트 루트 밖이면(plan/memory/scratchpad 등) 검사하지 않는다. bash 시절 `require-active-task.sh`의 후신 |
 | [`dead_end_registry.py`](../../../hooks/dead_end_registry.py)   |     | 등록된 죽은 접근을 다시 건드리려 하면 경고(차단 아님 — PreToolUse는 차단 이벤트에서 `additionalContext`를 지원하지 않으므로 stderr로만 표시)  |
 
 #### matcher: `Bash`
