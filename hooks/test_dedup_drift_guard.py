@@ -75,6 +75,14 @@ BASELINE_BODIES = {
         def background_tasks_running(data):
             return bool(data.get("background_tasks"))
         """,
+    "strip_heredoc_bodies": """
+        def strip_heredoc_bodies(command):
+            return command
+        """,
+    "is_outside_project": """
+        def is_outside_project(path, cwd):
+            return False
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -211,7 +219,7 @@ def test_registry_covers_task29_draft_workflow_hooks():
     assert "require_draft_first.py" in ddg.REGISTRY["is_backlog_project"]
     assert "backlog_commit_scope.py" in ddg.REGISTRY["is_backlog_project"]
     for name in ("tokenize", "split_segments"):
-        assert ddg.REGISTRY[name] == [
+        assert ddg.REGISTRY[name][:2] == [
             "require_draft_first.py",
             "backlog_commit_scope.py",
         ]
@@ -316,4 +324,23 @@ def test_registry_covers_task31_context_flag_helper():
     assert ddg.REGISTRY["background_tasks_running"] == [
         "block_stop_if_dirty.py",
         "context_flags.py",
+    ]
+
+
+def test_registry_covers_task32_pipeline_trace_copies():
+    # TASK-32: pipeline_trace.py copies the command tokenizer helpers from
+    # the TASK-29 hooks and the realpath project check from TASK-27.
+    for name in ("tokenize", "split_segments"):
+        assert ddg.REGISTRY[name] == [
+            "require_draft_first.py",
+            "backlog_commit_scope.py",
+            "pipeline_trace.py",
+        ]
+    assert ddg.REGISTRY["strip_heredoc_bodies"] == [
+        "require_draft_first.py",
+        "pipeline_trace.py",
+    ]
+    assert ddg.REGISTRY["is_outside_project"] == [
+        "require_active_task.py",
+        "pipeline_trace.py",
     ]

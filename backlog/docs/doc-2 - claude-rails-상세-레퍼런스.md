@@ -8,7 +8,7 @@ updated_date: '2026-10-03 16:00'
 # claude-rails 상세 레퍼런스
 
 README.md는 의도만 짧게 담고, 이 문서가 전체 스펙이다 — 운영/개인 레포 구분, 전체
-Phase 명세, HIL 지점 표, 27개(→28개→30개→31개→32개) 훅 하나하나의 이벤트/matcher/설명, 설치/삭제
+Phase 명세, HIL 지점 표, 27개(→28개→30개→31개→32개→33개) 훅 하나하나의 이벤트/matcher/설명, 설치/삭제
 절차, 파일 구성까지 전부 여기 있다. README가 "왜"를 말한다면, 이 문서는 "무엇을,
 어떻게"를 말한다.
 
@@ -105,22 +105,24 @@ backlog.md 워크플로 전용이었지만(5개 훅), 지금은 그 위에 프�
 쓰든 안 쓰든 항상 적용되는 범용 안전/관측 훅 23개가 더해졌고, TASK-29에서 드래프트 경유를 강제하는
 backlog 전용 훅 2개가 늘어 총 30개가 됐다. TASK-30에서 하네스 예약 태그 출력을 막는 범용 훅
 `reserved_tag_guard.py`가 더해져 범용 24개, 총 31개가 됐다. TASK-31에서 세션별 컨텍스트
-플래그 파일을 기록하는 범용 훅 `context_flags.py`가 더해져 범용 25개, 총 32개다:
+플래그 파일을 기록하는 범용 훅 `context_flags.py`가 더해져 범용 25개, 총 32개가 됐다. TASK-32에서
+작업 파이프라인(plan mode → 승인 → 드래프트 → 커밋 → 승격) 진행을 세션별로 기록하는 범용 관측 훅
+`pipeline_trace.py`가 더해져 범용 26개, 총 33개다:
 
 - **backlog.md 워크플로 전용** (7개, `backlog/config.yml`이 있는 프로젝트에서만 동작) —
   `session_start.py`, `require_active_task.py`, `pre_commit_check.py`,
   `pre_push_check.py`, `block_stop_if_dirty.py`(원래 bash로 있던 것과 1:1 대응),
   `require_draft_first.py`, `backlog_commit_scope.py`(TASK-29에서 추가).
-- **범용 안전/관측 훅** (25개, backlog.md 여부와 무관하게 항상 동작) — 시크릿 보호,
+- **범용 안전/관측 훅** (26개, backlog.md 여부와 무관하게 항상 동작) — 시크릿 보호,
   위험 명령 차단, 설정 변조 감시, 훅 자신의 복붙 코드가 사본 간에 어긋나지 않는지
   감시하는 self-guard(`dedup_drift_guard.py`), 세션 로깅, PR 리뷰 보조 등. 대부분
   [karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks)와
   [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery)의
   MIT 라이선스 플러그인을 포팅한 것이다 (8장에 훅별로 출처 표시).
 
-즉 이 32개는 "백로그 프로젝트의 워크플로 위반"만 막는 도구가 아니라, **이 컴퓨터에서
+즉 이 33개는 "백로그 프로젝트의 워크플로 위반"만 막는 도구가 아니라, **이 컴퓨터에서
 Claude Code가 하는 모든 행동에 대한 보안 경계**다 — backlog.md를 쓰지 않는 프로젝트
-에서도 25개는 항상 켜져 있고, 그중 어느 하나도 Phase 2/4.3처럼 사람 판단이 필요한 것을
+에서도 26개는 항상 켜져 있고, 그중 어느 하나도 Phase 2/4.3처럼 사람 판단이 필요한 것을
 대신 판단해주지는 않는다. 기계적으로 검증 가능한 것과 아닌 것을 정확히 나눈 뒤, 전자는
 코드로, 후자는 사람에게 — 이 구분이 "Claude가 내가 의도한 대로 행동하게 만든다"는
 1장 첫머리의 의도를 실제로 지키는 방법이다.
@@ -129,14 +131,14 @@ Claude Code가 하는 모든 행동에 대한 보안 경계**다 — backlog.md�
 
 ## 2. 지금 이 컴퓨터에 뭐가 설치돼 있는가
 
-전역 설치되어 있어 **모든 세션에 자동으로 적용**된다. 다만 1장에서 설명했듯 32개 중
+전역 설치되어 있어 **모든 세션에 자동으로 적용**된다. 다만 1장에서 설명했듯 33개 중
 7개(backlog.md 워크플로 훅)만 `backlog/config.yml`이 있는 프로젝트로 한정되고, 나머지
-25개는 프로젝트 종류와 무관하게 항상 동작한다.
+26개는 프로젝트 종류와 무관하게 항상 동작한다.
 
 | 항목         | 경로                                                                                                                                |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 훅 스크립트  | `~/.claude/hooks/claude-rails/*.py` (32개, Python, 실행권한 불필요 — `python3 <path>`로 호출)                                       |
-| 훅 테스트    | `~/.claude/hooks/claude-rails/test_*.py` (훅과 같은 디렉토리에 32개, 1:1 대응 — `.coverage`/`.pytest_cache`도 이 디렉토리에서 생김) |
+| 훅 스크립트  | `~/.claude/hooks/claude-rails/*.py` (33개, Python, 실행권한 불필요 — `python3 <path>`로 호출)                                       |
+| 훅 테스트    | `~/.claude/hooks/claude-rails/test_*.py` (훅과 같은 디렉토리에 33개, 1:1 대응 — `.coverage`/`.pytest_cache`도 이 디렉토리에서 생김) |
 | 전역 설정    | `~/.claude/settings.json` (`hooks` 키만 병합됨, 기존 설정 보존)                                                                     |
 | 전역 지침    | `~/.claude/CLAUDE.md` (`<!-- CLAUDE-RAILS:BEGIN -->` 블록)                                                                          |
 | 설치 전 백업 | `~/.claude/settings.json.bak.<timestamp>`                                                                                           |
@@ -159,9 +161,9 @@ CLAUDE.md는 마커로 중복 방지).
    `PermissionRequest`, `InstructionsLoaded`) 각각에 등록된 스크립트가 `matcher`(도구
    이름)와 `if`(명령 패턴) 조건에 맞을 때 자동 실행된다. 하나의 이벤트/매처에 여러
    훅이 걸려 있으면 등록 순서대로 전부 실행된다.
-3. 32개 중 **backlog.md 워크플로 전용 7개**만 가장 먼저 "지금 이 디렉토리가 backlog.md
+3. 33개 중 **backlog.md 워크플로 전용 7개**만 가장 먼저 "지금 이 디렉토리가 backlog.md
    프로젝트인가(`backlog/config.yml` 존재 여부)"부터 확인하고, 아니면 즉시 통과한다.
-   나머지 **25개는 이 확인 없이 항상 동작**한다 — 시크릿 보호나 위험 명령 차단이 backlog
+   나머지 **26개는 이 확인 없이 항상 동작**한다 — 시크릿 보호나 위험 명령 차단이 backlog
    프로젝트가 아니라고 꺼지면 안 되기 때문이다.
 4. 차단이 필요한 훅은 **exit code 2**로 그 액션 자체를 막는다(편집 불가, 커밋 불가, 턴
    종료 불가, push 불가, 위험 명령 실행 불가 등). exit 2는 Claude Code 훅 사양상 대부분의
@@ -170,7 +172,7 @@ CLAUDE.md는 마커로 중복 방지).
    `systemMessage`) 다른 이벤트(`UserPromptSubmit`/`PreToolUse`)와 짝을 이뤄 우회 차단하는
    방식을 쓴다(`instructions_audit.py`가 대표 사례, 8장 참고).
 5. 차단이 아닌 훅도 많다 — 세션 로그 기록, TODO/FIXME 채점, 포매터 실행, 컨텍스트 비용
-   집계처럼 **강제 없이 관측/보조만 하는 훅**이 32개 중 절반 가까이 된다(4장 범례의 ⚙️).
+   집계처럼 **강제 없이 관측/보조만 하는 훅**이 33개 중 절반 가까이 된다(4장 범례의 ⚙️).
 6. 막히면 Claude는 그 이유(스크립트가 stderr/JSON으로 낸 메시지)를 그대로 보고, 조건을
    충족시킨 뒤 다시 시도한다.
 
@@ -193,8 +195,8 @@ CLAUDE.md는 마커로 중복 방지).
 ## 5. 사용 흐름 — 태스크 하나 따라가기 (backlog.md 워크플로)
 
 까먹고 다시 왔을 때 이 섹션만 봐도 바로 쓸 수 있게, 실제로 손으로 치는 순서를 그대로
-적는다. 이 흐름은 32개 훅 중 **backlog.md 워크플로 전용 7개**(2·3장 참고)가 관여하는
-부분이다 — 시크릿 보호, 위험 명령 차단 같은 나머지 25개는 이 흐름과 별개로 항상
+적는다. 이 흐름은 33개 훅 중 **backlog.md 워크플로 전용 7개**(2·3장 참고)가 관여하는
+부분이다 — 시크릿 보호, 위험 명령 차단 같은 나머지 26개는 이 흐름과 별개로 항상
 백그라운드에서 같이 동작한다.
 
 ```
@@ -231,7 +233,7 @@ CLAUDE.md는 마커로 중복 방지).
 🤖  커밋 안 하고 턴을 끝내려 하면 훅(block_stop_if_dirty.py)이 막아서 계속 진행됨
 
     (위 사이클을 AC 단위로 반복 — 이 사이에도 포매터/시크릿 보호/위험 명령 차단 등
-    범용 훅 25개는 매 Edit/Write/Bash마다 계속 같이 돈다)
+    범용 훅 26개는 매 Edit/Write/Bash마다 계속 같이 돈다)
 
 🧑? 작업 중 AC 밖의 일을 발견하면 Claude가 반드시 먼저 물어봄
     (스코프를 넓힐지, 별도 태스크로 뺄지 — 조용히 확장 안 함)
@@ -375,7 +377,7 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 
 ---
 
-## 8. 훅 상세 스펙 — 32개, 이벤트별 정리
+## 8. 훅 상세 스펙 — 33개, 이벤트별 정리
 
 각 훅은 완전 독립형(다른 훅 파일을 import하지 않음)이다. 설명은 각 스크립트 최상단의
 모듈 docstring을 그대로 옮긴 것 — 실제로 읽지 않은 동작은 적지 않는다. "출처" 열은
@@ -403,6 +405,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 | [`instructions_audit.py`](../../../hooks/instructions_audit.py) |     | CLAUDE.md/`.claude/rules/*.md`에서 숨겨진/적대적 지시(제로폭 유니코드, bidi override, 시크릿 유출 지시, curl\|sh 등)를 감지했을 때 세션을 잠그는 락 파일이 있으면 모든 프롬프트를 차단. `HOOK_AUDIT_LEVEL`(critical\|high\|strict, 기본 high), `HOOK_AUDIT_WARN_ONLY=true`로 조정 |
 | [`session_logger.py`](../../../hooks/session_logger.py)     |     | 프롬프트를 세션 로그에 기록(이벤트 타입만 다름, 로그 파일은 SessionStart와 동일)                                                                                                                                                                                                  |
 | [`dead_end_registry.py`](../../../hooks/dead_end_registry.py)  |     | "그거 안 됐어, 이유는 X" 같은 되돌림 패턴을 프롬프트에서 감지해 현재 세션에서 최근 편집한 파일에 등록                                                                                                                                                                             |
+| [`pipeline_trace.py`](../../../hooks/pipeline_trace.py)  |     | payload의 `permission_mode == "plan"`이면 이 세션의 plan mode 진입을 파이프라인 상태 파일(`~/.claude/hooks-logs/pipeline/<session_id>.json`, `CC_PIPELINE_DIR`로 변경 가능)에 기록(TASK-32, 설계는 doc-4). 관측 전용, fail-open |
 
 ### PreToolUse
 
@@ -420,7 +423,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 | [`pre_commit_check.py`](../../../hooks/pre_commit_check.py)         | `Bash(git *)`         | 🔒  | `task/<ID>` 브랜치에서만 커밋 허용 + `.claude-rails.json`의 `testCommand` 설정 시 테스트 통과 필수. bash 시절 `pre-commit-check.sh`의 후신                                                                                                                                                                                                                                                                                                          |
 | [`backlog_commit_scope.py`](../../../hooks/backlog_commit_scope.py)      | `Bash(git *)`         | 🔒  | `git commit` 시 스테이징(`git diff --cached --name-status -M`)을 보고, 새 드래프트(`backlog/drafts/` 추가)와 그 밖의 파일이 섞이면, 또는 승격(`backlog/drafts/` → `backlog/tasks/` rename)과 `backlog/tasks/` 밖의 파일이 섞이면 차단. 승격된 태스크 파일 자체의 수정은 허용. PreToolUse 시점 인덱스를 보므로 같은 명령 안의 단순 `git add <args>`와 `commit -a`는 임시 인덱스(GIT_INDEX_FILE)에서 재현해 판정한다. `git rm/mv`, pathspec 커밋, `bash -c` 우회, 터미널 직접 커밋은 범위 밖(모듈 docstring 참고) |
 | [`require_draft_first.py`](../../../hooks/require_draft_first.py)       | (없음)                | 🔒  | 명령 위치에서 실제로 실행되는 `backlog task create`(basename 정규화, `;`/`&&`/`\|`/줄바꿈 세그먼트, env·래퍼 건너뜀)를 차단하고 `backlog draft create` → 승인 후 `draft promote`를 안내. 다른 명령의 따옴표 인자나 heredoc 본문 안의 텍스트는 통과. `bash -c`/`eval`/MCP 경유는 범위 밖(decision-1) |
-| [`dedup_drift_guard.py`](../../../hooks/dedup_drift_guard.py)        | `Bash(git *)`         |     | 이 저장소 자체를 지키는 self-guard — REGISTRY가 손으로 복붙된 함수 7개(`is_backlog_project`, `command_invokes_git_subcommand`, `has_command`, `has_active_task`, `run_shell`, `tokenize`, `split_segments`)가 어느 훅 파일들에 등장해야 하는지를 추적해, 사본 간에 어긋나면(정규화된 AST 비교) 커밋 시점에 차단. `backlog/config.yml` 유무와 무관하게 `hooks/` 디렉토리 존재만으로 동작 판단(즉 REGISTRY가 가리키는 파일들이 실제로 있는 저장소, 곧 claude-rails 자신에서만 작동) |
+| [`dedup_drift_guard.py`](../../../hooks/dedup_drift_guard.py)        | `Bash(git *)`         |     | 이 저장소 자체를 지키는 self-guard — REGISTRY가 손으로 복붙된 함수 10개(`is_backlog_project`, `command_invokes_git_subcommand`, `has_command`, `has_active_task`, `run_shell`, `tokenize`, `split_segments`, `background_tasks_running`, `strip_heredoc_bodies`, `is_outside_project`)가 어느 훅 파일들에 등장해야 하는지를 추적해, 사본 간에 어긋나면(정규화된 AST 비교) 커밋 시점에 차단. `backlog/config.yml` 유무와 무관하게 `hooks/` 디렉토리 존재만으로 동작 판단(즉 REGISTRY가 가리키는 파일들이 실제로 있는 저장소, 곧 claude-rails 자신에서만 작동) |
 | [`pre_push_check.py`](../../../hooks/pre_push_check.py)           | `Bash(git *)`         | 🔒  | `task/<ID>` 브랜치 push는 태스크가 Done && final summary 있을 때만 허용. bash 시절 `pre-push-check.sh`의 후신                                                                                                                                                                                                                                                                                                                                       |
 | [`pre_push_coverage_check.py`](../../../hooks/pre_push_coverage_check.py)  | `Bash(git *)`         |     | `.claude-rails.json`의 `coverageCommand` 설정 시 push 전 실제로 실행해 리포트를 보여줌(성공/실패 무관하게 매번), 실패 시에만 차단. 결과는 `<cwd>/.claude-rails/coverage-log.jsonl`에도 기록                                                                                                                                                                                                                                                         |
 | [`block_dangerous_commands.py`](../../../hooks/block_dangerous_commands.py) | (없음)                |     | 재앙적/고위험 셸 명령 차단. `HOOK_SAFETY_LEVEL`(critical\|high\|strict)로 룰셋 선택                                                                                                                                                                                                                                                                                                                                                                 |
@@ -455,6 +458,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`session_logger.py`](../../../hooks/session_logger.py) | 도구 호출 결과를 세션 로그에 기록                                                                                                                                                                                                                 |
 | [`nerf_receipts.py`](../../../hooks/nerf_receipts.py)  | 실패율, 편집 처리량, 모델 버전별 토큰/작업량을 기록하고 모델이 바뀌었을 때 실질적 변화를 표시. transcript의 `message.model`/`message.usage.iterations[]`를 그대로 사용(자기 보고 아님). `~/.claude/hooks-logs/nerf-receipts.jsonl`에 JSONL로 적재 |
+| [`pipeline_trace.py`](../../../hooks/pipeline_trace.py) | 승인된 `ExitPlanMode`(PostToolUse는 승인된 경우에만 발생 — 실측), `EnterPlanMode`, 명령 위치에서 실제 실행된 `backlog draft create`/`promote`와 `git commit`, 프로젝트 안(realpath, `backlog/` 제외) 파일 수정을 세션별 상태 파일에 집계(위 UserPromptSubmit 항목과 동일 스크립트). 차단하지 않음 |
 
 #### matcher: `Edit|Write`
 
@@ -486,6 +490,7 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 | [`nerf_receipts.py`](../../../hooks/nerf_receipts.py)       |     | Stop 이벤트도 같은 로그에 기록                                                                                                                |
 | [`standup_autopilot.py`](../../../hooks/standup_autopilot.py)   |     | 이번 턴의 파일/명령 활동을 오늘자 스탠드업 파일(`~/.claude/hooks-logs/standup/<YYYY-MM-DD>.md`)에 추가                                        |
 | [`context_flags.py`](../../../hooks/context_flags.py)       |     | `background_tasks`로 `parallel_session`/`background_task_count`를 플래그 파일에 기록(위 SessionStart 항목과 동일 스크립트) |
+| [`pipeline_trace.py`](../../../hooks/pipeline_trace.py)       |     | 이 세션이 plan mode/`ExitPlanMode` 기록 없이 프로젝트 파일을 수정했고 cwd가 git 저장소면 `systemMessage`(+stderr)로 한 번만 경고. exit 0 — 차단하지 않음(TASK-32 결정) |
 
 ### SessionEnd
 
@@ -687,7 +692,7 @@ claude-rails/
 ├── settings.hooks.json       # ~/.claude/settings.json에 병합되는 hooks 블록
 ├── CLAUDE.md.snippet         # ~/.claude/CLAUDE.md에 추가되는 워크플로 안내
 ├── .claude-rails.json.example
-└── hooks/                     # 32개 훅 + 32개 test_*.py = 64개 파일, 전부 flat
+└── hooks/                     # 33개 훅 + 33개 test_*.py = 66개 파일, 전부 flat
     ├── session_start.py / test_session_start.py                    # 🔒 backlog 전용
     ├── require_active_task.py / test_require_active_task.py        # 🔒 backlog 전용
     ├── pre_commit_check.py / test_pre_commit_check.py               # 🔒 backlog 전용
@@ -695,7 +700,7 @@ claude-rails/
     ├── block_stop_if_dirty.py / test_block_stop_if_dirty.py         # 🔒 backlog 전용
     ├── require_draft_first.py / test_require_draft_first.py         # 🔒 backlog 전용
     ├── backlog_commit_scope.py / test_backlog_commit_scope.py       # 🔒 backlog 전용
-    └── (나머지 25개 훅 + 대응 test_*.py — 8장 이벤트별 표 참고)
+    └── (나머지 26개 훅 + 대응 test_*.py — 8장 이벤트별 표 참고)
 ```
 
 각 훅과 그 테스트는 같은 디렉토리에 나란히 산다(별도 `tests/` 서브폴더 없음) — 설치

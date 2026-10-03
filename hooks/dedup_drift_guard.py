@@ -63,10 +63,22 @@ REGISTRY = {
     "tokenize": [
         "require_draft_first.py",
         "backlog_commit_scope.py",
+        "pipeline_trace.py",
     ],
     "split_segments": [
         "require_draft_first.py",
         "backlog_commit_scope.py",
+        "pipeline_trace.py",
+    ],
+    # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
+    # 프로젝트 안/밖 판정(TASK-27 realpath 로직)을 그대로 복사해 쓴다
+    "strip_heredoc_bodies": [
+        "require_draft_first.py",
+        "pipeline_trace.py",
+    ],
+    "is_outside_project": [
+        "require_active_task.py",
+        "pipeline_trace.py",
     ],
     # TASK-31: Stop payload의 background_tasks로 parallel_session을 판정하는 헬퍼
     "background_tasks_running": [
