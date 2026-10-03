@@ -20,11 +20,13 @@ installed settings (pre_push_check.py registered with `if: Bash(git *)`):
 - `true && git push --dry-run nonexistent-remote-x some-branch` -> hook ran
 - `/usr/bin/git push --dry-run nonexistent-remote-x some-branch` -> hook did
   NOT run (the command executed)
+- `FOO=1 git push --dry-run nonexistent-remote-x some-branch`  -> hook ran
+- `echo x | git push --dry-run nonexistent-remote-x some-branch` -> hook ran
 
-So the rule is matched per subcommand of a compound line, by text prefix,
-without normalizing the executable path. if_filter_matches() simulates
-exactly that and nothing more: env assignments (`FOO=1 git push`) and
-wrappers (`sudo git push`) are treated as not matching, which was not
+So the rule is matched per subcommand of a compound line (pipes included),
+by text prefix after leading env assignments, without normalizing the
+executable path. if_filter_matches() simulates exactly that and nothing
+more: wrappers (`sudo git push`) are treated as not matching, which was not
 measured - the conservative reading for this contract. Re-measure and
 update the simulator if Claude Code changes."""
 
@@ -47,6 +49,7 @@ import require_draft_first
 SETTINGS = os.path.join(os.path.dirname(__file__), os.pardir, "settings.hooks.json")
 SEPARATOR_CHARS = set(";&|()\n")
 RULE_RE = re.compile(r"^Bash\((.+)\)$")
+ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 
 # --- simulator of Claude Code's `if` matching (measured 2026-10-04) ---
@@ -65,7 +68,13 @@ def subcommands(command):
             segments.append([])
         else:
             segments[-1].append(tok)
-    return [" ".join(s) for s in segments if s]
+    # measured: leading env assignments don't hide the command from the rule
+    stripped = []
+    for s in segments:
+        while s and ASSIGNMENT_RE.match(s[0]):
+            s = s[1:]
+        stripped.append(s)
+    return [" ".join(s) for s in stripped if s]
 
 
 def rule_matches(pattern, text):
@@ -179,7 +188,6 @@ CONTRACT = {
                 "test suite, so a path-qualified commit only skips the "
                 "early warning"
             ),
-            "FOO=1 git commit -m x": "same as above",
         },
     },
     "pr_provenance_stamp": {
@@ -248,6 +256,8 @@ def bash_hooks():
         ("git push --dry-run nonexistent-remote-x some-branch", True),
         ("true && git push --dry-run nonexistent-remote-x some-branch", True),
         ("/usr/bin/git push --dry-run nonexistent-remote-x some-branch", False),
+        ("FOO=1 git push --dry-run nonexistent-remote-x some-branch", True),
+        ("echo x | git push --dry-run nonexistent-remote-x some-branch", True),
         # the incident: no git subcommand at all
         ("cd x && gh pr merge 1", False),
         ("git", True),
