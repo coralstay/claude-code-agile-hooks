@@ -318,7 +318,10 @@ def simulated_entries(cwd, adds, commit_all):
     with tempfile.TemporaryDirectory() as tmp:
         temp_index = os.path.join(tmp, "index")
         if os.path.isfile(real_index):
-            shutil.copyfile(real_index, temp_index)
+            # copy2 keeps the mtime: git compares content only for entries
+            # not older than the index file ("racy"), and a fresh mtime on
+            # the copy would hide a same-size edit made in that second
+            shutil.copy2(real_index, temp_index)
         env = dict(os.environ, GIT_INDEX_FILE=temp_index)
         steps = [["git", "add", *args] for args in adds]
         if commit_all:
