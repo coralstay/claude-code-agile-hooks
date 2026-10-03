@@ -3,10 +3,10 @@ id: TASK-41
 title: >-
   훅 테스트 커버리지 100% (1/2) —
   config_guard·backlog_commit_scope·pipeline_trace·pr_provenance_stamp
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 17:21'
+updated_date: '2026-10-03 17:43'
 labels:
   - tests
   - coverage
