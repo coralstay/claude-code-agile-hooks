@@ -10,8 +10,10 @@ this same Stop isn't guaranteed to land first):
   changes may belong to a still-running background subagent editing the
   same tree; blocking only makes the main agent busy-wait. The Stop that
   follows once the background work finishes is still checked.
-- stop_hook_active: pass. Claude is already continuing because a Stop hook
-  blocked once; blocking again turns into a block/retry loop.
+- stop_hook_active is deliberately NOT a pass condition: committing is
+  always within Claude's power, so repeated blocking is the enforcement,
+  not a loop bug. The loop seen in practice came from background work
+  owning the dirty tree, which the rule above covers.
 
 Fully self-contained: no imports from any other file in this repo."""
 
@@ -71,8 +73,6 @@ def main():
 
     cwd = data.get("cwd", "")
 
-    if data.get("stop_hook_active") is True:
-        sys.exit(0)
     if background_tasks_running(data):
         sys.exit(0)
 

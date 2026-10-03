@@ -173,11 +173,11 @@ def test_still_denies_when_background_tasks_null(monkeypatch):
     assert run_main(monkeypatch, {"cwd": "/x", "background_tasks": None}) == 2
 
 
-def test_passes_when_stop_hook_active(monkeypatch):
-    """한 번 차단해서 Claude가 계속 진행 중인 상태(stop_hook_active=true)
-    에서는 또 막지 않는다 — 차단-재시도 무한 루프 방지."""
+def test_still_denies_when_stop_hook_active(monkeypatch):
+    """stop_hook_active여도 계속 막는다 — 커밋은 언제나 Claude가 할 수 있는
+    일이라 반복 차단이 곧 강제력이다(경고 1회로 약화하지 않는다)."""
     _dirty_project(monkeypatch)
-    assert run_main(monkeypatch, {"cwd": "/x", "stop_hook_active": True}) == 0
+    assert run_main(monkeypatch, {"cwd": "/x", "stop_hook_active": True}) == 2
 
 
 @pytest.mark.parametrize(
