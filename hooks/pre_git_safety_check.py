@@ -43,9 +43,48 @@ is then blocked when it plausibly holds a guarded git operation - the words
 is recoverable (fix the quoting and retry); a missed block on a protected
 branch is not.
 
+TASK-38: which branch a push writes to is resolved, and a push to
+main/master is allowed only as a *first push*.
+- Targets: `<src>:<dst>` -> dst, `<src>` -> src (plus any remote.<r>.push
+  mapping); `refs/heads/` is stripped, HEAD/@ resolve to the current
+  branch, `*` and `:` (matching), --all/--branches/--mirror mean "every
+  branch". Without a refspec (`git push`, `git push origin`, `git push -u
+  origin`) the target follows git: remote.<r>.mirror, remote.<r>.push,
+  then push.default (simple/current -> current branch, upstream ->
+  current branch *and* branch.<b>.merge, matching -> every branch,
+  nothing -> none). The remote is the explicit one, else
+  branch.<b>.pushRemote, remote.pushDefault, branch.<b>.remote, "origin".
+  This closes the old gap where presetting an upstream on main and running
+  a bare `git push` skipped the check. Long options are matched by prefix
+  (`--forc`), as git does.
+- First-push exception: `git ls-remote --exit-code --heads <url>
+  refs/heads/<b>` exiting 2 (ref absent) on every pushurl (or every url
+  when there are several) allows it. Exit 0 blocks as before; anything
+  else - unknown remote, network error, 10s timeout, missing git,
+  url.*.pushInsteadOf in the config - blocks (fail-closed).
+- Force (`-f`, `--force*`, `+refspec`, `--mirror`, a forced
+  remote.<r>.push) and delete (`-d`, `--delete`, `:main`) to main/master
+  are blocked even on a first push - deliberately conservative: there is
+  nothing to overwrite yet, but no reason to force either.
+- Where git runs: the hook input's `cwd`, followed through `cd`/`pushd`
+  at command position (carried over `;`/`&&`/newline, not `|`/`||`/`&`,
+  undone by `)`; a missing directory leaves the cwd), then `git -C`.
+  `--git-dir`/`--work-tree` are passed on. Unknowable inputs - `cd -`,
+  `cd $VAR`, `popd`, CDPATH, `git -c`/`--config-env`/`--exec-path`,
+  `GIT_*=` assignments - block any push that needs a git query: the hook
+  won't run user-supplied config before the human approves the command.
+- If the current branch can't be read (not a repository, unborn HEAD) a
+  push that needs it is blocked; a detached HEAD without a refspec is
+  allowed (git refuses to push it).
+- Only push commands run git; everything else - and a push whose every
+  refspec has an explicit non-protected `:<dst>` - makes no subprocess
+  call. `git push origin task/x` costs one local `git config` call.
+
 Known gaps (decision-1): `bash -c "git push origin main"`, `eval`, aliases,
-scripts, and backtick/`$(...)` substitution are not seen. The `gh` checks
-are unchanged by TASK-37.
+scripts, and backtick/`$(...)` substitution are not seen. Neither are
+refspecs supplied at run time (`... | xargs git push origin`,
+`find -exec git push origin {} ;`) or `export GIT_DIR=...` in an earlier
+command. The `gh` checks are unchanged by TASK-37/38.
 
 Fully self-contained: no imports from any other file in this repo."""
 
