@@ -71,6 +71,10 @@ BASELINE_BODIES = {
         def split_segments(tokens):
             return [tokens]
         """,
+    "background_tasks_running": """
+        def background_tasks_running(data):
+            return bool(data.get("background_tasks"))
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -304,3 +308,12 @@ def test_find_drift_empty_when_real_repo_hooks_in_sync():
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
     assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task31_context_flag_helper():
+    # TASK-31: context_flags.py and block_stop_if_dirty.py both derive
+    # parallel_session from the Stop payload with the same helper.
+    assert ddg.REGISTRY["background_tasks_running"] == [
+        "block_stop_if_dirty.py",
+        "context_flags.py",
+    ]
