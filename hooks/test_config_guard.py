@@ -434,3 +434,85 @@ def test_remaining_read_or_unrelated_forms_pass(command):
 def test_mentions_protected_false_for_empty_text():
     assert cg.mentions_protected("") is False
     assert cg.mentions_protected(None) is False
+
+
+# --- TASK-47: 러너/래퍼의 인자 받는 플래그와 모르는 플래그 ---
+
+H = "/Users/x/.claude/hooks/claude-rails/"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # AC1: uv run / uvx의 인자 받는 플래그 뒤의 실제 명령
+        f"uv run --with x rm {S}",
+        f"uv run --with-editable . rm {S}",
+        f"uv run --python 3.12 rm {S}",
+        f"uv run -p 3.12 python3 -c \"open('{S}','w')\"",
+        f"uv run -p3.12 rm {S}",  # 짧은 플래그 값 붙여쓰기
+        f"uv run --with=x rm {S}",  # --flag=value 형태
+        f"uv run --project . --directory . --env-file .env rm {S}",
+        f"uv run -- rm {S}",  # -- 뒤는 명령
+        f"uvx --from x cp evil.py {H}",
+        f"uvx --with x --python 3.12 rm {S}",
+        f"uv tool run --from x rm {S}",
+        f"uv -q run --with x rm {S}",  # 전역 플래그 뒤 run
+        f"uv --directory . run rm {S}",
+        f"poetry -C . run rm {S}",
+        f"pipx run --spec x rm {S}",
+        f"pdm run -p . rm {S}",
+        # 다른 러너의 인자 받는 플래그
+        f"stdbuf -o L rm {S}",
+        f"caffeinate -t 5 rm {S}",
+        f"ionice -c 2 -n 7 rm {S}",
+        f"doas -u root rm {S}",
+        f"timeout --kill-after 5 10 rm {S}",
+        f"timeout --foreground 5 rm {S}",
+        f"xargs -0 -n 1 rm {S}",
+        # 래퍼의 인자 받는 플래그
+        f"sudo -u root rm {S}",
+        f"sudo -u root -E rm {S}",
+        f"env -i sudo -u root rm {S}",
+        f"env -u FOO rm {S}",
+        f"exec -a name rm {S}",
+        f"npx -p pkg rm {S}",
+        # AC2: 모르는 플래그 -> 보호 경로 언급 + 쓰기 명령이면 보수적으로 차단
+        f"uv run --unknown-flag x rm {S}",
+        f"uvx --mystery v cp evil.py {H}",
+        f"uv run --weird v python3 -c \"open('{S}','w')\"",
+        f"uv --weird v run rm {S}",
+        f"timeout --mystery v 5 rm {S}",
+        f"nice --weird v rm {S}",
+        f"xargs --weird v rm {S}",
+        f"sudo --weird v rm {S}",
+        f"env -S 'rm {S}'",  # env -S: 값이 명령줄
+        f"npx -c 'rm {S}'",
+        f"sudo -X v bash <<'EOF'\nrm {S}\nEOF",
+    ],
+)
+def test_runner_flag_arguments_do_not_hide_write(command):
+    assert cg.bash_targets_protected_config(command) is True
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"uv run --with x cat {S}",
+        "uv run --with pytest pytest -q",
+        "uvx --with pytest-cov pytest -q --cov",
+        f"uv run -p 3.12 python3 -c \"print(open('{S}').read())\"",
+        f"uvx --from jq-py jq . {S}",
+        "uv pip install -r requirements.txt",
+        "uv --weird pip list",  # run 아닌 하위 명령 + 보호 경로 없음
+        f"uv --weird v run cat {S}",  # 모르는 플래그여도 쓰기 명령이 없으면 통과
+        f"uv run --unknown-flag x cat {S}",
+        "uv run --unknown-flag x rm build/tmp",  # 쓰기 명령이어도 보호 경로 없음
+        f"sudo -u root cat {S}",
+        f"sudo --weird v cat {S}",
+        f"timeout --mystery v 5 grep x {S}",
+        "sudo -u",  # 플래그 값 없이 끝나는 줄
+        "uv run",
+    ],
+)
+def test_runner_flag_arguments_read_or_unrelated_pass(command):
+    assert cg.bash_targets_protected_config(command) is False
