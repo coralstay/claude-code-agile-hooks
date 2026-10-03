@@ -2,6 +2,7 @@ import io
 import json
 import os
 import subprocess
+import time
 
 import pytest
 
@@ -238,6 +239,32 @@ def test_same_command_git_add_all_is_simulated(monkeypatch, repo_with_draft):
     promote(repo_with_draft)
     write(repo_with_draft, "src/app.py", "print(3)\n")
     assert run_main(monkeypatch, repo_with_draft, "git add -A && git commit -m p") == 2
+
+
+def test_simulation_sees_same_size_edit_in_the_index_write_second(
+    monkeypatch, repo_with_draft
+):
+    """TASK-43 (flaky under concurrent runs): an edit of the same size made
+    in the same second the index was written has a stat that still matches
+    the cached one; git catches it only because the entry is 'racy' (its
+    mtime isn't older than the index file's) and compares content. The
+    simulation's temp index must keep the real index's mtime, or the copy
+    looks newer, the entry looks clean and `git add -A` misses the edit.
+    Pinned with fixed mtimes; ctime is ignored as git does with
+    core.trustctime=false (otherwise the rewrite's new ctime gives it away
+    and the race needs real timing to show)."""
+    repo = repo_with_draft
+    git(repo, "config", "core.trustctime", "false")
+    then = int(time.time()) - 100
+    app = repo / "src/app.py"
+    os.utime(app, (then, then))
+    git(repo, "update-index", "--refresh")  # cached stat of app.py = then
+    os.utime(repo / ".git/index", (then, then))  # index written that second
+    promote(repo)
+    app.write_text("print(3)\n")  # same size as print(1)
+    os.utime(app, (then, then))
+    os.utime(repo / ".git/index", (then, then))
+    assert run_main(monkeypatch, repo, "git add -A && git commit -m p") == 2
 
 
 def test_same_command_git_add_of_promotion_only_passes(monkeypatch, repo_with_draft):
