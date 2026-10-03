@@ -4,7 +4,7 @@ title: 'config_guard.py: 설정 파일을 읽기만 하는 명령까지 막는 �
 status: In Progress
 assignee: []
 created_date: '2026-10-03 08:01'
-updated_date: '2026-10-03 08:12'
+updated_date: '2026-10-03 12:16'
 labels:
   - hooks
   - bug
@@ -23,8 +23,8 @@ priority: high
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 오탐을 낸 패턴을 재현 테스트로 특정한다
-- [ ] #2 쓰기 신호가 없는 읽기 전용 명령(cmp, cat, jq, python의 json.load만 하는 heredoc 등)은 통과한다
-- [ ] #3 TASK-3의 인터프리터/curl 경유 쓰기 차단 테스트가 모두 그대로 통과한다
+- [x] #1 오탐을 낸 패턴을 재현 테스트로 특정한다
+- [x] #2 쓰기 신호가 없는 읽기 전용 명령(cmp, cat, jq, python의 json.load만 하는 heredoc 등)은 통과한다
+- [x] #3 TASK-3의 인터프리터/curl 경유 쓰기 차단 테스트가 모두 그대로 통과한다
 - [ ] #4 전체 스위트가 통과하고 설치본을 갱신한다
 <!-- AC:END -->
