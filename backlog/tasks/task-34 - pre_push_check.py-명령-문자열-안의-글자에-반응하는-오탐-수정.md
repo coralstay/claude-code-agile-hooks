@@ -1,10 +1,10 @@
 ---
 id: TASK-34
 title: 'pre_push_check.py: 명령 문자열 안의 글자에 반응하는 오탐 수정'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 07:58'
-updated_date: '2026-10-03 08:02'
+updated_date: '2026-10-03 08:06'
 labels:
   - hooks
   - bug
