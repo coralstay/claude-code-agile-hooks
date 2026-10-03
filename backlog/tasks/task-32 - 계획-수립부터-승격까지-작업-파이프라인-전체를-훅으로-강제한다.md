@@ -1,7 +1,7 @@
 ---
 id: TASK-32
 title: 계획 수립부터 승격까지 작업 파이프라인 전체를 훅으로 강제한다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-09-26 08:08'
 updated_date: '2026-10-03 07:36'
@@ -177,7 +177,7 @@ DRAFT-9는 이 파이프라인의 4/6/7단계(드래프트 경유 + 생성/승�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [x] #1 ExitPlanMode에 PreToolUse/PostToolUse 매처가 실제로 걸리는지 대화형 세션에서 실측하고 결과를 기록
+- [ ] #1 ExitPlanMode에 PreToolUse/PostToolUse 매처가 실제로 걸리는지 대화형 세션에서 실측하고 결과를 기록
 - [x] #2 1~3단계(plan mode → 사람 검토 → 오토모드)를 차단으로 강제할지 관측·기록만 할지 결정 — 예외 기준 포함
 - [x] #3 2단계 사람 승인의 근거를 승인된 ExitPlanMode로 인정할지 별도 검증 가능 신호를 요구할지 결정(DRAFT-8 종속)
 - [x] #4 5단계 산출물 기반 검사(의존성 미설정 시 승격 거부, 작업순서 문서 존재·역참조, 순환 없음)를 검사 지점과 함께 설계
@@ -198,3 +198,11 @@ DRAFT-9는 이 파이프라인의 4/6/7단계(드래프트 경유 + 생성/승�
 - 5단계(AC#4)는 doc-4 §4에 설계만 — 검사 지점은 승격 커밋 시점, 구현은 후속.
 - 설치(~/.claude 사본·settings.json 반영)는 하지 않았다 — AC#8 미체크.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+pipeline_trace.py 추가(UserPromptSubmit·PostToolUse·Stop). 세션별 상태 파일(~/.claude/hooks-logs/pipeline/<session_id>.json, CC_PIPELINE_DIR)에 plan mode 진입, ExitPlanMode 승인(횟수·시각·제목), 실제 명령 위치의 backlog draft create/promote, git commit, 프로젝트 파일 수정(cwd 안, backlog/ 제외)을 fcntl 잠금+원자적 쓰기로 기록하고 fail-open. 계획 기록 없이 프로젝트 파일을 고친 git 저장소 세션은 Stop에서 systemMessage로 1회 경고(비차단, exit 0). 1~3단계는 관측만, 4/6/7단계는 TASK-29 훅에 남김. doc-4에 단계별 강제 가능성, 실측, 결정, 5단계 산출물 검사 설계(미구현, 경고부터) 기록. uvx pytest 665 passed.
+
+AC #1은 절반만 충족해 체크하지 않았다: PostToolUse가 ExitPlanMode에 걸리고 승인 시에만 발생한다는 것은 로그·트랜스크립트 교차 확인(승인 28건 = 로그 28건, 거부 67건은 이벤트 없음)으로 실측했지만, PreToolUse 매처는 미측정. AC #8 설치는 일괄 설치 때 체크.
+<!-- SECTION:FINAL_SUMMARY:END -->
