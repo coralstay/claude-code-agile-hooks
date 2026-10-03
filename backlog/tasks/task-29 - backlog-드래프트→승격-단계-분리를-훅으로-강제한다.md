@@ -4,7 +4,7 @@ title: backlog 드래프트→승격 단계 분리를 훅으로 강제한다
 status: Done
 assignee: []
 created_date: '2026-09-26 03:34'
-updated_date: '2026-10-03 07:18'
+updated_date: '2026-10-03 08:01'
 labels:
   - backlog
   - workflow
@@ -73,7 +73,7 @@ backlog에 새 작업을 올릴 때는 이 순서를 지키고 **각 단계를 �
 - [x] #2 git commit 시 스테이징에 새 드래프트(backlog/drafts/ 신규 추가)와 그 밖의 파일이 섞여 있으면 차단한다 (B)
 - [x] #3 git commit 시 스테이징에 승격(backlog/drafts/ → backlog/tasks/ rename)과 그 밖의 파일이 섞여 있으면 차단한다 (B) — 승격된 태스크 파일 자체의 수정(--add-ref 등)은 허용
 - [x] #4 backlog를 쓰지 않는 저장소에서는 조용히 통과한다
-- [ ] #5 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
+- [x] #5 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
 <!-- AC:END -->
 
 ## Final Summary
