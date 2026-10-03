@@ -1,10 +1,10 @@
 ---
 id: TASK-36
 title: 'install.sh: settings 병합이 다른 도구의 훅을 지우는 문제'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 07:58'
-updated_date: '2026-10-03 08:02'
+updated_date: '2026-10-03 12:22'
 labels:
   - hooks
   - install
