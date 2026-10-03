@@ -3,6 +3,16 @@
 Phase 3-4b: don't let Claude end its turn with uncommitted changes while a
 task is In Progress - forces the small-commit loop to actually finish.
 
+TASK-31 context flags (read straight from the Stop payload, not from the
+flag file - Stop hooks run in parallel, so context_flags.py's write for
+this same Stop isn't guaranteed to land first):
+- background_tasks non-empty (parallel_session): pass. The uncommitted
+  changes may belong to a still-running background subagent editing the
+  same tree; blocking only makes the main agent busy-wait. The Stop that
+  follows once the background work finishes is still checked.
+- stop_hook_active: pass. Claude is already continuing because a Stop hook
+  blocked once; blocking again turns into a block/retry loop.
+
 Fully self-contained: no imports from any other file in this repo."""
 
 import json
@@ -41,6 +51,13 @@ def is_dirty(cwd):
     return bool((result.stdout or "").strip())
 
 
+def background_tasks_running(data):
+    """True if the Stop payload says background work is still running.
+    The field's shape isn't documented, so any non-empty list/dict counts."""
+    tasks = data.get("background_tasks")
+    return isinstance(tasks, (list, dict)) and len(tasks) > 0
+
+
 def deny(message):
     print(message, file=sys.stderr)
     sys.exit(2)
@@ -53,6 +70,11 @@ def main():
         data = {}
 
     cwd = data.get("cwd", "")
+
+    if data.get("stop_hook_active") is True:
+        sys.exit(0)
+    if background_tasks_running(data):
+        sys.exit(0)
 
     if not has_command("backlog"):
         sys.exit(0)
