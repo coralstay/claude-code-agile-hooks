@@ -36,6 +36,17 @@ def has_active_task(cwd):
     return "No tasks found." not in (result.stdout or "")
 
 
+def is_outside_project(path, cwd):
+    """True if `path` (relative paths resolve against `cwd`) lands outside the
+    project root after realpath on both sides, so `..` and symlinks pointing
+    back into the project still count as inside. Empty path -> False."""
+    if not path or not cwd:
+        return False
+    root = os.path.realpath(cwd)
+    target = os.path.realpath(os.path.join(cwd, path))
+    return os.path.commonpath([root, target]) != root
+
+
 def deny(message):
     print(message, file=sys.stderr)
     sys.exit(2)
@@ -54,6 +65,13 @@ def main():
         sys.exit(0)
     if not is_backlog_project(cwd):
         sys.exit(0)
+
+    # TASK-27: 프로젝트 밖 파일(plan, memory, scratchpad 등)은 게이트하지 않는다.
+    tool_input = data.get("tool_input") or {}
+    if isinstance(tool_input, dict):
+        path = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
+        if isinstance(path, str) and is_outside_project(path, cwd):
+            sys.exit(0)
 
     if not has_active_task(cwd):
         deny(
