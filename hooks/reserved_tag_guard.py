@@ -155,7 +155,8 @@ def main():
     if not tags:
         sys.exit(0)
 
-    listed = ", ".join(f"<{t}>" for t in tags)
+    # Backticked so the feedback itself never shows a bare reserved tag.
+    listed = ", ".join(f"`<{t}>`" for t in tags)
     deny(
         f"[claude-rails] 직전 응답에 하네스 예약 태그가 들어 있습니다: {listed}\n"
         "이 태그들은 하네스가 사용자가 직접 실행한 명령·출력이나 시스템 주입 메시지를 "

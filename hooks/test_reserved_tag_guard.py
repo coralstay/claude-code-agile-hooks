@@ -157,7 +157,9 @@ def test_main_blocks_on_detection(monkeypatch, capsys):
     )
     assert code == 2
     err = capsys.readouterr().err
-    assert "bash-input" in err
+    assert "`<bash-input>`" in err
+    # the feedback itself must not contain a bare reserved tag
+    assert rtg.find_reserved_tags(err) == []
     assert "예약" in err
     assert "실행하지 않았" in err
     assert "코드블록" in err
