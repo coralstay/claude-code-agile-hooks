@@ -23,6 +23,7 @@ the same directory, re-validates it as JSON, then atomically replaces the origin
 prints what was added/updated. Invalid existing JSON aborts without touching anything.
 """
 
+import contextlib
 import copy
 import json
 import os
@@ -127,7 +128,7 @@ def main(argv):
             shutil.copymode(settings_path, tmp)
         os.replace(tmp, settings_path)
     except BaseException:
-        if os.path.exists(tmp):
+        with contextlib.suppress(FileNotFoundError):
             os.unlink(tmp)
         raise
 
