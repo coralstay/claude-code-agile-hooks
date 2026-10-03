@@ -847,3 +847,10 @@ def test_blocks_unparsable_line_that_may_be_gh_destructive(
 )
 def test_allows_unparsable_line_without_gh_destructive(monkeypatch, command):
     assert run_main(monkeypatch, command) == 0
+
+
+def test_git_with_only_global_flags_runs_no_subcommand(monkeypatch):
+    # `git -C dir --no-pager` names no subcommand: nothing to guard, and the
+    # flag walk must stop at the end of the segment instead of matching later text.
+    assert gsc.subcommand_args(["git", "-C", "/r", "--no-pager"], 0, "push") is None
+    assert run_main(monkeypatch, "git -C /r --no-pager") == 0

@@ -322,3 +322,8 @@ def test_non_push_line_exits_before_config_or_subprocess(
     )
     assert code == 0
     assert capsys.readouterr().out == ""
+
+
+def test_segment_of_only_assignments_is_not_a_push():
+    assert ppc.command_runs_git("FOO=1 BAR=2", "push") is False
+    assert ppc.command_runs_git("FOO=1 BAR=2; git push", "push") is True

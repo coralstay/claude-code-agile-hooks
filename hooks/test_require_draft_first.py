@@ -130,3 +130,14 @@ def test_passes_on_invalid_json(monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         rdf.main()
     assert exc_info.value.code == 0
+
+
+def test_wrapper_flags_before_backlog_are_skipped(monkeypatch, backlog_repo, capsys):
+    assert rdf.command_invokes_backlog_task_create("sudo -E -n backlog task create x")
+    assert run_main(monkeypatch, backlog_repo, "sudo -E backlog task create x") == 2
+    assert capsys.readouterr().err
+
+
+def test_segment_of_only_assignments_is_not_task_create():
+    assert rdf.command_invokes_backlog_task_create("FOO=1 BAR=2") is False
+    assert rdf.command_invokes_backlog_task_create("FOO=1; backlog task create x") is True
