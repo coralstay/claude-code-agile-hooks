@@ -204,6 +204,10 @@
           },
           {
             "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/reserved_tag_guard.py"
+          },
+          {
+            "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/nerf_receipts.py"
           },
           {
