@@ -1,10 +1,10 @@
 ---
 id: TASK-39
 title: 'pre_commit_check·pre_push_coverage_check·backlog_commit_scope: 명령 문자열 매칭 오탐 정리'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 08:12'
-updated_date: '2026-10-03 12:39'
+updated_date: '2026-10-03 13:13'
 labels:
   - hooks
   - bug
