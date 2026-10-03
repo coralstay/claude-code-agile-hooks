@@ -1,10 +1,10 @@
 ---
 id: TASK-26
 title: TASK-24 잔여물 test_pre_merge_check.py 삭제 — 테스트 스위트 수집 실패 복구
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-03 03:38'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 03:44'
 labels:
   - hooks
   - tests
@@ -22,7 +22,13 @@ TASK-24에서 hooks/pre_merge_check.py는 지웠지만 hooks/test_pre_merge_chec
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 hooks/test_pre_merge_check.py를 삭제한다
-- [ ] #2 hooks 디렉토리에서 pytest 전체가 수집 에러 없이 통과한다
-- [ ] #3 설치된 사본 ~/.claude/hooks/claude-rails/test_pre_merge_check.py도 있으면 제거한다
+- [x] #1 hooks/test_pre_merge_check.py를 삭제한다
+- [x] #2 hooks 디렉토리에서 pytest 전체가 수집 에러 없이 통과한다
+- [x] #3 설치된 사본 ~/.claude/hooks/claude-rails/test_pre_merge_check.py도 있으면 제거한다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+TASK-24에서 남은 hooks/test_pre_merge_check.py를 삭제했다(사용자가 git rm으로 직접 실행 — protect_tests.py가 에이전트의 테스트 파일 삭제를 막음). 설치된 사본도 제거됐다. hooks에서 uvx pytest -q 결과 421 passed, 수집 에러 없음.
+<!-- SECTION:FINAL_SUMMARY:END -->
