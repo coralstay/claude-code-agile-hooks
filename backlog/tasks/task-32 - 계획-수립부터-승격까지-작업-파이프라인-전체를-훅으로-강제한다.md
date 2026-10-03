@@ -4,7 +4,7 @@ title: 계획 수립부터 승격까지 작업 파이프라인 전체를 훅으�
 status: In Progress
 assignee: []
 created_date: '2026-09-26 08:08'
-updated_date: '2026-10-03 07:29'
+updated_date: '2026-10-03 07:36'
 labels:
   - backlog
   - workflow
@@ -18,15 +18,7 @@ references:
   - decision-1
   - decision-3
 documentation:
-  - backlog/drafts/draft-9 - backlog-드래프트→승격-단계-분리를-훅으로-강제한다.md
-  - backlog/drafts/draft-2 - 커맨드-문자열-매칭의-구조적-한계를-보완할-syscall-레벨-샌드박스-레이어-검토.md
-  - backlog/drafts/draft-5 - 훅-시스템의-구조적-문제-5가지-—-1차-완화책은-컨텍스트-플래그-우선순위-높음.md
-  - >-
-    backlog/drafts/draft-8 -
-    어시스턴트가-하네스-예약-태그bash-input를-출력해-사용자-직접-실행을-사칭할-수-있는-문제-—-신뢰-경계-위조.md
-  - >-
-    backlog/decisions/decision-1 -
-    커맨드-문자열-매칭-훅은-basename-정규화까지만-—-syscall-레벨-강제는-범위-밖.md
+  - backlog/docs/doc-4 - 작업-파이프라인-관측-설계.md
 priority: high
 type: feature
 ---
@@ -185,12 +177,24 @@ DRAFT-9는 이 파이프라인의 4/6/7단계(드래프트 경유 + 생성/승�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 ExitPlanMode에 PreToolUse/PostToolUse 매처가 실제로 걸리는지 대화형 세션에서 실측하고 결과를 기록
-- [ ] #2 1~3단계(plan mode → 사람 검토 → 오토모드)를 차단으로 강제할지 관측·기록만 할지 결정 — 예외 기준 포함
-- [ ] #3 2단계 사람 승인의 근거를 승인된 ExitPlanMode로 인정할지 별도 검증 가능 신호를 요구할지 결정(DRAFT-8 종속)
-- [ ] #4 5단계 산출물 기반 검사(의존성 미설정 시 승격 거부, 작업순서 문서 존재·역참조, 순환 없음)를 검사 지점과 함께 설계
-- [ ] #5 DRAFT-9와의 범위 분담 확정 — 흡수할지, 4/6/7단계는 DRAFT-9에 남길지
-- [ ] #6 결정(2026-10-03): 1~3단계는 차단하지 않고 관측·기록만 한다. 세션별로 plan mode 진입·ExitPlanMode 승인·드래프트 생성·승격·커밋 여부를 기록하고, 계획 기록 없이 프로젝트 파일을 고친 세션은 Stop에서 경고(비차단)한다
-- [ ] #7 4/6/7단계는 DRAFT-9 범위로 남긴다(흡수하지 않는다)
+- [x] #1 ExitPlanMode에 PreToolUse/PostToolUse 매처가 실제로 걸리는지 대화형 세션에서 실측하고 결과를 기록
+- [x] #2 1~3단계(plan mode → 사람 검토 → 오토모드)를 차단으로 강제할지 관측·기록만 할지 결정 — 예외 기준 포함
+- [x] #3 2단계 사람 승인의 근거를 승인된 ExitPlanMode로 인정할지 별도 검증 가능 신호를 요구할지 결정(DRAFT-8 종속)
+- [x] #4 5단계 산출물 기반 검사(의존성 미설정 시 승격 거부, 작업순서 문서 존재·역참조, 순환 없음)를 검사 지점과 함께 설계
+- [x] #5 DRAFT-9와의 범위 분담 확정 — 흡수할지, 4/6/7단계는 DRAFT-9에 남길지
+- [x] #6 결정(2026-10-03): 1~3단계는 차단하지 않고 관측·기록만 한다. 세션별로 plan mode 진입·ExitPlanMode 승인·드래프트 생성·승격·커밋 여부를 기록하고, 계획 기록 없이 프로젝트 파일을 고친 세션은 Stop에서 경고(비차단)한다
+- [x] #7 4/6/7단계는 DRAFT-9 범위로 남긴다(흡수하지 않는다)
 - [ ] #8 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 구현/실측 노트 (2026-10-03)
+
+- AC#1 실측: session_logger.py는 PostToolUse에 matcher 없이 등록돼 있고, ~/.claude/hooks-logs/sessions/154e853a-53bb-433c-aaea-27a46083c828.jsonl 에 {"event": "tool_use", "tool_name": "ExitPlanMode", "timestamp": "2026-09-12T06:30:49..."} 가 있다(ExitPlanMode 레코드가 있는 세션 로그 17개) → PostToolUse 훅은 ExitPlanMode에 걸린다. 트랜스크립트의 승인/거부 tool_result와 대조하면 로그가 있는 23세션 중 22세션에서 로그 건수 == 승인 건수(승인 28 / 로그 28, 거부 67건은 로그 0건), nerf-receipts.jsonl도 ExitPlanMode PostToolUse 28·PostToolUseFailure 0 → 승인된 ExitPlanMode에서만 PostToolUse가 발생하고 거부는 어떤 이벤트도 남기지 않았다. 불일치 1세션은 로거 설치 이전 승인. PreToolUse 매처가 ExitPlanMode에 걸리는지는 미측정(이 설계에는 불필요). 상세는 doc-4 §2.
+- 구현: hooks/pipeline_trace.py (UserPromptSubmit + PostToolUse + Stop, 관측 전용, fail-open). 상태 파일 ~/.claude/hooks-logs/pipeline/<session_id>.json (CC_PIPELINE_DIR). Stop 경고는 git 저장소에서만, 세션당 1회, exit 0 + systemMessage/stderr.
+- tokenize/split_segments/strip_heredoc_bodies/is_outside_project 복사본을 dedup_drift_guard REGISTRY에 등록.
+- 5단계(AC#4)는 doc-4 §4에 설계만 — 검사 지점은 승격 커밋 시점, 구현은 후속.
+- 설치(~/.claude 사본·settings.json 반영)는 하지 않았다 — AC#8 미체크.
+<!-- SECTION:NOTES:END -->
