@@ -4,7 +4,7 @@ title: 'decision-11: 로컬은 rebase merge, 원격은 머지 커밋 — decisio
 status: In Progress
 assignee: []
 created_date: '2026-10-03 03:23'
-updated_date: '2026-10-03 03:25'
+updated_date: '2026-10-03 03:27'
 labels:
   - policy
   - git
@@ -41,8 +41,8 @@ decision-5(항상 rebase)와 decision-10(항상 머지 커밋)은 둘 다 로컬
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 backlog decision create로 decision-11을 만든다 — 본문은 이 저장소의 실측만 근거로 쓰고 다른 저장소를 참조하지 않는다
-- [ ] #2 decision-10의 status를 superseded로 바꾸고 decision-11을 가리키게 한다
-- [ ] #3 decision-4가 decision-11과 일치하는지 확인하고, 어긋나는 문구가 있으면 decision-11 Consequences에 명시한다
-- [ ] #4 README.md와 backlog/docs에서 병합 방식 서술을 찾아 decision-11과 맞춘다
+- [x] #1 backlog decision create로 decision-11을 만든다 — 본문은 이 저장소의 실측만 근거로 쓰고 다른 저장소를 참조하지 않는다
+- [x] #2 decision-10의 status를 superseded로 바꾸고 decision-11을 가리키게 한다
+- [x] #3 decision-4가 decision-11과 일치하는지 확인하고, 어긋나는 문구가 있으면 decision-11 Consequences에 명시한다
+- [x] #4 README.md와 backlog/docs에서 병합 방식 서술을 찾아 decision-11과 맞춘다
 <!-- AC:END -->
