@@ -1,10 +1,10 @@
 ---
 id: TASK-46
 title: gh pr merge가 가드를 통과한 사고 — if 필터가 검사 대상을 가린다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-03 17:13'
-updated_date: '2026-10-03 17:41'
+updated_date: '2026-10-03 17:43'
 labels:
   - hooks
   - bug
@@ -52,3 +52,9 @@ AC 후보:
 결론: if: Bash(git *)는 하위 명령별 텍스트 접두사 매칭, 경로 정규화 없음 → 경로 호출은 우회, git 하위 명령 없는 줄(cd x && gh pr merge)은 아예 안 걸림.
 결정: pre_push_check·pre_push_coverage_check 필터 제거(게이트, 비 push 줄은 subprocess 없이 종료 — 테스트 추가). dedup_drift_guard 유지(drift 감지기, test_dedup_registry.py가 스위트에서 동일 검출 — 계약 테스트 hidden_ok). pr_provenance_stamp 유지(표시용 도장 — hidden_ok). 계약 테스트: hooks/test_hook_registration_contract.py.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+if 필터 매칭을 실측했다(2026-10-04, 설치본 pre_push_check): 하위 명령별 텍스트 접두사 매칭이며 복합 명령·파이프 뒤 명령·env 할당 접두는 매칭되지만 /usr/bin/git 같은 경로 호출과 git 하위 명령이 없는 줄(cd x && gh pr merge)은 매칭되지 않는다. 이 의미를 흉내 내는 시뮬레이터와 계약 테스트(test_hook_registration_contract.py)를 추가: 훅마다 검사 대상 대표 명령을 훅 자신의 판정 함수로 확인한 뒤 필터를 통과하는지 대조하고, 가려지는 명령은 사유가 적힌 hidden_ok만 허용, 낡은 예외·계약 없는 필터·미분류 Bash 훅을 거부한다. 게이트인 pre_push_check·pre_push_coverage_check의 if 필터 제거(push 아닌 줄은 subprocess 없이 즉시 종료 — 테스트로 고정). dedup_drift_guard(드리프트 감지)·pr_provenance_stamp(장식)는 필터 유지 + 경로 호출 hidden_ok. pre_git_safety_check에 필터가 없음과 사고 줄 차단을 계약으로 고정. 옛 필터를 되살리면 9개 테스트가 실패함을 확인. 1241 passed. 래퍼(sudo) 매칭은 미실측 — 보수적 가정. AC #4 설치는 일괄.
+<!-- SECTION:FINAL_SUMMARY:END -->
