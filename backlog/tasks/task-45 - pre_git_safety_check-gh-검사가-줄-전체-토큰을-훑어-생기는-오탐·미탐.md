@@ -1,7 +1,7 @@
 ---
-id: DRAFT-5
+id: TASK-45
 title: 'pre_git_safety_check: gh 검사가 줄 전체 토큰을 훑어 생기는 오탐·미탐'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 13:13'
 updated_date: '2026-10-03 13:13'
@@ -9,6 +9,9 @@ labels:
   - hooks
   - bug
 dependencies: []
+references:
+  - TASK-37
+  - decision-1
 priority: high
 ---
 
