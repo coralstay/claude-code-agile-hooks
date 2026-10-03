@@ -297,7 +297,7 @@ def staging_plan(command):
             if any(ch in a for a in args for ch in "$`<>"):
                 return None
             adds.append(args)
-        elif sub == "commit":
+        else:  # sub == "commit" (only add/commit get past the check above)
             return adds, commit_stages_all(args)
     return None
 
