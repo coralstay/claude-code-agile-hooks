@@ -1,10 +1,10 @@
 ---
 id: TASK-25
 title: 'decision-11: 로컬은 rebase merge, 원격은 머지 커밋 — decision-10 대체'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 03:23'
-updated_date: '2026-10-03 03:24'
+updated_date: '2026-10-03 03:25'
 labels:
   - policy
   - git
