@@ -97,3 +97,15 @@ def test_allows_path_looking_argument_outside_verb_position(monkeypatch, tmp_pat
     # as an rm invocation.
     (tmp_path / "Content").mkdir()
     assert run_main(monkeypatch, "echo /bin/rm", cwd=str(tmp_path)) == 0
+
+
+def test_fails_open_on_unparseable_command(monkeypatch, tmp_path):
+    # shlex can't split an unterminated quote; the shell would reject it too, so allow.
+    (tmp_path / "Content").mkdir()
+    assert run_main(monkeypatch, "rm -rf 'content", cwd=str(tmp_path)) == 0
+
+
+def test_allows_when_rm_word_is_not_a_command_token(monkeypatch, tmp_path):
+    # RM_RE matches "rm" inside "notes.rm", but no token is the rm binary -> not a deletion.
+    (tmp_path / "Notes.rm").mkdir()
+    assert run_main(monkeypatch, "cat notes.rm", cwd=str(tmp_path)) == 0

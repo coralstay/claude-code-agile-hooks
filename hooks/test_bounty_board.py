@@ -132,3 +132,38 @@ def test_main_exits_cleanly_on_malformed_stdin(monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         bb.main()
     assert exc_info.value.code == 0
+
+
+def test_load_board_returns_empty_on_corrupt_file(isolate_board):
+    with open(isolate_board["board"], "w") as f:
+        f.write("{not json")
+    assert bb.load_board() == {}
+
+
+def test_scan_markers_unreadable_path_returns_empty(tmp_path):
+    # A directory can't be opened as a file (OSError) -> treated as having no markers.
+    assert bb.scan_markers(str(tmp_path)) == []
+
+
+def test_sync_file_markers_keeps_surviving_marker_age(isolate_board, tmp_path):
+    path = write_file(tmp_path, "g.py", "# TODO: keep me\n# FIXME: drop me\n")
+    old = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+    board = {
+        bb.bounty_key(path, "# TODO: keep me"): {"first_seen": old, "file": path},
+        bb.bounty_key(path, "# FIXME: drop me"): {"first_seen": old, "file": path},
+    }
+    write_file(tmp_path, "g.py", "# TODO: keep me\n")
+
+    cleared = bb.sync_file_markers(board, path)
+
+    assert cleared == [(bb.bounty_key(path, "# FIXME: drop me"), bb.compute_xp(old))]
+    # The surviving marker is neither cleared nor re-registered: its first_seen stays.
+    assert board == {bb.bounty_key(path, "# TODO: keep me"): {"first_seen": old, "file": path}}
+
+
+def test_unknown_event_is_ignored(monkeypatch, isolate_board, tmp_path, capsys):
+    path = write_file(tmp_path, "h.py", "# TODO: x\n")
+    code = run_main(monkeypatch, {"hook_event_name": "Stop", "tool_input": {"file_path": path}})
+    assert code == 0
+    assert capsys.readouterr().out == ""
+    assert not os.path.isfile(isolate_board["board"])
