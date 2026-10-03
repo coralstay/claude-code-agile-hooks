@@ -235,8 +235,19 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
     # verbatim; every copy must be registered so drift is caught.
     for name in ("strip_heredoc_bodies", "tokenize", "split_segments"):
         assert "pre_push_check.py" in ddg.REGISTRY[name]
-    assert ddg.REGISTRY["command_head"] == ["pipeline_trace.py", "pre_push_check.py"]
+    assert ddg.REGISTRY["command_head"] == [
+        "pipeline_trace.py",
+        "pre_push_check.py",
+        "config_guard.py",  # TASK-35
+    ]
     assert "pre_push_check.py" not in ddg.REGISTRY["command_invokes_git_subcommand"]
+
+
+def test_registry_covers_task35_config_guard_command_position_helpers():
+    # TASK-35: config_guard.py parses Bash commands with the same verbatim
+    # tokenizer/segment/command-position helpers.
+    for name in ("tokenize", "split_segments", "command_head"):
+        assert "config_guard.py" in ddg.REGISTRY[name]
 
 
 def test_allows_commit_when_all_registered_functions_identical(monkeypatch, tmp_path):
@@ -350,6 +361,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "backlog_commit_scope.py",
             "pipeline_trace.py",
             "pre_push_check.py",  # TASK-34
+            "config_guard.py",  # TASK-35
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
