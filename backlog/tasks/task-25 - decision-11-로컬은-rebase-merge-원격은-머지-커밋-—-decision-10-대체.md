@@ -1,14 +1,18 @@
 ---
-id: DRAFT-11
+id: TASK-25
 title: 'decision-11: 로컬은 rebase merge, 원격은 머지 커밋 — decision-10 대체'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 03:23'
-updated_date: '2026-10-03 03:23'
+updated_date: '2026-10-03 03:24'
 labels:
   - policy
   - git
 dependencies: []
+references:
+  - decision-10
+  - decision-5
+  - decision-4
 priority: high
 ---
 
