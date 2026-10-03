@@ -1,10 +1,10 @@
 ---
 id: TASK-29
 title: backlog 드래프트→승격 단계 분리를 훅으로 강제한다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-09-26 03:34'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 07:10'
 labels:
   - backlog
   - workflow
