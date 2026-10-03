@@ -1,15 +1,19 @@
 ---
-id: DRAFT-9
+id: TASK-29
 title: backlog 드래프트→승격 단계 분리를 훅으로 강제한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-26 03:34'
-updated_date: '2026-09-26 03:34'
+updated_date: '2026-10-03 03:40'
 labels:
   - backlog
   - workflow
-dependencies: []
-priority: medium
+dependencies:
+  - TASK-26
+references:
+  - decision-1
+  - decision-3
+priority: high
 type: feature
 ---
 
@@ -31,8 +35,8 @@ backlog에 새 작업을 올릴 때는 이 순서를 지키고 **각 단계를 �
 ## 왜 훅이 필요한가
 
 지금은 CLAUDE.md의 서술로만 존재해서 실제로 어겨졌다. 에이전트가 `backlog task create`로
-드래프트를 건너뛰고 태스크를 바로 만들었고, 유저가 지적해 되돌렸다(git-format 저장소에서
-GF-135를 만들고 아카이브한 뒤 DRAFT-18로 다시 만든 사례). 드래프트를 경유하는 이유는
+드래프트를 건너뛰고 태스크를 바로 만들었고, 유저가 지적해 되돌렸다(태스크를 아카이브하고
+드래프트로 다시 만든 사례). 드래프트를 경유하는 이유는
 승격 전에 유저가 카드를 검토할 창을 만드는 것이고, 생성과 승격이 각각 독립 커밋으로 남아야
 나중에 "언제 무엇이 태스크가 됐는지"를 이력에서 읽을 수 있다.
 
@@ -55,10 +59,19 @@ GF-135를 만들고 아카이브한 뒤 DRAFT-18로 다시 만든 사례). 드�
 
 ## 착수 전에 정할 것
 
-- B의 판정을 `pre-commit`에 둘지 `prepare-commit-msg`에 둘지. git-format 쪽 실측으로
-  `prepare-commit-msg`는 `--no-verify`로 건너뛸 수 없다는 것이 확인됐다(git-format doc-15).
-  claude-rails 훅들은 Claude Code의 PreToolUse/Stop 계열이라 git 훅과 레이어가 다르다 —
-  어느 레이어에 둘지가 첫 결정이다.
+- B를 어느 레이어에 둘지. claude-rails 훅은 Claude Code의 PreToolUse/Stop 계열이라 git 훅
+  (pre-commit 등)과 레이어가 다르다. 결정(2026-10-03): 이 저장소의 다른 커밋 검사
+  (pre_commit_check.py)와 같이 PreToolUse(Bash)에서 `git commit`을 가로채 판정한다 —
+  Claude Code 세션의 커밋에만 적용되고, 사람이 터미널에서 직접 하는 커밋은 범위 밖이다.
 - backlog을 쓰지 않는 저장소에서는 이 검사가 조용히 통과해야 한다(DRAFT-3과 연결).
 - 사람이 직접 `git commit`하는 경우에도 적용할지, Claude Code 세션에만 적용할지.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 backlog 프로젝트에서 PreToolUse(Bash)가 'backlog task create'를 차단하고 'backlog draft create'를 안내한다 (A)
+- [ ] #2 git commit 시 스테이징에 새 드래프트(backlog/drafts/ 신규 추가)와 그 밖의 파일이 섞여 있으면 차단한다 (B)
+- [ ] #3 git commit 시 스테이징에 승격(backlog/drafts/ → backlog/tasks/ rename)과 그 밖의 파일이 섞여 있으면 차단한다 (B) — 승격된 태스크 파일 자체의 수정(--add-ref 등)은 허용
+- [ ] #4 backlog를 쓰지 않는 저장소에서는 조용히 통과한다
+- [ ] #5 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
+<!-- AC:END -->
