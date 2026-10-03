@@ -56,7 +56,7 @@ from datetime import datetime, timezone
 
 try:
     import fcntl
-except ImportError:  # pragma: no cover - non-POSIX
+except ImportError:  # non-POSIX: record without the file lock
     fcntl = None
 
 SEPARATOR_CHARS = set(";&|()\n")

@@ -369,3 +369,143 @@ def test_unwritable_state_dir_fails_open(monkeypatch, tmp_path, git_repo):
         )
         == 0
     )
+
+
+# --- TASK-41: remaining branches ---------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("env -i backlog draft create x", {"draft_create"}),  # wrapper flags skipped
+        ("FOO=1 BAR=2", set()),  # only assignments: no command head
+        ('backlog draft create "unterminated', set()),  # unparseable: no actions
+    ],
+)
+def test_backlog_actions_edge_forms(command, expected):
+    assert pt.backlog_actions(command) == expected
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("git --no-pager commit -m x", True),  # bare global flag skipped
+        ("git --no-pager", False),  # flags only: no subcommand
+        ("git -C", False),  # flag missing its argument
+    ],
+)
+def test_command_runs_git_commit_flag_forms(command, expected):
+    assert pt.command_runs_git_commit(command) is expected
+
+
+def test_is_outside_project_false_for_empty_path_or_cwd(tmp_path):
+    assert pt.is_outside_project("", str(tmp_path)) is False
+    assert pt.is_outside_project("/etc/passwd", "") is False
+
+
+@pytest.mark.parametrize("tool_input", ["not-a-dict", ["a"]])
+def test_is_project_edit_false_for_non_dict_input(tmp_path, tool_input):
+    assert pt.is_project_edit(tool_input, str(tmp_path)) is False
+
+
+def test_is_project_edit_false_without_cwd():
+    assert pt.is_project_edit({"file_path": "a.py"}, "") is False
+
+
+def test_is_git_repo_false_for_missing_dir(tmp_path):
+    assert pt.is_git_repo(str(tmp_path / "nope")) is False
+    assert pt.is_git_repo("") is False
+
+
+def test_is_git_repo_false_when_git_cannot_run(monkeypatch, tmp_path):
+    def boom(*args, **kwargs):
+        raise OSError("git missing")
+
+    monkeypatch.setattr(pt.subprocess, "run", boom)
+    assert pt.is_git_repo(str(tmp_path)) is False
+
+
+def test_write_state_failure_removes_temp_and_reraises(monkeypatch, isolate_state_dir):
+    isolate_state_dir.mkdir()
+
+    def fail_replace(src, dst):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(pt.os, "replace", fail_replace)
+    with pytest.raises(OSError):
+        pt.write_state("s1", {"commit_count": 1})
+    assert list(isolate_state_dir.iterdir()) == []
+
+
+def test_write_state_interrupted_after_rename_keeps_state_and_reraises(
+    monkeypatch, isolate_state_dir
+):
+    # An interrupt landing right after os.replace: the temp file is already
+    # gone (renamed into place), so there is nothing to unlink.
+    isolate_state_dir.mkdir()
+    real_replace = os.replace
+
+    def replace_then_interrupt(src, dst):
+        real_replace(src, dst)
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(pt.os, "replace", replace_then_interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        pt.write_state("s1", {"commit_count": 1})
+    assert [p.name for p in isolate_state_dir.iterdir()] == ["s1.json"]
+    assert state(isolate_state_dir)["commit_count"] == 1
+
+
+def test_mark_plan_mode_keeps_first_timestamp():
+    st = {"plan_mode_seen": True, "plan_mode_seen_at": "first"}
+    pt.mark_plan_mode(st)
+    assert st["plan_mode_seen_at"] == "first"
+
+
+@pytest.mark.parametrize("plan", [None, 42, "", "   \n\t\n"])
+def test_plan_title_none_for_non_string_or_blank_plan(plan):
+    assert pt.plan_title(plan) is None
+
+
+def test_exit_plan_mode_with_non_dict_input_records_approval_without_title(
+    monkeypatch, isolate_state_dir, git_repo
+):
+    assert run_main(monkeypatch, post_tool(git_repo, "ExitPlanMode", "plan")) == 0
+    st = state(isolate_state_dir)
+    assert st["plan_approved_count"] == 1
+    assert "last_plan_title" not in st
+
+
+def test_bash_with_non_string_command_records_nothing(
+    monkeypatch, isolate_state_dir, git_repo
+):
+    assert run_main(monkeypatch, post_tool(git_repo, "Bash", {"command": ["git"]})) == 0
+    assert state(isolate_state_dir) == {}
+
+
+def test_unhandled_event_writes_no_state(monkeypatch, isolate_state_dir, git_repo):
+    event = {
+        "hook_event_name": "PreToolUse",
+        "session_id": "s1",
+        "cwd": str(git_repo),
+        "permission_mode": "plan",
+    }
+    assert run_main(monkeypatch, event) == 0
+    assert not isolate_state_dir.exists()
+
+
+def test_records_without_fcntl(monkeypatch, isolate_state_dir, git_repo):
+    """On a platform without fcntl the module still imports and records
+    state, just without the file lock."""
+    import importlib.util
+    import sys
+
+    monkeypatch.setitem(sys.modules, "fcntl", None)  # makes `import fcntl` fail
+    spec = importlib.util.spec_from_file_location("pipeline_trace_nofcntl", pt.__file__)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.fcntl is None
+
+    mod.handle(post_tool(git_repo, "Bash", {"command": "git commit -m x"}))
+    assert state(isolate_state_dir)["commit_count"] == 1
+    assert not (isolate_state_dir / "s1.json.lock").exists()
