@@ -138,3 +138,135 @@ def test_has_active_task_false_when_no_tasks(tmp_path, monkeypatch):
     bin_dir = _fake_backlog_script(tmp_path, 'echo "No tasks found."')
     monkeypatch.setenv("PATH", bin_dir + ":" + os.environ.get("PATH", ""))
     assert rat.has_active_task(str(tmp_path)) is False
+
+
+# --- TASK-27: 프로젝트 밖 경로는 게이트하지 않는다 ---------------------------
+
+
+def _gate_no_active_task(monkeypatch):
+    monkeypatch.setattr(rat, "has_command", lambda name: True)
+    monkeypatch.setattr(rat, "is_backlog_project", lambda cwd: True)
+    monkeypatch.setattr(rat, "has_active_task", lambda cwd: False)
+
+
+def _make_project(tmp_path):
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    return proj
+
+
+def test_passes_when_file_path_outside_project_without_checking_task(
+    monkeypatch, tmp_path
+):
+    proj = _make_project(tmp_path)
+    monkeypatch.setattr(rat, "has_command", lambda name: True)
+    monkeypatch.setattr(rat, "is_backlog_project", lambda cwd: True)
+
+    def boom(cwd):
+        raise AssertionError("has_active_task must not be called for outside paths")
+
+    monkeypatch.setattr(rat, "has_active_task", boom)
+    outside = tmp_path / "elsewhere" / "plan.md"
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": str(outside)}},
+    )
+    assert code == 0
+
+
+def test_passes_when_notebook_path_outside_project(monkeypatch, tmp_path):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    outside = tmp_path / "nb.ipynb"
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"notebook_path": str(outside)}},
+    )
+    assert code == 0
+
+
+def test_denies_when_file_path_inside_project(monkeypatch, tmp_path, capsys):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": str(proj / "src" / "a.py")}},
+    )
+    assert code == 2
+    assert "In Progress" in capsys.readouterr().err
+
+
+def test_denies_when_relative_file_path_resolves_inside_project(
+    monkeypatch, tmp_path
+):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": "src/a.py"}},
+    )
+    assert code == 2
+
+
+def test_denies_when_file_path_is_project_root_itself(monkeypatch, tmp_path):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": str(proj)}},
+    )
+    assert code == 2
+
+
+def test_denies_when_dotdot_traversal_leads_back_into_project(
+    monkeypatch, tmp_path
+):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    sneaky = str(proj) + "/../proj/x.py"
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": sneaky}},
+    )
+    assert code == 2
+
+
+def test_passes_when_sibling_dir_shares_project_name_prefix(monkeypatch, tmp_path):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    sibling = tmp_path / "proj-other" / "x.py"
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": str(sibling)}},
+    )
+    assert code == 0
+
+
+def test_denies_when_symlink_outside_points_into_project(monkeypatch, tmp_path):
+    proj = _make_project(tmp_path)
+    (proj / "src").mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = outside / "link"
+    link.symlink_to(proj / "src", target_is_directory=True)
+    _gate_no_active_task(monkeypatch)
+    code = run_main(
+        monkeypatch,
+        {"cwd": str(proj), "tool_input": {"file_path": str(link / "a.py")}},
+    )
+    assert code == 2
+
+
+def test_denies_when_tool_input_has_no_file_path(monkeypatch, tmp_path):
+    proj = _make_project(tmp_path)
+    _gate_no_active_task(monkeypatch)
+    code = run_main(monkeypatch, {"cwd": str(proj), "tool_input": {}})
+    assert code == 2
+
+
+def test_is_outside_project_unit(tmp_path):
+    proj = _make_project(tmp_path)
+    assert rat.is_outside_project(str(tmp_path / "x"), str(proj)) is True
+    assert rat.is_outside_project(str(proj / "x"), str(proj)) is False
+    assert rat.is_outside_project("x", str(proj)) is False
+    assert rat.is_outside_project("", str(proj)) is False
