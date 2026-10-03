@@ -1,13 +1,13 @@
 """Drift-prevention test for `is_backlog_project()`.
 
-The five hooks below are each fully self-contained (no shared imports, by
+The hooks below (originally five) are each fully self-contained (no shared imports, by
 design — see require_active_task.py's module docstring), so the
 `is_backlog_project()` check is hand-copied into every one of them. That's
 exactly how the 2026-09-18 bug happened: the `.git`-existence check landed in
 require_active_task.py but never propagated to the other four copies.
 
 This test extracts the `is_backlog_project` function's AST from every hook
-module, normalizes away location metadata, and asserts all five are
+module, normalizes away location metadata, and asserts all copies are
 identical. If someone patches only one copy in the future, this test fails.
 """
 
@@ -22,6 +22,8 @@ MODULES = [
     "pre_push_check.py",
     "block_stop_if_dirty.py",
     "session_start.py",
+    "require_draft_first.py",
+    "backlog_commit_scope.py",
 ]
 
 

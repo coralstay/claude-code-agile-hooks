@@ -63,6 +63,14 @@ BASELINE_BODIES = {
         def run_shell(cwd, command):
             return ""
         """,
+    "tokenize": """
+        def tokenize(command):
+            return command.split()
+        """,
+    "split_segments": """
+        def split_segments(tokens):
+            return [tokens]
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -171,6 +179,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_push_check.py",
         "pre_push_coverage_check.py",
         "dedup_drift_guard.py",
+        "backlog_commit_scope.py",
     ]
     assert ddg.REGISTRY["has_command"] == [
         "block_stop_if_dirty.py",
@@ -178,6 +187,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_push_check.py",
         "require_active_task.py",
         "session_start.py",
+        "backlog_commit_scope.py",
     ]
     assert ddg.REGISTRY["has_active_task"] == [
         "block_stop_if_dirty.py",
@@ -189,6 +199,18 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_push_coverage_check.py",
     ]
     assert "current_branch" not in ddg.REGISTRY
+
+
+def test_registry_covers_task29_draft_workflow_hooks():
+    # TASK-29: both draft-workflow hooks copy helpers verbatim; every copy
+    # must be registered so drift is caught at commit time.
+    assert "require_draft_first.py" in ddg.REGISTRY["is_backlog_project"]
+    assert "backlog_commit_scope.py" in ddg.REGISTRY["is_backlog_project"]
+    for name in ("tokenize", "split_segments"):
+        assert ddg.REGISTRY[name] == [
+            "require_draft_first.py",
+            "backlog_commit_scope.py",
+        ]
 
 
 def test_allows_commit_when_all_registered_functions_identical(monkeypatch, tmp_path):

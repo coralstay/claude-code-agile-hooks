@@ -68,6 +68,15 @@
           },
           {
             "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/backlog_commit_scope.py",
+            "if": "Bash(git *)"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/require_draft_first.py"
+          },
+          {
+            "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/dedup_drift_guard.py",
             "if": "Bash(git *)"
           },

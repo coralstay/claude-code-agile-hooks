@@ -1,10 +1,10 @@
 ---
 id: TASK-29
 title: backlog 드래프트→승격 단계 분리를 훅으로 강제한다
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-26 03:34'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 07:18'
 labels:
   - backlog
   - workflow
@@ -69,9 +69,15 @@ backlog에 새 작업을 올릴 때는 이 순서를 지키고 **각 단계를 �
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 backlog 프로젝트에서 PreToolUse(Bash)가 'backlog task create'를 차단하고 'backlog draft create'를 안내한다 (A)
-- [ ] #2 git commit 시 스테이징에 새 드래프트(backlog/drafts/ 신규 추가)와 그 밖의 파일이 섞여 있으면 차단한다 (B)
-- [ ] #3 git commit 시 스테이징에 승격(backlog/drafts/ → backlog/tasks/ rename)과 그 밖의 파일이 섞여 있으면 차단한다 (B) — 승격된 태스크 파일 자체의 수정(--add-ref 등)은 허용
-- [ ] #4 backlog를 쓰지 않는 저장소에서는 조용히 통과한다
+- [x] #1 backlog 프로젝트에서 PreToolUse(Bash)가 'backlog task create'를 차단하고 'backlog draft create'를 안내한다 (A)
+- [x] #2 git commit 시 스테이징에 새 드래프트(backlog/drafts/ 신규 추가)와 그 밖의 파일이 섞여 있으면 차단한다 (B)
+- [x] #3 git commit 시 스테이징에 승격(backlog/drafts/ → backlog/tasks/ rename)과 그 밖의 파일이 섞여 있으면 차단한다 (B) — 승격된 태스크 파일 자체의 수정(--add-ref 등)은 허용
+- [x] #4 backlog를 쓰지 않는 저장소에서는 조용히 통과한다
 - [ ] #5 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+훅 2개 추가. require_draft_first.py(PreToolUse Bash, if 필터 없음): backlog 프로젝트에서 실제 명령 위치의 'backlog task create'를 차단하고 draft create → 승인 후 promote를 안내한다. 따옴표 인자·heredoc 안의 같은 글자는 통과. backlog_commit_scope.py(PreToolUse Bash, if: Bash(git *)): git commit 시 스테이징(-z, rename 감지)을 보고 드래프트 신규 추가+그 밖의 파일, 승격(drafts→tasks)+backlog/tasks 밖의 파일이 섞이면 차단. 같은 명령의 git add / commit -a는 임시 인덱스(GIT_INDEX_FILE)로 재현해 판정하고 실제 인덱스는 건드리지 않는다. 미커버: git rm/mv 혼합, pathspec 커밋, bash -c/별칭, Claude Code 밖 커밋. 공용 헬퍼는 dedup REGISTRY에 등록. settings.hooks.json·README(훅 30개)·doc-2·CLAUDE.md.snippet(태스크 생성 단계를 draft 흐름으로) 반영. uvx pytest 532 passed. AC #5의 설치본 부분은 마지막 일괄 설치 때 체크.
+<!-- SECTION:FINAL_SUMMARY:END -->
