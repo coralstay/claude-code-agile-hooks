@@ -200,9 +200,8 @@ def test_registry_covers_newly_added_dedup_functions():
     # empty string vs None), so it must never appear.
     # TASK-34: pre_push_check.py left this list - it now uses the
     # command-position helpers (tokenize/split_segments/command_head).
-    # TASK-39: pre_commit_check.py left it too.
+    # TASK-39: pre_commit_check.py and pre_push_coverage_check.py left it too.
     assert ddg.REGISTRY["command_invokes_git_subcommand"] == [
-        "pre_push_coverage_check.py",
         "dedup_drift_guard.py",
         "backlog_commit_scope.py",
     ]
@@ -249,6 +248,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "config_guard.py",  # TASK-35
         "pre_git_safety_check.py",  # TASK-37
         "pre_commit_check.py",  # TASK-39
+        "pre_push_coverage_check.py",  # TASK-39
     ]
     assert "pre_push_check.py" not in ddg.REGISTRY["command_invokes_git_subcommand"]
 
@@ -393,6 +393,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "config_guard.py",  # TASK-35
             "pre_git_safety_check.py",  # TASK-37
             "pre_commit_check.py",  # TASK-39
+            "pre_push_coverage_check.py",  # TASK-39
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -400,6 +401,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_push_check.py",  # TASK-34
         "pre_git_safety_check.py",  # TASK-37
         "pre_commit_check.py",  # TASK-39
+        "pre_push_coverage_check.py",  # TASK-39
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
