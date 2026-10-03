@@ -108,13 +108,106 @@ OPAQUE_INTERPRETERS = INTERPRETER_VERBS - {"python3", "python"}
 PYTHON_RE = re.compile(r"^python[0-9.]*$")
 SHELL_KEYWORDS = {"if", "then", "else", "elif", "do", "while", "until", "}"}
 RUNNERS = {"timeout", "nice", "xargs", "stdbuf", "doas", "caffeinate", "ionice", "uvx"}
+# Runner/wrapper flags (TASK-47): a flag in *_WITH_ARG consumes the next
+# token (`uv run --with x rm ...` runs rm, not x). `--flag=value` and
+# short `-Xvalue` forms are one token. A flag in neither set is unknown:
+# its argument count can't be known, so the segment falls back to the
+# conservative rule in segment_targets_protected.
+UV_FLAGS_WITH_ARG = {
+    "--with", "--with-editable", "--with-requirements", "--from",
+    "--extra", "--no-extra", "--group", "--no-group", "--only-group",
+    "--package", "--python", "-p", "--project", "--directory", "--env-file",
+    "--index", "--default-index", "--index-url", "-i", "--extra-index-url",
+    "--find-links", "-f", "--index-strategy", "--keyring-provider",
+    "--resolution", "--prerelease", "--fork-strategy", "--exclude-newer",
+    "--exclude-newer-package", "--no-binary-package", "--no-build-package",
+    "--no-build-isolation-package", "--reinstall-package",
+    "--upgrade-package", "-P", "--refresh-package", "--link-mode",
+    "--config-setting", "-C", "--config-settings-package", "--cache-dir",
+    "--config-file", "--python-preference", "--python-platform", "--color",
+    "--allow-insecure-host", "--constraints", "-c", "--overrides",
+    "--build-constraints", "-b", "--torch-backend",
+    "--with-executables-from",
+}  # fmt: skip
+UV_FLAGS_NO_ARG = {
+    "--frozen", "--locked", "--no-sync", "--isolated", "--active",
+    "--no-active", "--no-project", "--no-editable", "--exact", "--inexact",
+    "--offline", "--no-cache", "-n", "--quiet", "-q", "--verbose", "-v",
+    "--native-tls", "--no-progress", "--no-config", "--no-python-downloads",
+    "--managed-python", "--no-managed-python", "--refresh", "--upgrade",
+    "-U", "--reinstall", "--compile-bytecode", "--no-build-isolation",
+    "--no-build", "--no-binary", "--no-sources", "--no-env-file",
+    "--all-packages", "--all-extras", "--all-groups", "--no-default-groups",
+    "--dev", "--no-dev", "--only-dev", "--preview", "--no-preview",
+    "--no-index", "--script", "-s", "--gui-script", "--module", "-m",
+    "--lfs", "--show-resolution", "--no-install-project",
+    "--no-install-workspace", "--no-install-local",
+}  # fmt: skip
 RUNNER_FLAGS_WITH_ARG = {
-    "nice": {"-n"},
-    "ionice": {"-c", "-n"},
+    "nice": {"-n", "--adjustment"},
+    "ionice": {"-c", "-n", "-p", "-P", "-u", "--class", "--classdata",
+               "--pid", "--pgid", "--uid"},
     "timeout": {"-s", "-k", "--signal", "--kill-after"},
-    "xargs": {"-I", "-n", "-P", "-L", "-d", "-s", "-E", "-a"},
-}
-RUN_SUBCOMMAND_TOOLS = {"uv", "poetry", "pipx", "pdm"}
+    "xargs": {"-I", "-n", "-P", "-L", "-d", "-s", "-E", "-a", "--max-args",
+              "--max-procs", "--max-lines", "--delimiter", "--arg-file",
+              "--eof", "--max-chars"},
+    "stdbuf": {"-i", "-o", "-e", "--input", "--output", "--error"},
+    "doas": {"-u", "-C"},
+    "caffeinate": {"-t", "-w"},
+    "uvx": UV_FLAGS_WITH_ARG,
+}  # fmt: skip
+RUNNER_FLAGS_NO_ARG = {
+    "ionice": {"-t", "--ignore"},
+    "timeout": {"--preserve-status", "--foreground", "-v", "--verbose"},
+    "xargs": {"-0", "-r", "-t", "-p", "-x", "-o", "-i", "-e", "-l", "--null",
+              "--no-run-if-empty", "--verbose", "--interactive", "--exit",
+              "--open-tty", "--replace", "--show-limits"},
+    "doas": {"-n", "-s", "-L"},
+    "caffeinate": {"-d", "-i", "-m", "-s", "-u"},
+    "uvx": UV_FLAGS_NO_ARG,
+}  # fmt: skip
+# `<tool> [flags] run [flags] CMD` (and `uv [flags] tool run`): (with_arg, no_arg)
+RUN_SUBCOMMAND_TOOLS = {
+    "uv": (UV_FLAGS_WITH_ARG, UV_FLAGS_NO_ARG),
+    "poetry": ({"-P", "--project", "-C", "--directory"},
+               {"-q", "--quiet", "-v", "--verbose", "-n", "--no-interaction",
+                "--no-ansi", "--ansi", "--no-plugins", "--no-cache"}),
+    "pipx": ({"--spec", "--python", "--pip-args", "--index-url"},
+             {"--no-cache", "--path", "--pypackages", "-v", "--verbose",
+              "-q", "--quiet", "-e", "--editable"}),
+    "pdm": ({"-p", "--project", "--venv"},
+            {"-g", "--global", "-s", "--site-packages", "-v", "--verbose",
+             "-q", "--quiet", "--recreate"}),
+}  # fmt: skip
+# Flags of command_head's WRAPPERS, which command_head skips one token at a
+# time. `env -S` / `npx -c` take a command line: left unknown on purpose.
+WRAPPER_FLAGS = {
+    "env": ({"-u", "--unset", "-C", "--chdir", "-P"},
+            {"-i", "--ignore-environment", "-0", "--null", "-v", "--debug",
+             "-"}),
+    "sudo": ({"-u", "--user", "-g", "--group", "-C", "--close-from", "-D",
+              "--chdir", "-p", "--prompt", "-R", "--chroot", "-r", "--role",
+              "-t", "--type", "-T", "--command-timeout", "-U", "--other-user",
+              "--host"},
+             {"-E", "--preserve-env", "-H", "--set-home", "-n",
+              "--non-interactive", "-S", "--stdin", "-b", "--background",
+              "-i", "--login", "-s", "--shell", "-k", "--reset-timestamp",
+              "-K", "-A", "--askpass", "-B", "--bell", "-P",
+              "--preserve-groups"}),
+    "command": (set(), {"-p", "-v", "-V"}),
+    "exec": ({"-a"}, {"-c", "-l"}),
+    "time": ({"-f", "--format", "-o", "--output"},
+             {"-p", "--portability", "-a", "--append", "-v", "--verbose",
+              "-q", "--quiet"}),
+    "nohup": (set(), set()),
+    "npx": ({"-p", "--package"}, {"-y", "--yes", "--no", "-q", "--quiet"}),
+    "bunx": ({"-p", "--package"}, {"--bun"}),
+}  # fmt: skip
+# Verbs that make "protected path mentioned somewhere" dangerous when the
+# real command position is uncertain.
+WRITE_SIGNAL_VERBS = (
+    MUTATING_VERBS | IN_PLACE_VERBS | SHELLS | OPAQUE_INTERPRETERS | {"eval"}
+)
 MAX_DEPTH = 8
 
 # --- command parsing (tokenize/split_segments/command_head are verbatim
@@ -365,42 +458,99 @@ def substitution_text(word):
     return None
 
 
+def skip_flags(words, k, with_arg, no_arg):
+    """(index after the flags starting at `k`, whether an unknown flag was
+    seen). A flag in `with_arg` consumes the next token; `--` ends flags."""
+    unknown = False
+    while k < len(words) and words[k].startswith("-"):
+        tok = words[k]
+        if tok == "--":
+            return k + 1, unknown
+        if tok in with_arg:
+            k += 2
+            continue
+        known = (
+            tok in no_arg
+            or tok.split("=", 1)[0] in with_arg | no_arg  # --flag=value
+            or (not tok.startswith("--") and tok[:2] in with_arg)  # -Xvalue
+        )
+        unknown = unknown or not known
+        k += 1
+    return k, unknown
+
+
 def effective_head(words):
-    """(index of the real command, whether it runs under xargs): skips
+    """(index of the real command, whether it runs under xargs, index of the
+    first runner/wrapper with an unknown flag or None): skips
     assignments/wrappers (command_head), shell keywords and runners like
-    `timeout 5`, `nice -n 5`, `xargs -I{}`, `uv run`."""
+    `timeout 5`, `nice -n 5`, `xargs -I{}`, `uv run --with x`."""
     i = 0
     under_xargs = False
+    unsure = None
+
+    def mark(pos, unknown):
+        nonlocal unsure
+        if unknown and unsure is None:
+            unsure = pos
+
     while i < len(words):
         j = i + command_head(words[i:])
+        # command_head skips wrapper flags one token at a time, so for
+        # `sudo -u root rm` it lands on `root`: re-skip them with arity.
+        end = j
+        for w in range(i, j):
+            if words[w] in WRAPPERS:
+                k, unknown = skip_flags(words, w + 1, *WRAPPER_FLAGS[words[w]])
+                mark(w, unknown)
+                end = max(end, k)
+        if end > j:
+            i = end
+            continue
         if j >= len(words):
-            return j, under_xargs
+            return j, under_xargs, unsure
         name = os.path.basename(words[j].lstrip("`"))
         if name in SHELL_KEYWORDS:
             i = j + 1
             continue
-        if (
-            name in RUN_SUBCOMMAND_TOOLS
-            and j + 1 < len(words)
-            and words[j + 1] == "run"
-        ):
-            k = j + 2
-            while k < len(words) and words[k].startswith("-"):
+        if name in RUN_SUBCOMMAND_TOOLS:
+            with_arg, no_arg = RUN_SUBCOMMAND_TOOLS[name]
+            k, unknown = skip_flags(words, j + 1, with_arg, no_arg)
+            mark(j, unknown)
+            if words[k : k + 1] == ["run"]:
                 k += 1
+            elif name == "uv" and words[k : k + 2] == ["tool", "run"]:
+                k += 2
+            else:
+                return j, under_xargs, unsure
+            k, unknown = skip_flags(words, k, with_arg, no_arg)
+            mark(j, unknown)
             i = k
             continue
         if name in RUNNERS:
             under_xargs = under_xargs or name == "xargs"
-            flags_with_arg = RUNNER_FLAGS_WITH_ARG.get(name, set())
-            k = j + 1
-            while k < len(words) and words[k].startswith("-"):
-                k += 2 if words[k] in flags_with_arg else 1
+            k, unknown = skip_flags(
+                words,
+                j + 1,
+                RUNNER_FLAGS_WITH_ARG.get(name, set()),
+                RUNNER_FLAGS_NO_ARG.get(name, set()),
+            )
+            mark(j, unknown)
             if name == "timeout" and k < len(words):
                 k += 1
             i = k
             continue
-        return j, under_xargs
-    return len(words), under_xargs
+        return j, under_xargs, unsure
+    return len(words), under_xargs, unsure
+
+
+def signals_write(word):
+    """True if any whitespace-separated part of `word` names a command that
+    can write (also catches `env -S 'rm ...'` style command-line values)."""
+    return any(
+        os.path.basename(part.lstrip("`")) in WRITE_SIGNAL_VERBS
+        or PYTHON_RE.match(os.path.basename(part))
+        for part in word.split()
+    )
 
 
 def _is_std_stream(node):
@@ -598,7 +748,17 @@ def segment_targets_protected(words, redirs, docs, command, depth):
         if inner and recurse(inner):
             return True
 
-    h, under_xargs = effective_head(words)
+    h, under_xargs, unsure = effective_head(words)
+    if unsure is not None:
+        # An unknown runner/wrapper flag may have taken an argument, so the
+        # real command could be any later word: block if the rest mentions
+        # a protected path and names any command that can write (TASK-47).
+        rest = words[unsure:]
+        mentioned = any(mentions_protected(w) for w in rest) or any(
+            mentions_protected(text) for text, _ in docs
+        )
+        if mentioned and any(signals_write(w) for w in rest):
+            return True
     if h >= len(words):
         return any(recurse(text) for text, _ in docs)
 
