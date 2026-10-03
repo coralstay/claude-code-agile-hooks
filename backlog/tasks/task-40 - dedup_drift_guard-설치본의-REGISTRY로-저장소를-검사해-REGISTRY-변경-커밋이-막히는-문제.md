@@ -4,7 +4,7 @@ title: 'dedup_drift_guard: 설치본의 REGISTRY로 저장소를 검사해 REGIS
 status: In Progress
 assignee: []
 created_date: '2026-10-03 08:12'
-updated_date: '2026-10-03 12:58'
+updated_date: '2026-10-03 13:01'
 labels:
   - hooks
   - bug
@@ -24,7 +24,7 @@ TASK-34에서 발생. 설치된 dedup_drift_guard.py는 자기 안의 REGISTRY�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 저장소의 REGISTRY 변경이 설치본 갱신 없이 커밋된다
-- [ ] #2 저장소 REGISTRY를 읽을 수 없으면 지금처럼 설치본 REGISTRY로 검사한다
+- [x] #1 저장소의 REGISTRY 변경이 설치본 갱신 없이 커밋된다
+- [x] #2 저장소 REGISTRY를 읽을 수 없으면 지금처럼 설치본 REGISTRY로 검사한다
 - [ ] #3 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
 <!-- AC:END -->
