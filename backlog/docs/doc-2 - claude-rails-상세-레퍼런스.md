@@ -548,6 +548,43 @@ MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없�
 있는 값만 넣을 것. 예시는 `.claude-rails.json.example` 참고(현재는 `testCommand`만
 포함 — 필요하면 `coverageCommand`를 직접 추가).
 
+실행 방식: 두 훅 모두 훅 입력의 `cwd`(Claude Code의 작업 디렉토리)에서 `shell=True`로
+실행한다. `pre_commit_check.py`는 `cwd`가 backlog 프로젝트 루트(`.git` + `backlog/config.yml`)
+일 때만 동작하므로, 하위 디렉토리로 `cd`한 채 커밋하면 테스트를 건너뛴다. 매 커밋마다
+돌기 때문에 `testCommand`는 빨라야 한다(Claude Code 훅 타임아웃 안에 끝나야 함).
+`pre_push_coverage_check.py`는 실행 기록을 `<cwd>/.claude-rails/coverage-log.jsonl`에 남기므로
+`.claude-rails/`를 `.gitignore`에 넣는다.
+
+### 이 저장소 자신의 게이트 (도그푸딩, TASK-43)
+
+이 저장소 루트에도 `.claude-rails.json`이 있다:
+
+```json
+{
+  "testCommand": "uvx --with pytest-xdist pytest -q -n auto -p no:cacheprovider",
+  "coverageCommand": "uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov -p no:cacheprovider"
+}
+```
+
+- 커밋마다 전체 스위트를 병렬(pytest-xdist)로 돌린다 — 커버리지 측정은 빼서 빠르게.
+- push마다 CI와 같은 명령으로 줄·분기 커버리지 100%(`pyproject.toml`의 `fail_under`)를
+  확인한다.
+- 같은 명령을 GitHub Actions(`.github/workflows/ci.yml`)가 `main` push와 모든 PR에서
+  ubuntu·macOS × Python 3.11·3.12로 돌린다(`permissions: contents: read`, 시크릿 없음).
+  README 상단의 CI 배지가 그 결과다.
+- 스위트는 병렬·동시 실행에 안전해야 한다(두 번 동시 실행, `-n auto`). 테스트는
+  `tmp_path` 밖에 쓰지 않고 전역 git 설정(서명·identity)에 기대지 않는다 — 커밋을 만드는
+  테스트는 `-c user.email=...` 등으로 identity를 직접 준다.
+- 계약 테스트 두 개: `hooks/test_hook_registration_contract.py`(TASK-46, `if` 필터가 훅이
+  다룰 명령을 가리지 않는지)와 `hooks/test_hook_runtime_contract.py`(TASK-43). 후자는
+  등록된 명령이 `hooks/<name>.py`를 가리키는지, 훅마다 `test_<name>.py`가 있는지, 모든
+  훅이 등록됐는지(아니면 `UNREGISTERED_BY_DESIGN`에 이유와 함께)를 보고, 등록된 모든
+  (이벤트, 도구) 조합을 `install.sh`와 같은 배치로 임시 HOME 아래에 설치한 뒤 등록 명령
+  문자열 그대로 `sh -c`로 실행한다 — 빈 stdin·깨진 JSON·이벤트별 최소 정상 payload에서
+  traceback 없이 종료 코드 0(예외는 `EXPECTED_EXIT`에 이유와 함께). 환경은 PATH만
+  물려받고 `HOME`·`TMPDIR`·`XDG_*`·`CC_HOOK_FLAGS_DIR`·`CC_PIPELINE_DIR`를 임시 디렉토리로
+  돌리며, 훅이 만든 파일이 임시 HOME의 로그 디렉토리 밖에 생기면 실패한다.
+
 ---
 
 ## 10. 알려진 한계 / 다음 단계
