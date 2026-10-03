@@ -4,7 +4,7 @@ title: 훅 테스트 커버리지 100% (2/2) — 나머지 훅·scripts·커버�
 status: In Progress
 assignee: []
 created_date: '2026-10-03 12:38'
-updated_date: '2026-10-03 17:51'
+updated_date: '2026-10-03 18:03'
 labels:
   - tests
   - coverage
@@ -21,7 +21,7 @@ priority: high
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 저장소 루트에서 hooks·scripts 전체의 줄·분기 커버리지가 100%다
-- [ ] #2 커버리지 설정 파일에 측정 대상·제외 규칙·fail_under=100이 있다
-- [ ] #3 추가한 테스트는 각각 해당 분기의 기대 동작을 단언한다
+- [x] #1 저장소 루트에서 hooks·scripts 전체의 줄·분기 커버리지가 100%다
+- [x] #2 커버리지 설정 파일에 측정 대상·제외 규칙·fail_under=100이 있다
+- [x] #3 추가한 테스트는 각각 해당 분기의 기대 동작을 단언한다
 <!-- AC:END -->
