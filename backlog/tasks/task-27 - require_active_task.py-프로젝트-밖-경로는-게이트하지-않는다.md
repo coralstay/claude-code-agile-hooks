@@ -1,10 +1,10 @@
 ---
 id: TASK-27
 title: 'require_active_task.py: 프로젝트 밖 경로는 게이트하지 않는다'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 03:38'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 03:44'
 labels:
   - hooks
   - backlog
