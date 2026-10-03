@@ -32,6 +32,7 @@ REGISTRY = {
         "pre_push_check.py",
         "block_stop_if_dirty.py",
         "session_start.py",
+        "require_draft_first.py",
     ],
     "command_invokes_git_subcommand": [
         "pre_commit_check.py",
