@@ -1,12 +1,15 @@
 ---
-id: DRAFT-8
+id: TASK-30
 title: 어시스턴트가 하네스 예약 태그(bash-input)를 출력해 '사용자 직접 실행'을 사칭할 수 있는 문제 — 신뢰 경계 위조
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-25 20:00'
-updated_date: '2026-10-03 03:39'
+updated_date: '2026-10-03 03:40'
 labels: []
-dependencies: []
+dependencies:
+  - TASK-26
+references:
+  - decision-1
 priority: high
 ---
 

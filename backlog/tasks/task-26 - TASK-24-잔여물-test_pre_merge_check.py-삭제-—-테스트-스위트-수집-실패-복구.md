@@ -1,14 +1,16 @@
 ---
-id: DRAFT-11
+id: TASK-26
 title: TASK-24 잔여물 test_pre_merge_check.py 삭제 — 테스트 스위트 수집 실패 복구
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 03:38'
-updated_date: '2026-10-03 03:38'
+updated_date: '2026-10-03 03:40'
 labels:
   - hooks
   - tests
 dependencies: []
+references:
+  - TASK-24
 priority: high
 ---
 

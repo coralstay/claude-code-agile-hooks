@@ -1,14 +1,15 @@
 ---
-id: DRAFT-12
+id: TASK-27
 title: 'require_active_task.py: 프로젝트 밖 경로는 게이트하지 않는다'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 03:38'
-updated_date: '2026-10-03 03:38'
+updated_date: '2026-10-03 03:40'
 labels:
   - hooks
   - backlog
-dependencies: []
+dependencies:
+  - TASK-26
 priority: high
 ---
 

@@ -1,14 +1,17 @@
 ---
-id: DRAFT-13
+id: TASK-28
 title: 'pr_provenance_stamp.py: 복합 명령(&&, |)을 깨뜨리는 버그 수정'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 03:38'
-updated_date: '2026-10-03 03:38'
+updated_date: '2026-10-03 03:40'
 labels:
   - hooks
   - bug
-dependencies: []
+dependencies:
+  - TASK-26
+references:
+  - decision-1
 priority: high
 ---
 

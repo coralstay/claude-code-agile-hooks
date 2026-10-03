@@ -1,15 +1,22 @@
 ---
-id: DRAFT-10
+id: TASK-32
 title: 계획 수립부터 승격까지 작업 파이프라인 전체를 훅으로 강제한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-26 08:08'
-updated_date: '2026-10-03 03:39'
+updated_date: '2026-10-03 03:40'
 labels:
   - backlog
   - workflow
   - hooks
-dependencies: []
+dependencies:
+  - TASK-26
+  - TASK-27
+  - TASK-29
+  - TASK-30
+references:
+  - decision-1
+  - decision-3
 documentation:
   - backlog/drafts/draft-9 - backlog-드래프트→승격-단계-분리를-훅으로-강제한다.md
   - backlog/drafts/draft-2 - 커맨드-문자열-매칭의-구조적-한계를-보완할-syscall-레벨-샌드박스-레이어-검토.md

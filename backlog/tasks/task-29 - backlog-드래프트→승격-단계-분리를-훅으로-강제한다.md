@@ -1,14 +1,18 @@
 ---
-id: DRAFT-9
+id: TASK-29
 title: backlog 드래프트→승격 단계 분리를 훅으로 강제한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-09-26 03:34'
-updated_date: '2026-10-03 03:39'
+updated_date: '2026-10-03 03:40'
 labels:
   - backlog
   - workflow
-dependencies: []
+dependencies:
+  - TASK-26
+references:
+  - decision-1
+  - decision-3
 priority: high
 type: feature
 ---
