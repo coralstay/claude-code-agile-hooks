@@ -374,3 +374,11 @@ def test_path_and_compound_push_reach_the_gate(monkeypatch, capsys, command):
     )
     assert run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": command}}) == 2
     assert "TASK-3" in capsys.readouterr().err
+
+
+def test_wrapper_flags_are_skipped_before_git():
+    assert ppc.command_invokes_git_push("sudo -E -n git push origin x")
+
+
+def test_empty_cwd_is_not_a_backlog_project():
+    assert ppc.is_backlog_project("") is False
