@@ -19,6 +19,13 @@ behavioral difference does). The checked repo's own REGISTRY (read as data
 from its hooks/dedup_drift_guard.py) takes precedence over the one embedded
 here; see load_repo_registry() (TASK-40).
 
+TASK-46: the `if: Bash(git *)` filter is kept on purpose. It matches the
+command text per subcommand (measured 2026-10-04), so `/usr/bin/git commit`
+and `FOO=1 git commit` skip this check - accepted, because this is a drift
+detector rather than a security control and test_dedup_registry.py catches
+the same drift in the test suite. The gap is listed with that reason in
+hooks/test_hook_registration_contract.py (`hidden_ok`).
+
 Fully self-contained: no imports from any other file in this repo."""
 
 import ast

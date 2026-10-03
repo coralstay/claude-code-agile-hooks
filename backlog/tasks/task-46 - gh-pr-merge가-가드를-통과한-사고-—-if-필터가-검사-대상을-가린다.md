@@ -4,7 +4,7 @@ title: gh pr merge가 가드를 통과한 사고 — if 필터가 검사 대상�
 status: In Progress
 assignee: []
 created_date: '2026-10-03 17:13'
-updated_date: '2026-10-03 17:34'
+updated_date: '2026-10-03 17:39'
 labels:
   - hooks
   - bug
@@ -41,3 +41,14 @@ AC 후보:
 - [ ] #3 cd x && gh pr merge 1이 차단되는 회귀 테스트를 남긴다
 - [ ] #4 전체 스위트를 통과하고 설치본을 갱신한다
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-10-04 실측(메인 세션, Claude Code 설치본, pre_push_check.py를 if: Bash(git *)로 등록한 상태 — Done 아니면 push 차단):
+- git push --dry-run nonexistent-remote-x some-branch → 훅 실행(차단)
+- true && git push --dry-run nonexistent-remote-x some-branch → 훅 실행(if 규칙이 복합 명령의 하위 명령마다 맞춤)
+- /usr/bin/git push --dry-run nonexistent-remote-x some-branch → 훅 실행 안 됨(명령이 실행됨, 원격 부재로만 실패)
+결론: if: Bash(git *)는 하위 명령별 텍스트 접두사 매칭, 경로 정규화 없음 → 경로 호출은 우회, git 하위 명령 없는 줄(cd x && gh pr merge)은 아예 안 걸림.
+결정: pre_push_check·pre_push_coverage_check 필터 제거(게이트, 비 push 줄은 subprocess 없이 종료 — 테스트 추가). dedup_drift_guard 유지(drift 감지기, test_dedup_registry.py가 스위트에서 동일 검출 — 계약 테스트 hidden_ok). pr_provenance_stamp 유지(표시용 도장 — hidden_ok). 계약 테스트: hooks/test_hook_registration_contract.py.
+<!-- SECTION:NOTES:END -->
