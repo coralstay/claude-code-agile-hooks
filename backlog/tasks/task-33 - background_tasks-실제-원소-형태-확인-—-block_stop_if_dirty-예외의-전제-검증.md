@@ -1,10 +1,10 @@
 ---
 id: TASK-33
 title: background_tasks 실제 원소 형태 확인 — block_stop_if_dirty 예외의 전제 검증
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 07:58'
-updated_date: '2026-10-03 08:01'
+updated_date: '2026-10-03 08:02'
 labels:
   - hooks
   - measure
