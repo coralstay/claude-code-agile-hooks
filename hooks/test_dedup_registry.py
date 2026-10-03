@@ -23,6 +23,7 @@ MODULES = [
     "block_stop_if_dirty.py",
     "session_start.py",
     "require_draft_first.py",
+    "backlog_commit_scope.py",
 ]
 
 
