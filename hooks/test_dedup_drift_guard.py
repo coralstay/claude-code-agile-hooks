@@ -83,6 +83,10 @@ BASELINE_BODIES = {
         def is_outside_project(path, cwd):
             return False
         """,
+    "command_head": """
+        def command_head(segment):
+            return 0
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -186,9 +190,10 @@ def test_registry_covers_newly_added_dedup_functions():
     # registered here, so drift in them went undetected. current_branch is
     # deliberately excluded (its return-value contract differs by file:
     # empty string vs None), so it must never appear.
+    # TASK-34: pre_push_check.py left this list - it now uses the
+    # command-position helpers (tokenize/split_segments/command_head).
     assert ddg.REGISTRY["command_invokes_git_subcommand"] == [
         "pre_commit_check.py",
-        "pre_push_check.py",
         "pre_push_coverage_check.py",
         "dedup_drift_guard.py",
         "backlog_commit_scope.py",
@@ -223,6 +228,15 @@ def test_registry_covers_task29_draft_workflow_hooks():
             "require_draft_first.py",
             "backlog_commit_scope.py",
         ]
+
+
+def test_registry_covers_task34_pre_push_command_position_helpers():
+    # TASK-34: pre_push_check.py copies the command-position parsing helpers
+    # verbatim; every copy must be registered so drift is caught.
+    for name in ("strip_heredoc_bodies", "tokenize", "split_segments"):
+        assert "pre_push_check.py" in ddg.REGISTRY[name]
+    assert ddg.REGISTRY["command_head"] == ["pipeline_trace.py", "pre_push_check.py"]
+    assert "pre_push_check.py" not in ddg.REGISTRY["command_invokes_git_subcommand"]
 
 
 def test_allows_commit_when_all_registered_functions_identical(monkeypatch, tmp_path):
@@ -335,10 +349,12 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "require_draft_first.py",
             "backlog_commit_scope.py",
             "pipeline_trace.py",
+            "pre_push_check.py",  # TASK-34
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
         "pipeline_trace.py",
+        "pre_push_check.py",  # TASK-34
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
