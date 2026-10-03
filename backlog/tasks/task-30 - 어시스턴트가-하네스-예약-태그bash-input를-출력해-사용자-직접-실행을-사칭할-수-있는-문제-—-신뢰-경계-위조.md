@@ -1,10 +1,10 @@
 ---
 id: TASK-30
 title: 어시스턴트가 하네스 예약 태그(bash-input)를 출력해 '사용자 직접 실행'을 사칭할 수 있는 문제 — 신뢰 경계 위조
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-09-25 20:00'
-updated_date: '2026-10-03 03:40'
+updated_date: '2026-10-03 07:22'
 labels: []
 dependencies:
   - TASK-26
@@ -90,9 +90,15 @@ Claude가 응답 본문에 `<bash-input>cd /path && git push</bash-input>` 형�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Stop 훅이 last_assistant_message에서 하네스 예약 태그(bash-input, bash-stdout, bash-stderr, system-reminder, local-command-stdout, command-name 등)를 탐지한다
-- [ ] #2 펜스 코드블록과 인라인 코드 안의 태그는 탐지하지 않는다(태그를 설명하는 정상 출력은 허용)
-- [ ] #3 탐지 시 정정을 요구하는 메시지로 Stop을 막는다 — stop_hook_active일 때는 다시 막지 않아 무한루프를 만들지 않는다
-- [ ] #4 CLAUDE.md.snippet에 '사용자에게 제안하는 명령은 펜스 코드블록으로만 쓰고 하네스 예약 태그는 출력하지 않는다' 규칙을 추가한다
+- [x] #1 Stop 훅이 last_assistant_message에서 하네스 예약 태그(bash-input, bash-stdout, bash-stderr, system-reminder, local-command-stdout, command-name 등)를 탐지한다
+- [x] #2 펜스 코드블록과 인라인 코드 안의 태그는 탐지하지 않는다(태그를 설명하는 정상 출력은 허용)
+- [x] #3 탐지 시 정정을 요구하는 메시지로 Stop을 막는다 — stop_hook_active일 때는 다시 막지 않아 무한루프를 만들지 않는다
+- [x] #4 CLAUDE.md.snippet에 '사용자에게 제안하는 명령은 펜스 코드블록으로만 쓰고 하네스 예약 태그는 출력하지 않는다' 규칙을 추가한다
 - [ ] #5 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Stop 훅 reserved_tag_guard.py 추가. last_assistant_message에서 하네스 예약 태그 12종(RESERVED_TAGS, 대소문자 무시, 여는/닫는/자기닫는 형태)을 찾고, 펜스 코드블록과 인라인 코드 안은 제외한다. 탐지 시 정정(사용자가 실행한 것이 없다고 밝히고 명령은 펜스 코드블록으로 다시 제시)을 요구하며 exit 2. stop_hook_active면 통과해 루프를 만들지 않는다. 트랜스크립트는 읽지 않는다(Stop 페이로드에 last_assistant_message가 실린다는 것은 DRAFT-10 실측으로 확인됨). settings.hooks.json Stop 등록, README·doc-2(총 31개, 범용 24개), CLAUDE.md.snippet 규칙 추가. 테스트 52개, uvx pytest 584 passed. 미커버: 4칸 들여쓰기 코드블록(오탐 가능), HTML 엔티티·유사 문자, 한 턴의 마지막 메시지 이전 텍스트. AC #5 설치는 마지막 일괄 설치 때 체크.
+<!-- SECTION:FINAL_SUMMARY:END -->
