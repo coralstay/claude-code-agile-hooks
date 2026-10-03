@@ -4,8 +4,10 @@ title: 어시스턴트가 하네스 예약 태그(bash-input)를 출력해 '사�
 status: Draft
 assignee: []
 created_date: '2026-09-25 20:00'
+updated_date: '2026-10-03 03:39'
 labels: []
 dependencies: []
+priority: high
 ---
 
 ## Description
@@ -82,3 +84,12 @@ Claude가 응답 본문에 `<bash-input>cd /path && git push</bash-input>` 형�
 - DRAFT-7 (신규 저장소 최초 push가 main 가드에 막히는 문제) — 이 draft의 선택지 3이 위 신뢰 경계에 직접 의존하므로, 두 건은 같이 결정해야 한다.
 - DRAFT-5 (훅 시스템의 구조적 문제 5가지) — "컨텍스트 플래그" 1차 완화책과 같은 계열의 신뢰/상태 검증 문제.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 Stop 훅이 last_assistant_message에서 하네스 예약 태그(bash-input, bash-stdout, bash-stderr, system-reminder, local-command-stdout, command-name 등)를 탐지한다
+- [ ] #2 펜스 코드블록과 인라인 코드 안의 태그는 탐지하지 않는다(태그를 설명하는 정상 출력은 허용)
+- [ ] #3 탐지 시 정정을 요구하는 메시지로 Stop을 막는다 — stop_hook_active일 때는 다시 막지 않아 무한루프를 만들지 않는다
+- [ ] #4 CLAUDE.md.snippet에 '사용자에게 제안하는 명령은 펜스 코드블록으로만 쓰고 하네스 예약 태그는 출력하지 않는다' 규칙을 추가한다
+- [ ] #5 테스트를 추가하고 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
+<!-- AC:END -->

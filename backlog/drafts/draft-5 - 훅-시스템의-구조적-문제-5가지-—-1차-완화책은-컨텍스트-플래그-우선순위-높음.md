@@ -4,9 +4,10 @@ title: 훅 시스템의 구조적 문제 5가지 — 1차 완화책은 컨텍스
 status: Draft
 assignee: []
 created_date: '2026-09-19 12:43'
-updated_date: '2026-09-19 12:43'
+updated_date: '2026-10-03 03:39'
 labels: []
 dependencies: []
+priority: high
 ---
 
 ## Description
@@ -20,5 +21,6 @@ dependencies: []
 - [ ] #1 5가지 문제 각각이 실제로 재현 가능한 시나리오인지 검증(레이턴시/세션마비/무한루프/압축유실/병렬충돌) — 이번 세션 중 실제로 겪은 사례(병렬 충돌: git-safety 오탐, GitHub 재커밋 divergence)를 근거로 우선 기록
 - [ ] #2 1차 완화책 '컨텍스트 플래그'의 구체적 형태를 설계 — 훅 호출 시 전달되는 JSON payload에 상태 플래그(예: parallel_session, post_compact, retry_count)를 추가하고 훅이 이를 참고해 판단을 조정하는 방식인지 확정
 - [ ] #3 다섯 문제 전부를 한 번에 풀려 하지 말고 컨텍스트 플래그부터 우선 구현한다는 순서를 명시 — 우선순위 높음으로 표시
-- [ ] #4 이 draft도 promote하지 않고 사용자 검토 대기
+- [ ] #4 컨텍스트 플래그 1차 구현: 세션별 플래그 상태(최소 post_compact, parallel_session)를 기록하는 훅을 만들고, 기존 훅 하나 이상이 그 플래그를 읽어 판단을 조정하게 한다 — 훅의 완전 독립형 원칙(decision-3)을 지킨다
+- [ ] #5 설계와 재현 시나리오를 backlog doc으로 남기고, 테스트를 추가해 전체 스위트가 통과하며, settings.hooks.json·README 훅 표·설치된 사본에 반영한다
 <!-- AC:END -->
