@@ -1,10 +1,10 @@
 ---
 id: TASK-46
 title: gh pr merge가 가드를 통과한 사고 — if 필터가 검사 대상을 가린다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 17:13'
-updated_date: '2026-10-03 17:21'
+updated_date: '2026-10-03 17:34'
 labels:
   - hooks
   - bug
