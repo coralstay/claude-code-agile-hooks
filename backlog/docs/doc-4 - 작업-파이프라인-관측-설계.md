@@ -58,14 +58,17 @@ proceed with this tool use..."`)를 세고, 같은 세션의 session_logger 로�
 - **PostToolUse 훅은 `ExitPlanMode`에 걸린다** — 그리고 **승인된 경우에만** 걸린다.
   거부된 `ExitPlanMode`는 PostToolUse도 PostToolUseFailure도 남기지 않았다(관측 기간 안에서).
   따라서 "PostToolUse(ExitPlanMode) 발생 = 유저가 그 계획을 승인했다"로 읽을 수 있다.
-- **PreToolUse 매처가 `ExitPlanMode`에 걸리는지는 아직 실측하지 않았다.** matcher 없이 PreToolUse에
-  걸린 훅(`instructions_audit.py`)은 로그를 남기지 않아 증거가 없다. 이 설계는 PostToolUse만 쓰므로
-  당장 필요하지 않다. PreToolUse에서 계획 본문을 미리 보거나 막아야 할 일이 생기면 그때 측정한다.
-- 거부를 "관측"하는 방법은 훅 이벤트로는 없다. 필요하면 트랜스크립트의 `is_error: true`
-  `tool_result`를 읽어야 한다(이번 구현은 하지 않음).
-- `permission_mode`가 PostToolUse payload에도 오는지는 직접 덤프로 확인하지 않았다(TASK-32 본문
-  실측은 UserPromptSubmit/PreToolUse/Stop). 구현은 어느 이벤트에서든 이 필드가 오면 쓰고, 안 와도
-  `EnterPlanMode`/`ExitPlanMode` PostToolUse와 UserPromptSubmit으로 plan mode를 잡는다.
+- **PreToolUse 매처는 `ExitPlanMode`에 걸린다 — 거부·승인 모두** (2026-10-04 대화형 세션 실측).
+  임시 측정 훅(프로젝트 로컬 설정에 PreToolUse·PostToolUse matcher `ExitPlanMode`로 등록, payload를
+  그대로 기록)으로 같은 계획을 두 번 올렸다. 1회차 거부: PreToolUse만 실행(`permission_mode` plan),
+  PostToolUse 없음. 2회차 승인: PreToolUse(plan)와 PostToolUse(`auto`) 둘 다 실행.
+  PreToolUse payload 키는 `cwd, effort, hook_event_name, permission_mode, prompt_id, scratchpad_dir,
+session_id, tool_input, tool_name, tool_use_id, transcript_path`이고, PostToolUse는 여기에
+  `duration_ms`, `tool_response`(`{plan, filePath, isAgent}` — 승인된 계획 본문)가 더해진다.
+- 따라서 PreToolUse(ExitPlanMode) = "계획을 올렸다(승인 여부 미정)", PostToolUse(ExitPlanMode) =
+  "승인됐다"로 구분된다. 거부는 짝(`tool_use_id`)이 되는 PostToolUse가 없는 것으로만 추론된다.
+  승인 직후 PostToolUse 시점에는 모드가 이미 plan을 벗어나 있다(`auto`).
+- `permission_mode`는 PostToolUse payload에도 온다(위 실측).
 
 ## 3. 결정
 
@@ -154,7 +157,7 @@ proceed with this tool use..."`)를 세고, 같은 세션의 session_logger 로�
 
 ## 6. 열린 질문
 
-- PreToolUse 매처가 `ExitPlanMode`에 걸리는가 — 미측정(§2).
+- ~~PreToolUse 매처가 `ExitPlanMode`에 걸리는가~~ — 걸린다, 거부·승인 모두(§2, 2026-10-04 실측).
 - 거부된 `ExitPlanMode`가 이벤트를 전혀 남기지 않는 게 모든 거부 방식(Esc, 피드백 입력 등)에서
   같은가 — 관측된 거부 67건은 전부 이벤트 없음이었지만 거부 방식별로 나눠 보진 않았다.
 - `permission_mode == "auto"`가 대화형 payload에 실제로 오는가, PostToolUse payload에도 오는가.
