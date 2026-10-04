@@ -80,11 +80,29 @@ main/master is allowed only as a *first push*.
   refspec has an explicit non-protected `:<dst>` - makes no subprocess
   call. `git push origin task/x` costs one local `git config` call.
 
+TASK-45: gh is judged like git. In each segment, every gh executable (by
+basename: `/usr/bin/gh`) at or after the command head - unquoted runner
+arguments included, the same conservative choice as for git - has its
+first two subcommand words read, skipping gh's flags (`-R/--repo` and
+`--hostname` take a value; `-R` after the subcommand doesn't matter). Only
+an exact (noun, verb) pair from GH_DESTRUCTIVE blocks, so `gh pr list; git
+merge --ff-only x` (words spread over segments - the old whole-line scan
+blocked it) and `gh pr view merge` pass. `gh api` is checked for the same
+operations: a non-GET call to `repos/<o>/<r>/pulls/<n>/merge`, DELETE on
+`repos/<o>/<r>` or `.../releases/<id>` (`releases/tags/<t>` too), PATCH on
+`.../pulls|issues/<n>` with `state=closed` or an unseen `--input` body,
+and GraphQL text naming mergePullRequest/closePullRequest/closeIssue/
+deleteRepository. The method defaults as gh's does (POST with fields).
+An unparsable line is blocked when it has the word `gh` plus a noun/verb
+pair, or `api` plus `/merge`, DELETE, `state=closed` or such a mutation.
+
 Known gaps (decision-1): `bash -c "git push origin main"`, `eval`, aliases,
 scripts, and backtick/`$(...)` substitution are not seen. Neither are
 refspecs supplied at run time (`... | xargs git push origin`,
 `find -exec git push origin {} ;`) or `export GIT_DIR=...` in an earlier
-command. The `gh` checks are unchanged by TASK-37/38.
+command. For gh: `gh alias`/extensions, an unknown value-taking flag before
+the subcommand, GraphQL queries read from a file (`query=@q.graphql`), and
+other REST endpoints (e.g. deleting refs) are not covered.
 
 Fully self-contained: no imports from any other file in this repo."""
 
@@ -113,6 +131,52 @@ PUSH_LONG_WITH_ARG = (
 )
 OPAQUE_GLOBAL_OPTS = ("--config-env", "--exec-path")
 TRUE_VALUES = ("true", "yes", "on", "1")
+# TASK-45: destructive gh operations
+GH_DESTRUCTIVE = {
+    ("pr", "merge"),
+    ("pr", "close"),
+    ("issue", "close"),
+    ("release", "delete"),
+    ("repo", "delete"),
+}
+GH_FLAGS_WITH_ARG = {"-R", "--repo", "--hostname"}
+GH_API_FLAGS_WITH_ARG = {
+    "-X",
+    "--method",
+    "-f",
+    "--raw-field",
+    "-F",
+    "--field",
+    "-H",
+    "--header",
+    "--input",
+    "-q",
+    "--jq",
+    "-t",
+    "--template",
+    "-p",
+    "--preview",
+    "--hostname",
+    "--cache",
+}
+GH_API_HOST_RE = re.compile(r"^https?://[^/]+/(?:api/v3/)?")
+_REPO = r"repos/[^/]+/[^/]+"
+GH_API_RULES = [
+    (_REPO + r"/pulls/[^/]+/merge", {"PUT", "POST", "PATCH", "DELETE"}, "pr merge"),
+    (_REPO, {"DELETE"}, "repo delete"),
+    (_REPO + r"/releases/(?:tags/)?[^/]+", {"DELETE"}, "release delete"),
+]
+GH_API_CLOSABLE = _REPO + r"/(?:pulls|issues)/[^/]+"
+GH_GRAPHQL_MUTATIONS = {
+    "mergePullRequest": "pr merge",
+    "closePullRequest": "pr close",
+    "closeIssue": "issue close",
+    "deleteRepository": "repo delete",
+}
+GH_API_UNPARSABLE_RE = re.compile(
+    r"/merge\b|\bDELETE\b|state=closed|" + "|".join(GH_GRAPHQL_MUTATIONS),
+    re.IGNORECASE,
+)
 
 
 # --- command parsing (strip_heredoc_bodies/tokenize/split_segments/
@@ -631,28 +695,125 @@ def check_unparsable(command):
         )
 
 
-def check_gh_destructive(command):
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        tokens = command.split()
+# --- TASK-45: destructive gh operations (see the module docstring) ---
 
-    if "gh" not in tokens:
-        return
 
-    gh_idx = tokens.index("gh")
-    rest = tokens[gh_idx + 1 :]
+def gh_invocations(segments):
+    """Argument lists of every gh executable (by basename) at or after each
+    segment's command head - same command-position rules as git."""
+    found = []
+    for segment in segments:
+        for k in range(command_head(segment), len(segment)):
+            if os.path.basename(segment[k]) == "gh":
+                found.append(segment[k + 1 :])
+    return found
 
-    destructive_patterns = [
-        ("pr", "merge"),
-        ("pr", "close"),
-        ("issue", "close"),
-        ("release", "delete"),
-        ("repo", "delete"),
-    ]
-    for noun, verb in destructive_patterns:
-        if noun in rest and verb in rest:
+
+def gh_command_words(args):
+    """(gh's first two subcommand words like `pr`, `merge`, the arguments
+    after the first word), skipping gh's own flags; `-R/--repo` and
+    `--hostname` take a value."""
+    words, rest = [], []
+    i = 0
+    while i < len(args) and len(words) < 2:
+        tok = args[i]
+        i += 1
+        if tok in GH_FLAGS_WITH_ARG:
+            i += 1
+        elif not tok.startswith("-"):
+            words.append(tok)
+            if len(words) == 1:
+                rest = args[i:]
+    return tuple(words), rest
+
+
+def gh_api_request(args):
+    """(method, endpoint, field values, uses --input) of `gh api <args>`.
+    The method defaults the way gh's does: POST once a field or --input is
+    given, else GET."""
+    method, fields, has_input, positionals = None, [], False, []
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        i += 1
+        name, value = tok, None
+        if tok.startswith("--") and "=" in tok:
+            name, _, value = tok.partition("=")
+        elif (
+            not tok.startswith("--")
+            and tok[:2] in GH_API_FLAGS_WITH_ARG
+            and len(tok) > 2
+        ):
+            name, value = tok[:2], tok[2:].removeprefix("=")  # -XPUT, -X=PUT
+        if name in GH_API_FLAGS_WITH_ARG:
+            if value is None:
+                value = args[i] if i < len(args) else ""
+                i += 1
+            if name in ("-X", "--method"):
+                method = value
+            elif name in ("-f", "-F", "--field", "--raw-field"):
+                fields.append(value)
+            has_input |= name == "--input"
+        elif not tok.startswith("-"):
+            positionals.append(tok)
+    if method is None:
+        method = "POST" if fields or has_input else "GET"
+    endpoint = positionals[0] if positionals else ""
+    endpoint = GH_API_HOST_RE.sub("", endpoint).strip("/")
+    return method.upper(), endpoint, fields, has_input
+
+
+def gh_api_reason(args):
+    """What a `gh api` call does that `gh pr merge` & co. would be blocked
+    for, or None. Only the endpoints below are recognized."""
+    method, endpoint, fields, has_input = gh_api_request(args)
+    if endpoint == "graphql":
+        text = " ".join(args)
+        for mutation, label in GH_GRAPHQL_MUTATIONS.items():
+            if mutation in text:
+                return f"GraphQL {mutation}({label})"
+        return None
+    if method == "GET":
+        return None
+    for pattern, methods, label in GH_API_RULES:
+        if method in methods and re.fullmatch(pattern, endpoint):
+            return f"{method} {endpoint}({label})"
+    if method == "PATCH" and re.fullmatch(GH_API_CLOSABLE, endpoint):
+        if has_input or "state=closed" in fields:
+            return f"PATCH {endpoint} state=closed(pr/issue close)"
+    return None
+
+
+def check_gh_destructive(segments, command):
+    for args in gh_invocations(segments):
+        words, rest = gh_command_words(args)
+        if words in GH_DESTRUCTIVE:
+            noun, verb = words
             deny(f"[git-safety] 'gh {noun} {verb}' 계열 명령은 금지됩니다: {command}")
+        if words[:1] == ("api",):
+            reason = gh_api_reason(rest)
+            if reason:
+                deny(
+                    f"[git-safety] 'gh api'로 {reason}을 하는 것은 금지됩니다 "
+                    f"(gh pr merge 등과 같은 작업): {command}"
+                )
+
+
+def check_gh_unparsable(command):
+    """Conservative judgement for a line that can't be tokenized: block if
+    the words of a destructive gh operation appear anywhere in it."""
+    text = prepare(command)
+    if not re.search(r"\bgh\b", text):
+        return
+    words = set(re.findall(r"[A-Za-z]+", text))
+    risky = any(noun in words and verb in words for noun, verb in GH_DESTRUCTIVE)
+    if "api" in words and GH_API_UNPARSABLE_RE.search(text):
+        risky = True
+    if risky:
+        deny(
+            "[git-safety] 명령을 해석할 수 없어(따옴표 불균형 등) 파괴적 gh 작업인지 "
+            f"확인할 수 없으므로 보수적으로 차단합니다: {command}"
+        )
 
 
 def main():
@@ -669,10 +830,12 @@ def main():
         tokens = tokenize(prepare(command))
     except ValueError:
         check_unparsable(command)
+        check_gh_unparsable(command)
     else:
+        segments = split_segments(tokens)
+        check_gh_destructive(segments, command)  # no subprocess: judged first
         check_push(tokens, command, data.get("cwd") or os.getcwd())
-        check_branch_delete(split_segments(tokens), command)
-    check_gh_destructive(command)
+        check_branch_delete(segments, command)
 
     sys.exit(0)
 

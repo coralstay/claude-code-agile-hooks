@@ -1,13 +1,20 @@
 ---
-id: DRAFT-5
+id: TASK-46
 title: gh pr merge가 가드를 통과한 사고 — if 필터가 검사 대상을 가린다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 17:13'
+updated_date: '2026-10-03 17:21'
 labels:
   - hooks
   - bug
-dependencies: []
+dependencies:
+  - TASK-45
+references:
+  - TASK-37
+  - TASK-39
+  - TASK-45
+priority: high
 ---
 
 ## Description
@@ -26,3 +33,11 @@ AC 후보:
 
 참고: TASK-37(필터 제거 선례), TASK-45(gh 검사 오탐·미탐 — 판정 로직, 이 건은 등록 범위), TASK-43(훅 계약 테스트)
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 각 훅이 검사하는 명령 범위와 settings.hooks.json의 if 필터가 맞는지 대조하는 계약 테스트가 있다 — 검사 대상이 필터 밖이면 실패한다
+- [ ] #2 if 필터가 남은 훅(pre_push_check, pre_push_coverage_check, dedup_drift_guard 등)이 경로 호출과 git 아닌 명령으로 시작하는 복합 명령에서 실행되는지 실측하고, 실행되지 않는 게이트·보안 훅은 필터를 없애거나 대체한다
+- [ ] #3 cd x && gh pr merge 1이 차단되는 회귀 테스트를 남긴다
+- [ ] #4 전체 스위트를 통과하고 설치본을 갱신한다
+<!-- AC:END -->
