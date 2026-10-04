@@ -1,7 +1,7 @@
 ---
 id: TASK-48
 title: 'config_guard: hooks-logs 경로를 보호 hooks 디렉토리로 오인하는 오탐'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-03 18:45'
 updated_date: '2026-10-04 01:15'
