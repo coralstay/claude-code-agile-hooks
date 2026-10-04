@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-24 11:19'
-updated_date: '2026-10-03 18:44'
+updated_date: '2026-10-04 01:14'
 labels:
   - hooks
   - observability
@@ -48,7 +48,7 @@ SessionStart(또는 SessionEnd) 훅에서 이 저장소의 훅 규약대로 away
 - [x] #1 away_summary 레코드를 (sessionId, uuid) 기준 중복 없이 append-only JSONL로 적재하는 훅을 만든다
 - [x] #2 적재 시점(SessionStart/SessionEnd)을 실측으로 정하고 근거를 남긴다
 - [x] #3 프로젝트·기간 필터로 조회하는 얇은 CLI를 둔다
-- [ ] #4 테스트(커버리지 100% 유지)를 추가하고 설치본을 갱신한다
+- [x] #4 테스트(커버리지 100% 유지)를 추가하고 설치본을 갱신한다
 <!-- AC:END -->
 
 ## Implementation Notes

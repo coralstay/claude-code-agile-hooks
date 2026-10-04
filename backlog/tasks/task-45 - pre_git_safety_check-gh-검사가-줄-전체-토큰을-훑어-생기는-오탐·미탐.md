@@ -4,7 +4,7 @@ title: 'pre_git_safety_check: gh 검사가 줄 전체 토큰을 훑어 생기는
 status: Done
 assignee: []
 created_date: '2026-10-03 13:13'
-updated_date: '2026-10-03 17:33'
+updated_date: '2026-10-04 01:14'
 labels:
   - hooks
   - bug
@@ -26,7 +26,7 @@ priority: high
 - [x] #1 gh 파괴 명령은 같은 세그먼트의 명령 위치에서 gh(basename) 다음 하위 명령으로만 판정한다
 - [x] #2 서로 다른 세그먼트에 흩어진 gh와 merge 같은 단어 조합은 막지 않는다
 - [x] #3 /usr/bin/gh 같은 경로 호출도 같은 규칙으로 막는다
-- [ ] #4 재현 테스트를 추가하고 전체 스위트·커버리지 100%를 유지하며 설치본을 갱신한다
+- [x] #4 재현 테스트를 추가하고 전체 스위트·커버리지 100%를 유지하며 설치본을 갱신한다
 <!-- AC:END -->
 
 ## Final Summary

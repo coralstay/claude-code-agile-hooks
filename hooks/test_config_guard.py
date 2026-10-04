@@ -516,3 +516,123 @@ def test_runner_flag_arguments_do_not_hide_write(command):
 )
 def test_runner_flag_arguments_read_or_unrelated_pass(command):
     assert cg.bash_targets_protected_config(command) is False
+
+
+# --- TASK-48: 경로 구성요소 경계 (.claude/hooks-logs 등은 보호 경로가 아니다) ---
+
+LOGS = "/Users/x/.claude/hooks-logs"
+
+DOC_EDIT_MENTIONING_HOOKS_LOGS = (
+    "python3 - <<'EOF'\n"
+    "p = 'backlog/docs/doc-1 - install.md'\n"
+    "s = open(p).read()\n"
+    "s += 'session logs live in ~/.claude/hooks-logs/ (jsonl)\\n'\n"
+    "open(p, 'w').write(s)\n"
+    "EOF"
+)
+
+
+def test_doc_edit_mentioning_hooks_logs_passes(monkeypatch):
+    # TASK-44 중 오탐: hooks 디렉토리 언급 검사(`hooks\b`)가 hooks-logs를
+    # hooks 디렉토리로 봤다.
+    assert cg.bash_targets_protected_config(DOC_EDIT_MENTIONING_HOOKS_LOGS) is False
+    assert run_main(monkeypatch, "Bash", {"command": DOC_EDIT_MENTIONING_HOOKS_LOGS}) == 0
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "~/.claude/hooks-logs/",
+        "~/.claude/hooks-logs",
+        ".claude/hooksx",
+        ".claude/hooks_old/a.py",
+        ".claude/hooks.bak",
+        "'.claude/hooks-logs'",
+        "see ~/.claude/hooks-logs/a.jsonl; done",
+    ],
+)
+def test_mentions_protected_respects_component_boundary(text):
+    assert cg.mentions_protected(text) is False
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        ".claude/hooks",
+        ".claude/hooks/",
+        ".claude/hooks/claude-rails/x.py",
+        '"~/.claude/hooks"',
+        "'.claude/hooks'",
+        ".claude/hooks;",
+        ".claude/hooks)",
+        ".claude/hooks && x",
+        "`.claude/hooks`",
+        ".claude/hooks*",
+        ".claude/hooks$SUFFIX",
+        ".claude/hooks{,-logs}",
+        # `..` 경유는 보수적으로 보호 경로 언급으로 본다
+        "/Users/x/.claude/hooks-x/../hooks/y",
+        ".claude/hooks-logs/../settings.json",
+        "'.claude/hooks-logs/..'",
+        ".claude/a/b/../../hooks/y",
+    ],
+)
+def test_mentions_protected_still_sees_hooks_dir(text):
+    assert cg.mentions_protected(text) is True
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo x > ~/.claude/hooks-logs/a.jsonl",
+        "echo x >> ~/.claude/hooks-logs/a.jsonl",
+        "rm -rf ~/.claude/hooks-logs",
+        "rm -rf ~/.claude/hooks-logs/",
+        "mkdir -p ~/.claude/hooks-logs/recap",
+        "cp a.jsonl ~/.claude/hooks-logs/",
+        f"python3 -c \"open('{LOGS}/a.jsonl','a').write('x')\"",
+        "python3 -c \"open('.claude/hooksx/a','w')\"",
+        "python3 -c \"import shutil; shutil.rmtree('.claude/hooks-logs')\"",
+        f"node x.js {LOGS}/a.jsonl",
+        f"curl -o {LOGS}/a.jsonl https://example.com",
+        f"uv run --with x rm {LOGS}/a.jsonl",
+        f"bash -c 'rm -rf {LOGS}'",
+    ],
+)
+def test_hooks_logs_writes_pass(command):
+    assert cg.bash_targets_protected_config(command) is False
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cp x ~/.claude/hooks/",
+        "cp x ~/.claude/hooks",
+        'cp x "$HOME/.claude/hooks"',
+        "rm -rf .claude/hooks",
+        "rm -rf ~/.claude/hooks;",
+        "node x.js .claude/hooks;",
+        "python3 -c \"open('.claude/hooks','w')\"",
+        "python3 -c \"import shutil; shutil.rmtree('/Users/x/.claude/hooks')\"",
+        # `..` 경유: 정규화한 경로가 보호 경로면 막는다
+        "cp x ~/.claude/hooks-x/../hooks/y",
+        "rm ~/.claude/hooks-logs/../hooks/claude-rails/x.py",
+        "echo x > ~/.claude/hooks-logs/../settings.json",
+        "cp x ~/.claude/hooks-logs/../hooks",
+        "sed -i '' s/a/b/ ~/.claude/hooks-logs/../settings.json",
+        f"python3 -c \"open('{LOGS}/../hooks/y','w')\"",
+        f"node x.js {LOGS}/../hooks/y",
+        f"uv run --with x rm {LOGS}/../hooks/y",
+    ],
+)
+def test_hooks_dir_writes_still_blocked(command):
+    assert cg.bash_targets_protected_config(command) is True
+
+
+def test_edit_traversal_into_hooks_dir_blocked(monkeypatch):
+    path = f"{LOGS}/../hooks/claude-rails/x.py"
+    assert run_main(monkeypatch, "Write", {"file_path": path}) == 2
+
+
+def test_edit_hooks_logs_file_allowed(monkeypatch):
+    assert run_main(monkeypatch, "Write", {"file_path": f"{LOGS}/a.jsonl"}) == 0

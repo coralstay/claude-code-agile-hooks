@@ -4,7 +4,7 @@ title: 'config_guard: uv run 등 러너의 인자를 받는 플래그를 명령�
 status: Done
 assignee: []
 created_date: '2026-10-03 17:51'
-updated_date: '2026-10-03 18:10'
+updated_date: '2026-10-04 01:14'
 labels:
   - hooks
   - security
@@ -26,7 +26,7 @@ TASK-41 커버리지 작업 중 발견. effective_head가 uv run의 플래그를
 <!-- AC:BEGIN -->
 - [x] #1 uv run·uvx의 인자 받는 플래그(--with, --python, --from, --project, --directory, -p 등) 뒤의 실제 명령을 판정해 보호 경로 쓰기를 막는다
 - [x] #2 알 수 없는 플래그가 있는 러너 줄에서 보호 경로 쓰기 가능성이 보이면 보수적으로 막는다
-- [ ] #3 재현 테스트를 추가하고 줄·분기 커버리지 100%·전체 스위트를 유지하며 설치본을 갱신한다
+- [x] #3 재현 테스트를 추가하고 줄·분기 커버리지 100%·전체 스위트를 유지하며 설치본을 갱신한다
 <!-- AC:END -->
 
 ## Final Summary

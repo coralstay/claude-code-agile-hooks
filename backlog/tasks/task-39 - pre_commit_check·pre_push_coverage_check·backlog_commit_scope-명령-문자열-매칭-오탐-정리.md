@@ -4,7 +4,7 @@ title: 'pre_commit_check·pre_push_coverage_check·backlog_commit_scope: 명령 
 status: Done
 assignee: []
 created_date: '2026-10-03 08:12'
-updated_date: '2026-10-03 17:20'
+updated_date: '2026-10-04 01:14'
 labels:
   - hooks
   - bug
@@ -25,7 +25,7 @@ TASK-34 조사 중 발견. 세 훅이 공유하는 command_invokes_git_subcomman
 <!-- AC:BEGIN -->
 - [x] #1 세 훅이 명령 위치의 git 하위 명령만 판정한다
 - [x] #2 공용 헬퍼 교체를 REGISTRY와 테스트에 반영하고 drift가 없다
-- [ ] #3 재현 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
+- [x] #3 재현 테스트를 추가하고 전체 스위트가 통과하며 설치본을 갱신한다
 <!-- AC:END -->
 
 ## Final Summary
