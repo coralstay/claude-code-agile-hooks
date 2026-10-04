@@ -1,10 +1,10 @@
 ---
 id: TASK-49
 title: format_code.py 제거 — 포매터는 Claude 훅의 역할이 아니다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-04 01:48'
-updated_date: '2026-10-04 01:57'
+updated_date: '2026-10-04 06:11'
 labels:
   - hooks
   - policy
@@ -42,9 +42,15 @@ lint 피드백(ruff check, tsc)은 필요해지면 "파일을 바꾸지 않고, 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 hooks/format_code.py와 hooks/test_format_code.py를 삭제한다
-- [ ] #2 settings.hooks.json에서 format_code 항목을 제거하고 계약 테스트(등록·실행)가 통과한다
-- [ ] #3 README·doc-2에서 format_code 서술을 제거하고 훅 수를 맞춘다
-- [ ] #4 전체 스위트와 커버리지 100% 게이트가 통과한다
+- [x] #1 hooks/format_code.py와 hooks/test_format_code.py를 삭제한다
+- [x] #2 settings.hooks.json에서 format_code 항목을 제거하고 계약 테스트(등록·실행)가 통과한다
+- [x] #3 README·doc-2에서 format_code 서술을 제거하고 훅 수를 맞춘다
+- [x] #4 전체 스위트와 커버리지 100% 게이트가 통과한다
 - [ ] #5 설치본과 ~/.claude/settings.json의 format_code 항목을 제거한다
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+포매터 훅 format_code.py와 테스트를 삭제하고 settings.hooks.json 등록(PostToolUse Edit|Write)을 뺐다. README·doc-2에서 행을 지우고 훅 수를 33→32(범용 26→25)로 맞췄다. 근거: 가드·게이트·관측 어디에도 속하지 않고 에이전트 모르게 파일 전체를 다시 쓰며, 프로젝트 동의 여부를 확인하지 않아 diff를 오염시키고(한 줄 수정에 수십~160줄), 서브에이전트가 스크립트로 되돌리며 Edit/Write 가드를 거치지 않게 만들었고, 프로젝트 밖 파일까지 포맷하고, npx --yes로 패키지를 받아 실행할 수 있었다. 포맷은 프로젝트의 pre-commit·에디터·CI 책임. 테스트 파일 삭제는 protect_tests 때문에 사용자가 git rm. 1672 passed, 커버리지 100%. 진행 중 사용자가 머지를 막는 pre_git_safety_check.py 비활성화를 요청했다가 철회해 해당 변경은 커밋 없이 폐기했다(훅 유지). AC #5(설치본·~/.claude/settings.json 정리)는 install.sh가 삭제를 하지 않아 사용자가 직접 정리한 뒤 체크.
+<!-- SECTION:FINAL_SUMMARY:END -->
