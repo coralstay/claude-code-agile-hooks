@@ -1,5 +1,7 @@
 # claude-rails
 
+[![CI](https://github.com/coralstay/claude-rails/actions/workflows/ci.yml/badge.svg)](https://github.com/coralstay/claude-rails/actions/workflows/ci.yml)
+
 에이전트(Claude Code)를 사용하기 위해 개인적으로 만들어 사용하고 있는 훅 모음집입니다.
 Claude Code와 함께 작업할 때, Claude가 제가 의도한 대로 행동할 수 있도록 돕기 위해
 만들었습니다.
@@ -166,8 +168,27 @@ cd ~/githubs/claude-rails && ./install.sh
 있고, `hooks/`·`scripts/` 전체의 줄·분기 커버리지가 100% 미만이면 실패합니다.
 
 ```bash
-uvx --with pytest-cov pytest -q --cov
+uvx --with pytest-cov pytest -q --cov                                  # 순차 실행
+uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov      # 병렬 실행 (더 빠름)
 ```
+
+테스트에는 단위 테스트 외에 계약 테스트 두 개가 있습니다.
+[`hooks/test_hook_registration_contract.py`](hooks/test_hook_registration_contract.py)는
+`if` 필터가 훅이 검사할 명령을 가리지 않는지 확인하고,
+[`hooks/test_hook_runtime_contract.py`](hooks/test_hook_runtime_contract.py)는
+`settings.hooks.json`에 등록된 모든 훅을 Claude Code처럼 실제 subprocess로 실행해 빈
+입력·깨진 JSON·정상 입력에서 크래시 없이 정해진 종료 코드를 내는지 확인합니다. 이때 `HOME`을
+임시 디렉토리로 바꿔 실행하므로 실제 `~/.claude`는 건드리지 않습니다.
+
+**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 `main` push와 모든 PR에서
+ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커버리지가 100% 미만이면
+실패합니다.
+
+**로컬 게이트**: 이 저장소에도 [`.claude-rails.json`](.claude-rails.json)이 있어서, 설치된
+훅이 이 저장소에서 커밋할 때마다 `testCommand`(병렬 테스트, 커버리지 없이)를, push할
+때마다 `coverageCommand`(CI와 같은 명령)를 돌립니다. 실패하면 커밋·push가 막힙니다. push
+때의 실행 기록은 `.claude-rails/coverage-log.jsonl`에 남고, 이 디렉토리는 git에서
+제외됩니다.
 
 ## 더 자세한 내용이 궁금하시다면
 

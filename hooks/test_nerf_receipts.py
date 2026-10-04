@@ -167,15 +167,17 @@ def test_latest_assistant_usage_none_when_no_usable_entry(tmp_path):
     assert nr.latest_assistant_usage(transcript) == (None, None)
 
 
-def test_latest_assistant_usage_unreadable_transcript(tmp_path):
+def test_latest_assistant_usage_unreadable_transcript(tmp_path, monkeypatch):
+    # TASK-43: chmod 0 doesn't make a file unreadable for root (CI
+    # containers), so the read failure is injected at open() instead - same
+    # PermissionError the hook sees for an unreadable file, for any user.
     transcript = make_transcript(tmp_path, [ASSISTANT_ENTRY])
-    os.chmod(transcript, 0)
-    try:
-        if os.access(transcript, os.R_OK):  # running as root: permissions don't apply
-            pytest.fail("cannot make the transcript unreadable in this environment")
-        assert nr.latest_assistant_usage(transcript) == (None, None)
-    finally:
-        os.chmod(transcript, 0o600)
+
+    def unreadable(path, *args, **kwargs):
+        raise PermissionError(13, "Permission denied", path)
+
+    monkeypatch.setattr(nr, "open", unreadable, raising=False)
+    assert nr.latest_assistant_usage(transcript) == (None, None)
 
 
 def test_posttooluse_without_file_path_omits_it(monkeypatch, isolate_log):

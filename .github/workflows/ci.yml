@@ -1,0 +1,53 @@
+# TASK-43: the same gate as the local pre-push coverageCommand
+# (.claude-rails.json) - the whole suite in parallel with branch coverage;
+# pyproject.toml's fail_under = 100 fails the job below 100%.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.11", "3.12"]
+    env:
+      # uvx and the hooks the runtime contract test starts as `python3`
+      # both use the matrix interpreter
+      UV_PYTHON: ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      # setup-uv publishes no floating major tag after v7: pinned to a release
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: false
+
+      - name: Static checks
+        run: |
+          bash -n install.sh
+          python3 -m json.tool settings.hooks.json > /dev/null
+          python3 -m json.tool .claude-rails.json > /dev/null
+
+      - name: Tests + coverage (fail under 100%)
+        run: uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov
