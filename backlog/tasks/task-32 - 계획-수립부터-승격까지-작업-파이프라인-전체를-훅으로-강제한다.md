@@ -1,10 +1,10 @@
 ---
 id: TASK-32
 title: 계획 수립부터 승격까지 작업 파이프라인 전체를 훅으로 강제한다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-09-26 08:08'
-updated_date: '2026-10-04 01:32'
+updated_date: '2026-10-04 01:33'
 labels:
   - backlog
   - workflow
@@ -177,7 +177,7 @@ DRAFT-9는 이 파이프라인의 4/6/7단계(드래프트 경유 + 생성/승�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 ExitPlanMode에 PreToolUse/PostToolUse 매처가 실제로 걸리는지 대화형 세션에서 실측하고 결과를 기록
+- [x] #1 ExitPlanMode에 PreToolUse/PostToolUse 매처가 실제로 걸리는지 대화형 세션에서 실측하고 결과를 기록
 - [x] #2 1~3단계(plan mode → 사람 검토 → 오토모드)를 차단으로 강제할지 관측·기록만 할지 결정 — 예외 기준 포함
 - [x] #3 2단계 사람 승인의 근거를 승인된 ExitPlanMode로 인정할지 별도 검증 가능 신호를 요구할지 결정(DRAFT-8 종속)
 - [x] #4 5단계 산출물 기반 검사(의존성 미설정 시 승격 거부, 작업순서 문서 존재·역참조, 순환 없음)를 검사 지점과 함께 설계
@@ -197,6 +197,8 @@ DRAFT-9는 이 파이프라인의 4/6/7단계(드래프트 경유 + 생성/승�
 - tokenize/split_segments/strip_heredoc_bodies/is_outside_project 복사본을 dedup_drift_guard REGISTRY에 등록.
 - 5단계(AC#4)는 doc-4 §4에 설계만 — 검사 지점은 승격 커밋 시점, 구현은 후속.
 - 설치(~/.claude 사본·settings.json 반영)는 하지 않았다 — AC#8 미체크.
+
+2026-10-04 AC #1 실측(대화형 세션, 프로젝트 로컬 설정에 PreToolUse·PostToolUse matcher ExitPlanMode 임시 측정 훅): 1회차 거부 → PreToolUse만 실행(permission_mode plan), PostToolUse 없음. 2회차 승인 → PreToolUse(plan) + PostToolUse(auto, tool_response={plan, filePath, isAgent}). PreToolUse는 거부·승인 모두 걸리고, PostToolUse는 승인 시에만 걸린다. 측정 훅은 사용자가 측정 후 삭제.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
