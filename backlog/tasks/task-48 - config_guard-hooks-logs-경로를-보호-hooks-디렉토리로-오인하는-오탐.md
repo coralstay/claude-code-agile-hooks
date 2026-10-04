@@ -4,7 +4,7 @@ title: 'config_guard: hooks-logs 경로를 보호 hooks 디렉토리로 오인�
 status: In Progress
 assignee: []
 created_date: '2026-10-03 18:45'
-updated_date: '2026-10-04 01:15'
+updated_date: '2026-10-04 01:19'
 labels:
   - hooks
   - bug
@@ -24,7 +24,7 @@ TASK-44 중 발견. 문서 텍스트에 .claude/hooks-logs/ 경로가 들어 있
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 보호 경로 판정이 경로 구성요소 경계를 지켜 .claude/hooks-logs·.claude/hooksx 등을 .claude/hooks로 보지 않는다
-- [ ] #2 .claude/hooks 자체와 그 하위 경로 쓰기는 지금처럼 막는다
+- [x] #1 보호 경로 판정이 경로 구성요소 경계를 지켜 .claude/hooks-logs·.claude/hooksx 등을 .claude/hooks로 보지 않는다
+- [x] #2 .claude/hooks 자체와 그 하위 경로 쓰기는 지금처럼 막는다
 - [ ] #3 재현 테스트를 추가하고 커버리지 100%·전체 스위트를 유지하며 설치본을 갱신한다
 <!-- AC:END -->
