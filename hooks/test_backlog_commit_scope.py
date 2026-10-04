@@ -300,3 +300,176 @@ def test_git_add_with_redirection_is_not_simulated(monkeypatch, repo):
     git(repo, "add", DRAFT)
     command = "git add src/app.py > /dev/null && git commit -m x"
     assert run_main(monkeypatch, repo, command) == 0
+
+
+# --- TASK-39: only a `git commit`/`git add` in command position counts -------
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo git commit",
+        "echo /usr/bin/git commit -m x",
+        "backlog task edit TASK-1 --notes 'git commit 전에 확인'",
+        "cat <<'EOF' > notes.md\ngit commit -m x\nEOF",
+        "git status",
+    ],
+)
+def test_text_mentioning_commit_is_not_checked(monkeypatch, repo, command):
+    # Regression: these used to be judged as a commit against a mixed index.
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo, command) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "/usr/bin/git commit -m x",
+        "FOO=1 git commit -m x",
+        "sudo -E git commit -m x",
+        "echo ok && git commit -m x",
+        "(git commit -m x)",
+        "git \\\ncommit -m x",
+        'git commit -m "unterminated',
+    ],
+)
+def test_real_commit_forms_are_checked(monkeypatch, repo, command):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_heredoc_body_git_add_is_not_replayed(monkeypatch, repo):
+    # The `git add` line is heredoc text, not a command: only the draft is
+    # really staged, so the commit passes.
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    command = "cat <<'EOF' > n.txt\ngit add src/app.py\nEOF\ngit commit -m x"
+    assert run_main(monkeypatch, repo, command) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sudo git add src/app.py && git commit -m x",
+        "/usr/bin/git add src/app.py; FOO=1 git commit -m x",
+        "git add src/app.py && sudo git commit -m x",
+    ],
+)
+def test_prefixed_git_add_is_replayed(monkeypatch, repo, command):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_prefixed_commit_all_is_simulated(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")  # tracked, unstaged
+    git(repo, "add", DRAFT)
+    assert run_main(monkeypatch, repo, "FOO=1 git commit -am x") == 2
+
+
+# --- staging_plan (pure) ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("git commit -m x", ([], False)),
+        ("git add a b && git commit -a", ([["a", "b"]], True)),
+        ("git status; git add a; git log; git commit", ([["a"]], False)),
+        ("FOO=1 git; git commit", ([], False)),
+        ("git add a && git -C /p commit -a", ([["a"]], False)),
+        ("git add a && git --no-pager commit -a", ([["a"]], False)),
+        ("git add a && GIT_DIR=/p git commit -a", ([["a"]], False)),
+        ("git -C /p add a && git commit", None),
+        ("GIT_INDEX_FILE=/tmp/i git add a && git commit", None),
+        ("cd /p && git commit", None),
+        ("sudo cd /p; git commit", None),
+        ("git add $F && git commit", None),
+        ('git commit -m "x', None),
+        ("echo git commit", None),
+        ("cat <<EOF\ngit add a\ngit commit\nEOF", None),
+    ],
+)
+def test_staging_plan(command, expected):
+    assert bcs.staging_plan(command) == expected
+
+
+# --- commit_stages_all ------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        (["--all"], True),
+        (["-a"], True),
+        (["-qa"], True),
+        (["-m", "-a"], False),
+        (["-ma"], False),
+        (["--message", "-a"], False),
+        (["--message=-a"], False),
+        (["--amend"], False),
+        (["--", "-a"], False),
+        (["-"], False),
+        (["path"], False),
+    ],
+)
+def test_commit_stages_all(args, expected):
+    assert bcs.commit_stages_all(args) is expected
+
+
+# --- remaining branches -----------------------------------------------------
+
+
+def test_parse_name_status_skips_empty_and_truncated_fields():
+    assert bcs.parse_name_status("\0M\0a.py\0\0D") == [("M", "a.py", None)]
+
+
+def test_parse_name_status_truncated_rename_falls_back():
+    # `R` without both paths is read as a plain entry with one path.
+    assert bcs.parse_name_status("R100\0old") == [("R", "old", None)]
+
+
+def test_is_backlog_project_false_for_empty_cwd():
+    assert bcs.is_backlog_project("") is False
+
+
+def test_has_command_real():
+    assert bcs.has_command("python3") is True
+    assert bcs.has_command("definitely-not-a-real-command-xyz") is False
+
+
+def test_staged_entries_none_outside_repo(tmp_path):
+    assert bcs.staged_entries(str(tmp_path)) is None
+
+
+def test_simulated_entries_none_outside_repo(tmp_path):
+    assert bcs.simulated_entries(str(tmp_path), [["a"]], False) is None
+
+
+def test_simulation_without_existing_index(monkeypatch, tmp_path):
+    # Fresh repo: no index file yet, the temp index starts empty.
+    git(tmp_path, "init", "-q")
+    write(tmp_path, "backlog/config.yml", "project_name: t\n")
+    write(tmp_path, DRAFT, DRAFT_BODY)
+    command = f"git add '{DRAFT}' && git commit -m x"
+    assert run_main(monkeypatch, tmp_path, command) == 0
+
+
+def test_passes_when_index_unreadable(monkeypatch, repo):
+    monkeypatch.setattr(bcs, "staged_entries", lambda cwd, env=None: None)
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_format_offenders_truncates_long_lists():
+    entries = [("M", f"src/f{i}.py", None) for i in range(bcs.MAX_LISTED + 3)]
+    listed = bcs.format_offenders(entries + [("M", "src/f0.py", None)])
+    assert "src/f9.py" in listed
+    assert f"src/f{bcs.MAX_LISTED}.py" not in listed
+    assert "... 외 3개" in listed

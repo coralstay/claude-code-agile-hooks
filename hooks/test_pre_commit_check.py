@@ -166,36 +166,91 @@ def test_no_op_when_command_is_not_a_commit(monkeypatch, tmp_path):
     assert exc_info.value.code == 0
 
 
-def test_command_invokes_git_subcommand_handles_dash_c():
-    assert pcc.command_invokes_git_subcommand("git -C /p commit -m x", "commit") is True
+# --- TASK-39: only a `git commit` in command position counts ----------------
+
+COMMIT_TEXT_ONLY = [
+    "echo git commit",
+    'echo "git commit -m x"',
+    "backlog task edit TASK-1 --notes 'run git commit later'",
+    "cat <<'EOF' > notes.md\ngit commit -m x\nEOF",
+    "cat <<EOF\n  git -C /p commit -m x\nEOF\necho done",
+    "git log --grep commit",
+    "git status",
+    "printf '%s' \"a; git commit\"",
+    "",
+]
+
+COMMIT_REAL = [
+    "git commit -m x",
+    "/usr/bin/git commit -m x",
+    "./git commit -m x",
+    "git -C /p commit -m x",
+    "git -c user.name=x commit -m x",
+    "git --git-dir=.git commit -m x",
+    "git -q commit -m x",
+    "FOO=1 git commit -m x",
+    "env FOO=1 git commit -m x",
+    "sudo -E git commit -m x",
+    "cd /p && git commit -m x",
+    "git add . ; git commit -m x",
+    "true || git commit -m x",
+    "(git commit -m x)",
+    "{ git commit -m x; }",
+    "git \\\ncommit -m x",
+    "cat <<'EOF' > f\nbody\nEOF\ngit commit -F f",
+    'git commit -m "$(cat <<\'EOF\'\nmsg\nEOF\n)"',
+    'git commit -m "unterminated',
+]
 
 
-def test_command_invokes_git_subcommand_false_for_other_subcommand():
-    assert pcc.command_invokes_git_subcommand("git -C /p push", "commit") is False
+@pytest.mark.parametrize("command", COMMIT_TEXT_ONLY)
+def test_command_runs_git_ignores_text(command):
+    assert pcc.command_runs_git(command, "commit") is False
 
 
-def test_command_invokes_git_subcommand_skips_bare_flag():
-    assert pcc.command_invokes_git_subcommand("git -q commit -m x", "commit") is True
+@pytest.mark.parametrize("command", COMMIT_REAL)
+def test_command_runs_git_detects_real_commit(command):
+    assert pcc.command_runs_git(command, "commit") is True
 
 
-def test_command_invokes_git_subcommand_falls_back_on_unparsable_command():
+def test_command_runs_git_other_subcommand_is_not_commit():
+    assert pcc.command_runs_git("git -C /p push", "commit") is False
+    assert pcc.command_runs_git("git -C", "commit") is False
+    assert pcc.command_runs_git("FOO=1", "commit") is False
+
+
+def test_command_runs_git_unparsable_falls_back_to_substring():
     unbalanced = 'git commit -m "unterminated'
-    assert pcc.command_invokes_git_subcommand(unbalanced, "commit") is True
-    assert pcc.command_invokes_git_subcommand(unbalanced, "push") is False
+    assert pcc.command_runs_git(unbalanced, "commit") is True
+    assert pcc.command_runs_git(unbalanced, "push") is False
 
 
-def test_command_invokes_git_subcommand_detects_absolute_path_bypass():
-    assert (
-        pcc.command_invokes_git_subcommand("/usr/bin/git commit -m x", "commit") is True
+@pytest.mark.parametrize("command", COMMIT_TEXT_ONLY)
+def test_text_mentioning_commit_skips_all_checks(monkeypatch, command):
+    # Regression (TASK-39): `echo git commit` and heredoc bodies used to be
+    # judged as a commit, running the branch check and the test command.
+    monkeypatch.setattr(
+        pcc,
+        "has_command",
+        lambda name: (_ for _ in ()).throw(AssertionError("should not be called")),
     )
+    code = run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": command}})
+    assert code == 0
 
 
-def test_command_invokes_git_subcommand_detects_relative_path_bypass():
-    assert pcc.command_invokes_git_subcommand("./git commit -m x", "commit") is True
+def test_denies_prefixed_absolute_commit_off_task_branch(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(pcc, "has_command", lambda name: True)
+    monkeypatch.setattr(pcc, "is_backlog_project", lambda cwd: True)
+    monkeypatch.setattr(pcc, "has_active_task", lambda cwd: True)
+    monkeypatch.setattr(pcc, "current_branch", lambda cwd: "main")
+    command = "git add -A && FOO=1 /usr/bin/git commit -m x"
+    code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}})
+    assert code == 2
+    assert "태스크 브랜치" in capsys.readouterr().err
 
 
-def test_command_invokes_git_subcommand_ignores_git_outside_verb_position():
-    assert pcc.command_invokes_git_subcommand("echo /usr/bin/git", "commit") is False
+def test_is_backlog_project_false_for_empty_cwd():
+    assert pcc.is_backlog_project("") is False
 
 
 def test_configured_test_command_reads_file(tmp_path):

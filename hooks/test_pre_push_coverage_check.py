@@ -216,30 +216,81 @@ def test_run_shell_captures_combined_output():
     assert "out" in output and "err" in output
 
 
-def test_command_invokes_git_subcommand_handles_dash_c():
-    assert ppc.command_invokes_git_subcommand("git -C /p push", "push") is True
+# --- TASK-39: only a `git push` in command position counts ------------------
+
+PUSH_TEXT_ONLY = [
+    "echo git push",
+    "echo /usr/bin/git",
+    'echo "git push origin task/x"',
+    "git commit -m 'then git push'",
+    "backlog task edit TASK-1 --notes 'git push after review'",
+    "cat <<'EOF' > notes.md\ngit push\nEOF",
+    "cat <<EOF\n  git -C /p push\nEOF\necho done",
+    "git -C /p status",
+    "git log --grep push",
+    "git --no-pager",
+    "",
+]
+
+PUSH_REAL = [
+    "git push",
+    "/usr/bin/git push",
+    "./git push",
+    "git -C /p push",
+    "git -c push.default=current push",
+    "git --git-dir=.git push",
+    "git -q push",
+    "FOO=1 git push",
+    "env FOO=1 git push origin task/x",
+    "sudo -E git push",
+    "cd /p && git push",
+    "git commit -m x; git push",
+    "false || git push",
+    "(git push)",
+    "git \\\npush",
+    "cat <<'EOF' > f\nbody\nEOF\ngit push",
+    'git push "unterminated',
+]
 
 
-def test_command_invokes_git_subcommand_false_for_other_subcommand():
-    assert ppc.command_invokes_git_subcommand("git -C /p status", "push") is False
+@pytest.mark.parametrize("command", PUSH_TEXT_ONLY)
+def test_command_runs_git_ignores_text(command):
+    assert ppc.command_runs_git(command, "push") is False
 
 
-def test_command_invokes_git_subcommand_skips_bare_flag():
-    assert ppc.command_invokes_git_subcommand("git -q push", "push") is True
+@pytest.mark.parametrize("command", PUSH_REAL)
+def test_command_runs_git_detects_real_push(command):
+    assert ppc.command_runs_git(command, "push") is True
 
 
-def test_command_invokes_git_subcommand_falls_back_on_unparsable_command():
-    unbalanced = 'git push "unterminated'
-    assert ppc.command_invokes_git_subcommand(unbalanced, "push") is True
+def test_command_runs_git_unparsable_falls_back_to_substring():
+    assert ppc.command_runs_git('git commit -m "x', "push") is False
+    assert ppc.command_runs_git('git push "x', "push") is True
 
 
-def test_command_invokes_git_subcommand_detects_absolute_path_bypass():
-    assert ppc.command_invokes_git_subcommand("/usr/bin/git push", "push") is True
+@pytest.mark.parametrize("command", PUSH_TEXT_ONLY)
+def test_text_mentioning_push_runs_no_coverage(tmp_path, monkeypatch, capsys, command):
+    # Regression (TASK-39): `echo git push` and heredoc bodies used to run the
+    # coverage command and log an attempt.
+    (tmp_path / ".claude-rails.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
+    code = run_main(
+        monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
+    )
+    assert code == 0
+    assert capsys.readouterr().out == ""
+    assert not (tmp_path / ".claude-rails" / "coverage-log.jsonl").exists()
 
 
-def test_command_invokes_git_subcommand_detects_relative_path_bypass():
-    assert ppc.command_invokes_git_subcommand("./git push", "push") is True
-
-
-def test_command_invokes_git_subcommand_ignores_git_outside_verb_position():
-    assert ppc.command_invokes_git_subcommand("echo /usr/bin/git", "push") is False
+def test_fires_on_prefixed_absolute_push_in_chain(tmp_path, monkeypatch, capsys):
+    (tmp_path / ".claude-rails.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
+    command = "git commit -m x && FOO=1 /usr/bin/git push"
+    code = run_main(
+        monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
+    )
+    assert code == 0
+    hso = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "deny"

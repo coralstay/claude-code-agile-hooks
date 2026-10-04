@@ -46,10 +46,6 @@ NO_FUNCTION_BODY = """
 # the one function a test cares about perturbing.
 BASELINE_BODIES = {
     "is_backlog_project": IDENTICAL_BODY,
-    "command_invokes_git_subcommand": """
-        def command_invokes_git_subcommand(command, subcommand):
-            return subcommand in command.split()
-        """,
     "has_command": """
         def has_command(name):
             import shutil
@@ -86,6 +82,14 @@ BASELINE_BODIES = {
     "command_head": """
         def command_head(segment):
             return 0
+        """,
+    "git_subcommand_index": """
+        def git_subcommand_index(segment):
+            return None
+        """,
+    "command_runs_git": """
+        def command_runs_git(command, subcommand):
+            return False
         """,
 }
 
@@ -192,12 +196,9 @@ def test_registry_covers_newly_added_dedup_functions():
     # empty string vs None), so it must never appear.
     # TASK-34: pre_push_check.py left this list - it now uses the
     # command-position helpers (tokenize/split_segments/command_head).
-    assert ddg.REGISTRY["command_invokes_git_subcommand"] == [
-        "pre_commit_check.py",
-        "pre_push_coverage_check.py",
-        "dedup_drift_guard.py",
-        "backlog_commit_scope.py",
-    ]
+    # TASK-39: the other three hooks left it too, so only this guard's own
+    # copy remains - a single copy can't drift, the entry is gone.
+    assert "command_invokes_git_subcommand" not in ddg.REGISTRY
     assert ddg.REGISTRY["has_command"] == [
         "block_stop_if_dirty.py",
         "pre_commit_check.py",
@@ -240,15 +241,18 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_push_check.py",
         "config_guard.py",  # TASK-35
         "pre_git_safety_check.py",  # TASK-37
+        "pre_commit_check.py",  # TASK-39
+        "pre_push_coverage_check.py",  # TASK-39
+        "backlog_commit_scope.py",  # TASK-39
     ]
-    assert "pre_push_check.py" not in ddg.REGISTRY["command_invokes_git_subcommand"]
+    assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
 
 def test_registry_covers_task37_git_safety_command_position_helpers():
     # TASK-37: pre_git_safety_check.py judges only command-position git with
     # the same four verbatim helpers; every copy must be registered.
     for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
-        assert ddg.REGISTRY[name][-1] == "pre_git_safety_check.py"
+        assert "pre_git_safety_check.py" in ddg.REGISTRY[name]
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
@@ -260,6 +264,25 @@ def test_registry_covers_task35_config_guard_command_position_helpers():
     # tokenizer/segment/command-position helpers.
     for name in ("tokenize", "split_segments", "command_head"):
         assert "config_guard.py" in ddg.REGISTRY[name]
+
+
+def test_registry_covers_task39_git_subcommand_helpers():
+    # TASK-39: the commit/push gates judge command-position git with the
+    # same verbatim helpers; every copy must be registered.
+    gates = [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
+    ]
+    for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+        for gate in gates:
+            assert gate in ddg.REGISTRY[name]
+    assert ddg.REGISTRY["git_subcommand_index"] == gates
+    assert ddg.REGISTRY["command_runs_git"] == gates
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
 
 
 def test_allows_commit_when_all_registered_functions_identical(monkeypatch, tmp_path):
@@ -383,12 +406,17 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_push_check.py",  # TASK-34
             "config_guard.py",  # TASK-35
             "pre_git_safety_check.py",  # TASK-37
+            "pre_commit_check.py",  # TASK-39
+            "pre_push_coverage_check.py",  # TASK-39
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
         "pipeline_trace.py",
         "pre_push_check.py",  # TASK-34
         "pre_git_safety_check.py",  # TASK-37
+        "pre_commit_check.py",  # TASK-39
+        "pre_push_coverage_check.py",  # TASK-39
+        "backlog_commit_scope.py",  # TASK-39
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
@@ -403,10 +431,11 @@ def test_registry_covers_task32_pipeline_trace_copies():
 
 def append_repo_registry(hooks_dir, registry_source):
     """Appends a REGISTRY assignment to the fake repo's own
-    dedup_drift_guard.py (build_full_hooks_dir already wrote it, since it is
-    registered under command_invokes_git_subcommand)."""
+    dedup_drift_guard.py (created if build_full_hooks_dir didn't write it -
+    since TASK-39 no REGISTRY entry lists that file)."""
     path = hooks_dir / "dedup_drift_guard.py"
-    path.write_text(path.read_text() + "\n" + textwrap.dedent(registry_source))
+    existing = path.read_text() if path.exists() else ""
+    path.write_text(existing + "\n" + textwrap.dedent(registry_source))
 
 
 def registry_without(function_name, filename):

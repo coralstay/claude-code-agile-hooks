@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (matcher: Bash, if: Bash(git *))
+"""PreToolUse (matcher: Bash, no `if` filter)
 TASK-29 (B): in a backlog.md project, "draft created" and "draft promoted"
 must each land as their own commit, so history shows when something became
 a task. On `git commit` (including `git -C <path> commit`) this hook reads
@@ -23,8 +23,23 @@ commit:
   - `git commit -a` / `--all` / short clusters such as `-am`.
 Simulation is skipped (the real index is checked as-is) when the command
 `cd`s/`pushd`s first, when a preceding `git add` uses global flags
-(`git -C x add`) or shell expansions (`$VAR`, backticks), or when the line
-can't be tokenized.
+(`git -C x add`), a `GIT_*=` assignment, or shell expansions (`$VAR`,
+backticks), or when the line can't be tokenized.
+
+TASK-39: commits and the `git add`s to replay are found the way
+pre_push_check.py (TASK-34) finds a push - heredoc bodies dropped,
+backslash-newline continuations joined, the line split into shell segments,
+env assignments and simple wrappers skipped (`command_head`), git compared
+by basename (decision-1) and its global flags skipped. Detection
+(`command_runs_git`) and replay (`staging_plan`) read the same segments, so
+`echo git commit`, quoted text and heredoc bodies neither trigger the check
+nor get replayed, while `sudo git add x && FOO=1 /usr/bin/git commit` is
+both detected and simulated. If the line can't be tokenized, any `commit`
+substring counts as a commit and the real index is checked (conservative:
+an extra index read is harmless, a skipped scope check is not). Registered
+without `if: Bash(git *)` for the same reason as pre_commit_check.py: the
+filter matches command text, so absolute-path or env-prefixed commits never
+reached this hook.
 
 Still uncovered: `git rm`/`git mv`/`git stage`/`git update-index` in the
 same command, `git commit <pathspec>`/`--only`/`--include` (checked against
@@ -39,6 +54,7 @@ Fully self-contained: no imports from any other file in this repo."""
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -46,10 +62,13 @@ import sys
 import tempfile
 
 FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+SEPARATOR_CHARS = set(";&|()\n")
+WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
+ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 
 DRAFTS = "backlog/drafts/"
 TASKS = "backlog/tasks/"
-SEPARATOR_CHARS = set(";&|()\n")
 COMMIT_SHORT_WITH_ARG = set("mFcCt")
 COMMIT_LONG_WITH_ARG = {
     "--message",
@@ -72,32 +91,99 @@ def has_command(name):
     return shutil.which(name) is not None
 
 
-def command_invokes_git_subcommand(command, subcommand):
-    """True if `command` runs `git <subcommand>` anywhere, regardless of
-    global flags (like `-C <path>`) placed before the subcommand."""
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        return subcommand in command
+# --- command parsing (strip_heredoc_bodies/tokenize/split_segments/
+# command_head/git_subcommand_index/command_runs_git are registered in
+# dedup_drift_guard.REGISTRY) ---
 
+
+def strip_heredoc_bodies(command):
+    """Drop the body lines of `<<EOF ... EOF` heredocs. The line holding
+    the `<<` operator itself is kept (it is a real command)."""
+    kept = []
+    pending = []  # delimiters whose bodies are still open, in order
+    for line in command.split("\n"):
+        if pending:
+            if line.strip() == pending[0]:
+                pending.pop(0)
+            continue
+        kept.append(line)
+        pending.extend(m.group(3) for m in HEREDOC_RE.finditer(line))
+    return "\n".join(kept)
+
+
+def tokenize(command):
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>\n")
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    return list(lexer)
+
+
+def split_segments(tokens):
+    segments = [[]]
+    for tok in tokens:
+        if tok and set(tok) <= SEPARATOR_CHARS:
+            segments.append([])
+        else:
+            segments[-1].append(tok)
+    return [s for s in segments if s]
+
+
+def command_head(segment):
+    """Index of the executable in `segment`, skipping env assignments and
+    simple wrappers (same rules as require_draft_first.py)."""
     i = 0
-    while i < len(tokens):
-        if os.path.basename(tokens[i]) != "git":
+    while i < len(segment):
+        tok = segment[i]
+        if tok in ("{", "!") or ASSIGNMENT_RE.match(tok):
             i += 1
             continue
-        j = i + 1
-        while j < len(tokens):
-            tok = tokens[j]
-            if tok in FLAGS_WITH_ARG:
-                j += 2
-                continue
-            if tok.startswith("-"):
-                j += 1
-                continue
-            if tok == subcommand:
-                return True
-            break
-        i = j
+        if tok in WRAPPERS:
+            i += 1
+            while i < len(segment) and segment[i].startswith("-"):
+                i += 1
+            continue
+        break
+    return i
+
+
+def git_subcommand_index(segment):
+    """Index of the git subcommand in `segment` when the segment runs git
+    in command position (basename compare, git's global flags skipped),
+    else None."""
+    i = command_head(segment)
+    if i >= len(segment) or os.path.basename(segment[i]) != "git":
+        return None
+    j = i + 1
+    while j < len(segment):
+        tok = segment[j]
+        if tok in FLAGS_WITH_ARG:
+            j += 2
+            continue
+        if tok.startswith("-"):
+            j += 1
+            continue
+        return j
+    return None
+
+
+def command_runs_git(command, subcommand):
+    """True if some shell segment of `command` runs `git <subcommand>` in
+    command position. Heredoc bodies and quoted/plain arguments of other
+    commands don't count. Falls back to a substring check when the line
+    can't be tokenized (conservative: these hooks are gates)."""
+    if not command:
+        return False
+    # bash joins backslash-newline continuations before parsing words
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
+    try:
+        tokens = tokenize(stripped)
+    except ValueError:
+        return subcommand in stripped
+    for segment in split_segments(tokens):
+        j = git_subcommand_index(segment)
+        if j is not None and segment[j] == subcommand:
+            return True
     return False
 
 
@@ -151,24 +237,6 @@ def staged_entries(cwd, env=None):
 # --- same-command staging simulation ----------------------------------------
 
 
-def tokenize(command):
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>\n")
-    lexer.whitespace = " \t\r"
-    lexer.whitespace_split = True
-    lexer.commenters = ""
-    return list(lexer)
-
-
-def split_segments(tokens):
-    segments = [[]]
-    for tok in tokens:
-        if tok and set(tok) <= SEPARATOR_CHARS:
-            segments.append([])
-        else:
-            segments[-1].append(tok)
-    return [s for s in segments if s]
-
-
 def commit_stages_all(args):
     """True if `git commit <args>` would stage tracked changes (-a/--all)."""
     i = 0
@@ -199,27 +267,31 @@ def staging_plan(command):
     """Returns (list_of_git_add_arg_lists, commit_all) describing what the
     command stages before its commit, or None when it can't be simulated
     safely (fall back to checking the real index)."""
+    # TASK-39: the same segments command_runs_git() judges - heredoc bodies
+    # dropped, continuations joined, git found in command position
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
     try:
-        tokens = tokenize(command)
+        tokens = tokenize(stripped)
     except ValueError:
         return None
 
     adds = []
     for segment in split_segments(tokens):
-        head = segment[0]
-        if head in ("cd", "pushd", "popd"):
+        head = command_head(segment)
+        if head < len(segment) and segment[head] in ("cd", "pushd", "popd"):
             return None
-        if os.path.basename(head) != "git" or len(segment) < 2:
+        j = git_subcommand_index(segment)
+        if j is None:
             continue
-        sub, args = segment[1], segment[2:]
-        if sub.startswith("-"):
-            # global flags (`git -C x ...`): only the commit itself is fine
-            rest = [t for t in segment[1:] if not t.startswith("-")]
-            if "commit" in rest:
+        sub, args = segment[j], segment[j + 1 :]
+        if sub not in ("add", "commit"):
+            continue
+        if j != head + 1 or any(t.startswith("GIT_") for t in segment[:head]):
+            # global flags (`git -C x ...`) or `GIT_*=` env may point at
+            # another repo/index: only the commit itself is fine
+            if sub == "commit":
                 return adds, False
-            if "add" in rest:
-                return None
-            continue
+            return None
         if sub == "add":
             # shell expansions/redirections can't be replayed faithfully
             if any(ch in a for a in args for ch in "$`<>"):
@@ -340,7 +412,7 @@ def main():
     cwd = data.get("cwd", "")
     command = (data.get("tool_input") or {}).get("command", "")
 
-    if not command_invokes_git_subcommand(command, "commit"):
+    if not command_runs_git(command, "commit"):
         sys.exit(0)
     if not has_command("git"):
         sys.exit(0)

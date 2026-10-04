@@ -1,55 +1,143 @@
 #!/usr/bin/env python3
-"""PreToolUse (matcher: Bash, if: Bash(git *))
+"""PreToolUse (matcher: Bash, no `if` filter)
 Phase 3-1 + 3-4: commits must happen on a task/<ID> branch, and (if the
 project opted in via .claude-rails.json) tests must pass first.
 
-The settings.json `if` filter only narrows to "any git command" - this
-script does its own subcommand detection so `git -C <path> commit` (flags
-before the subcommand) is still recognized as a commit, not just
-`git commit`.
+TASK-39: registered without `if: Bash(git *)` - that filter matches the
+command text, so `/usr/bin/git commit` or `FOO=1 git commit` never reached
+this gate (same finding as TASK-37). The cost is one short python process
+per Bash call; every non-commit line exits right after parsing.
+
+Only a `git commit` in *command position* counts, found the way
+pre_push_check.py (TASK-34) finds a push: heredoc bodies dropped,
+backslash-newline continuations joined, the line tokenized and split into
+shell segments (`;`, `&&`, `||`, `|`, `&`, `(`, newline), env assignments
+and simple wrappers (`env`, `sudo`, ...) skipped (`command_head`), git
+compared by basename (decision-1) and its global flags (`-C <path>`,
+`-c k=v`, `--git-dir=...`) skipped. `echo git commit`, quoted text
+(`--notes "... git commit ..."`) and heredoc bodies are not a commit.
+
+Parse failure (unbalanced quote): command position can't be told apart
+from text, so any `commit` substring counts as a commit - this is a gate,
+and an unneeded branch/test check is recoverable while a skipped one is not.
+
+Known gaps (decision-1): `bash -c "git commit"`, `eval`, aliases, scripts,
+backtick substitution, and runners such as `xargs git commit` are not seen.
 
 Fully self-contained: no imports from any other file in this repo."""
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
 
 FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+SEPARATOR_CHARS = set(";&|()\n")
+WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
+ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 
 
 def has_command(name):
     return shutil.which(name) is not None
 
 
-def command_invokes_git_subcommand(command, subcommand):
-    """True if `command` runs `git <subcommand>` anywhere, regardless of
-    global flags (like `-C <path>`) placed before the subcommand."""
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        return subcommand in command
+# --- command parsing (strip_heredoc_bodies/tokenize/split_segments/
+# command_head/git_subcommand_index/command_runs_git are registered in
+# dedup_drift_guard.REGISTRY) ---
 
+
+def strip_heredoc_bodies(command):
+    """Drop the body lines of `<<EOF ... EOF` heredocs. The line holding
+    the `<<` operator itself is kept (it is a real command)."""
+    kept = []
+    pending = []  # delimiters whose bodies are still open, in order
+    for line in command.split("\n"):
+        if pending:
+            if line.strip() == pending[0]:
+                pending.pop(0)
+            continue
+        kept.append(line)
+        pending.extend(m.group(3) for m in HEREDOC_RE.finditer(line))
+    return "\n".join(kept)
+
+
+def tokenize(command):
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>\n")
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    return list(lexer)
+
+
+def split_segments(tokens):
+    segments = [[]]
+    for tok in tokens:
+        if tok and set(tok) <= SEPARATOR_CHARS:
+            segments.append([])
+        else:
+            segments[-1].append(tok)
+    return [s for s in segments if s]
+
+
+def command_head(segment):
+    """Index of the executable in `segment`, skipping env assignments and
+    simple wrappers (same rules as require_draft_first.py)."""
     i = 0
-    while i < len(tokens):
-        if os.path.basename(tokens[i]) != "git":
+    while i < len(segment):
+        tok = segment[i]
+        if tok in ("{", "!") or ASSIGNMENT_RE.match(tok):
             i += 1
             continue
-        j = i + 1
-        while j < len(tokens):
-            tok = tokens[j]
-            if tok in FLAGS_WITH_ARG:
-                j += 2
-                continue
-            if tok.startswith("-"):
-                j += 1
-                continue
-            if tok == subcommand:
-                return True
-            break
-        i = j
+        if tok in WRAPPERS:
+            i += 1
+            while i < len(segment) and segment[i].startswith("-"):
+                i += 1
+            continue
+        break
+    return i
+
+
+def git_subcommand_index(segment):
+    """Index of the git subcommand in `segment` when the segment runs git
+    in command position (basename compare, git's global flags skipped),
+    else None."""
+    i = command_head(segment)
+    if i >= len(segment) or os.path.basename(segment[i]) != "git":
+        return None
+    j = i + 1
+    while j < len(segment):
+        tok = segment[j]
+        if tok in FLAGS_WITH_ARG:
+            j += 2
+            continue
+        if tok.startswith("-"):
+            j += 1
+            continue
+        return j
+    return None
+
+
+def command_runs_git(command, subcommand):
+    """True if some shell segment of `command` runs `git <subcommand>` in
+    command position. Heredoc bodies and quoted/plain arguments of other
+    commands don't count. Falls back to a substring check when the line
+    can't be tokenized (conservative: these hooks are gates)."""
+    if not command:
+        return False
+    # bash joins backslash-newline continuations before parsing words
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
+    try:
+        tokens = tokenize(stripped)
+    except ValueError:
+        return subcommand in stripped
+    for segment in split_segments(tokens):
+        j = git_subcommand_index(segment)
+        if j is not None and segment[j] == subcommand:
+            return True
     return False
 
 
@@ -111,7 +199,7 @@ def main():
     cwd = data.get("cwd", "")
     command = (data.get("tool_input") or {}).get("command", "")
 
-    if not command_invokes_git_subcommand(command, "commit"):
+    if not command_runs_git(command, "commit"):
         sys.exit(0)
     if not has_command("backlog"):
         sys.exit(0)
