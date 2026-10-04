@@ -11,6 +11,8 @@ import os
 import subprocess
 import sys
 
+import pytest
+
 import merge_settings as ms
 
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -246,6 +248,99 @@ def test_cli_refuses_invalid_settings_json_without_touching_it(tmp_path):
     assert result.returncode != 0
     assert settings.read_text() == "{not json"
     assert not list(tmp_path.glob("settings.json.bak.*"))
+
+
+# --- CLI in-process (main() called directly so coverage measures it) -----------
+
+
+def test_main_usage_error_without_two_paths(capsys):
+    assert ms.main(["merge_settings.py", "only-one.json"]) == 2
+    assert "usage:" in capsys.readouterr().err
+
+
+def test_main_merges_backs_up_preserves_mode_and_reports(tmp_path, capsys):
+    target = RAILS + "block_dangerous_commands.py"
+    existing = foreign_settings()
+    existing["hooks"]["PreToolUse"].append(
+        {"matcher": "Bash", "hooks": [cmd(target, timeout=1)]}
+    )
+    settings, repo = setup_files(tmp_path, existing)
+    os.chmod(settings, 0o640)
+
+    assert ms.main(["merge_settings.py", str(settings), str(repo)]) == 0
+
+    assert json.loads(settings.read_text()) == ms.merge_hooks(existing, repo_hooks())[0]
+    assert settings.read_text().endswith("\n")
+    assert os.stat(settings).st_mode & 0o777 == 0o640
+    [backup] = tmp_path.glob("settings.json.bak.*")
+    assert json.loads(backup.read_text()) == existing
+    assert not list(tmp_path.glob(".settings.*"))
+    out = capsys.readouterr().out
+    assert f"기존 설정 백업: {backup}" in out
+    assert f"갱신: PreToolUse [Bash]  {target}" in out
+    assert f"추가: Stop  {RAILS}block_stop_if_dirty.py" in out
+    assert "총 2개 추가, 1개 갱신" in out
+
+
+def test_main_no_changes_writes_and_backs_up_nothing(tmp_path, capsys):
+    merged = ms.merge_hooks(foreign_settings(), repo_hooks())[0]
+    settings, repo = setup_files(tmp_path, merged)
+    before = settings.read_text()
+
+    assert ms.main(["merge_settings.py", str(settings), str(repo)]) == 0
+
+    assert settings.read_text() == before
+    assert not list(tmp_path.glob("settings.json.bak.*"))
+    assert "추가/갱신할 항목 없음" in capsys.readouterr().out
+
+
+def test_main_creates_missing_settings_without_backup(tmp_path, capsys):
+    settings = tmp_path / "sub" / "settings.json"
+    repo = tmp_path / "settings.hooks.json"
+    write_json(repo, {"hooks": repo_hooks()})
+
+    assert ms.main(["merge_settings.py", str(settings), str(repo)]) == 0
+
+    assert json.loads(settings.read_text()) == ms.merge_hooks({}, repo_hooks())[0]
+    assert os.listdir(tmp_path / "sub") == ["settings.json"]
+    assert "기존 설정 백업" not in capsys.readouterr().out
+
+
+def test_main_invalid_json_exits_1_without_touching(tmp_path, capsys):
+    settings, repo = setup_files(tmp_path, None)
+    settings.write_text("{not json")
+
+    assert ms.main(["merge_settings.py", str(settings), str(repo)]) == 1
+
+    assert settings.read_text() == "{not json"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["settings.hooks.json", "settings.json"]
+    assert "올바른 JSON이 아닙니다" in capsys.readouterr().err
+
+
+def test_main_non_object_top_level_exits_1_without_touching(tmp_path, capsys):
+    settings, repo = setup_files(tmp_path, ["not", "an", "object"])
+
+    assert ms.main(["merge_settings.py", str(settings), str(repo)]) == 1
+
+    assert json.loads(settings.read_text()) == ["not", "an", "object"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["settings.hooks.json", "settings.json"]
+    assert "최상위가 객체가 아닙니다" in capsys.readouterr().err
+
+
+def test_main_aborts_when_temp_file_does_not_round_trip(tmp_path, monkeypatch):
+    # Simulate the temp file reading back different from what was written
+    # (disk/concurrent-writer corruption): the original must stay as it was
+    # and the temp file must be cleaned up.
+    settings, repo = setup_files(tmp_path, foreign_settings())
+    before = settings.read_text()
+    real_load = ms._load
+    monkeypatch.setattr(ms, "_load", lambda path: {} if path.endswith(".tmp") else real_load(path))
+
+    with pytest.raises(ValueError, match="round-trip"):
+        ms.main(["merge_settings.py", str(settings), str(repo)])
+
+    assert settings.read_text() == before
+    assert not list(tmp_path.glob(".settings.*"))
 
 
 # --- install.sh end-to-end (HOME redirected to tmp_path; never the real home) ----

@@ -29,6 +29,7 @@ writer must never be the hook that paralyses a session.
 
 Fully self-contained: no imports from any other file in this repo."""
 
+import contextlib
 import json
 import os
 import sys
@@ -69,7 +70,7 @@ def write_flags(session_id, flags):
             json.dump(flags, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
     except BaseException:
-        if os.path.exists(tmp):
+        with contextlib.suppress(FileNotFoundError):
             os.unlink(tmp)
         raise
 

@@ -270,3 +270,11 @@ def test_is_outside_project_unit(tmp_path):
     assert rat.is_outside_project(str(proj / "x"), str(proj)) is False
     assert rat.is_outside_project("x", str(proj)) is False
     assert rat.is_outside_project("", str(proj)) is False
+
+
+def test_non_dict_tool_input_skips_outside_check_and_still_gates(monkeypatch, capsys):
+    monkeypatch.setattr(rat, "has_command", lambda name: True)
+    monkeypatch.setattr(rat, "is_backlog_project", lambda cwd: True)
+    monkeypatch.setattr(rat, "has_active_task", lambda cwd: False)
+    assert run_main(monkeypatch, {"cwd": "/x", "tool_input": "not-a-dict"}) == 2
+    assert "In Progress" in capsys.readouterr().err

@@ -1,5 +1,6 @@
 import io
 import json
+import os
 
 import pytest
 
@@ -148,3 +149,37 @@ def test_latest_assistant_usage_handles_malformed_line(tmp_path):
 def test_sum_tokens_empty_usage():
     totals = nr.sum_tokens({})
     assert totals["input_tokens"] == 0
+
+
+def test_latest_assistant_usage_walks_back_past_unusable_lines(tmp_path):
+    path = tmp_path / "t.jsonl"
+    with open(path, "w") as f:
+        f.write(json.dumps(ASSISTANT_ENTRY) + "\n")  # oldest: the only usable one
+        f.write(json.dumps({"type": "user", "message": {}}) + "\n")
+        f.write("not json\n")
+        f.write("\n")
+        f.write(json.dumps({"type": "assistant", "message": {"model": "m-without-usage"}}) + "\n")
+    assert nr.latest_assistant_usage(str(path)) == ("claude-sonnet-5", ASSISTANT_ENTRY["message"]["usage"])
+
+
+def test_latest_assistant_usage_none_when_no_usable_entry(tmp_path):
+    transcript = make_transcript(tmp_path, [{"type": "user", "message": {}}, {"type": "assistant", "message": {}}])
+    assert nr.latest_assistant_usage(transcript) == (None, None)
+
+
+def test_latest_assistant_usage_unreadable_transcript(tmp_path):
+    transcript = make_transcript(tmp_path, [ASSISTANT_ENTRY])
+    os.chmod(transcript, 0)
+    try:
+        if os.access(transcript, os.R_OK):  # running as root: permissions don't apply
+            pytest.fail("cannot make the transcript unreadable in this environment")
+        assert nr.latest_assistant_usage(transcript) == (None, None)
+    finally:
+        os.chmod(transcript, 0o600)
+
+
+def test_posttooluse_without_file_path_omits_it(monkeypatch, isolate_log):
+    run_main(monkeypatch, {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "ls"}})
+    [record] = read_records(isolate_log)
+    assert record["tool_name"] == "Bash"
+    assert "file_path" not in record

@@ -161,3 +161,11 @@ def test_no_tmp_files_left_behind(monkeypatch, isolate_flags_dir):
 
 def test_read_flags_returns_empty_when_missing(isolate_flags_dir):
     assert cf.read_flags("nope") == {}
+
+
+def test_write_flags_failure_removes_tmp_and_keeps_old_file(isolate_flags_dir):
+    cf.write_flags("s13", {"post_compact": True})
+    with pytest.raises(TypeError):
+        cf.write_flags("s13", {"bad": {1, 2}})  # a set isn't JSON-serializable
+    assert [p.name for p in isolate_flags_dir.iterdir()] == ["s13.json"]
+    assert read_flags(isolate_flags_dir, "s13") == {"post_compact": True}

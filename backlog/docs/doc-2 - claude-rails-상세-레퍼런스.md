@@ -711,6 +711,12 @@ echo '{"cwd":"<backlog 프로젝트 경로>","transcript_path":"/nonexistent"}' 
 cd ~/.claude/hooks/claude-rails && python3 -m pytest
 ```
 
+저장소에서는 루트에서 `uvx --with pytest-cov pytest -q --cov`로 `hooks/`·`scripts/` 전체를
+돌리고 커버리지를 잰다(TASK-42). 설정은 `pyproject.toml` — `testpaths`로 두 디렉토리를
+모으고, `test_*.py`는 측정에서 빼고, 분기 포함 `fail_under = 100`이라 100% 미만이면
+실패한다. 제외 규칙은 `if __name__ == "__main__":` 진입점 하나뿐이고 `# pragma: no cover`는
+쓰지 않는다.
+
 ---
 
 ## 12. 파일 구성
@@ -722,6 +728,7 @@ claude-rails/
 ├── settings.hooks.json       # ~/.claude/settings.json에 병합되는 hooks 블록
 ├── CLAUDE.md.snippet         # ~/.claude/CLAUDE.md에 추가되는 워크플로 안내
 ├── .claude-rails.json.example
+├── pyproject.toml            # pytest testpaths + coverage 설정(fail_under=100)
 ├── scripts/                   # 훅이 아닌 보조 스크립트 (설치되지 않음)
 │   └── merge_settings.py / test_merge_settings.py   # install.sh의 추가 전용 settings 병합
 └── hooks/                     # 33개 훅 + 33개 test_*.py = 66개 파일, 전부 flat

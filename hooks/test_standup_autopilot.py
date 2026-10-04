@@ -97,3 +97,27 @@ def test_session_activity_returns_empty_for_missing_log():
 
 def test_read_yesterday_summary_none_when_missing():
     assert sa.read_yesterday_summary() is None
+
+
+def test_entry_skips_malformed_lines_and_truncates_long_file_list(monkeypatch, isolate_dirs):
+    sessions = isolate_dirs["sessions"]
+    sessions.mkdir()
+    files = [f"/p/f{n:02d}.py" for n in range(12)]
+    with open(sessions / "s5.jsonl", "w") as f:
+        f.write("not json\n")
+        for path in files:
+            f.write(json.dumps({"event": "tool_use", "file_path": path}) + "\n")
+
+    run_main(monkeypatch, {"hook_event_name": "Stop", "session_id": "s5"})
+
+    entry = open(sa.today_path()).read()
+    assert "12개 파일 작업" in entry
+    assert ", ".join(files[:10]) + " 외 2개" in entry
+    assert "/p/f10.py" not in entry
+
+
+def test_unknown_event_writes_nothing(monkeypatch, isolate_dirs, capsys):
+    write_session_log(isolate_dirs["sessions"], "s6", [{"event": "tool_use", "file_path": "/p/a.py"}])
+    assert run_main(monkeypatch, {"hook_event_name": "PreCompact", "session_id": "s6"}) == 0
+    assert capsys.readouterr().out == ""
+    assert not os.path.exists(isolate_dirs["standup"])

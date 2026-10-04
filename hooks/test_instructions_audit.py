@@ -125,3 +125,11 @@ def test_get_checks_default_is_high():
 
     _os.environ.pop("HOOK_AUDIT_LEVEL", None)
     assert ia.get_checks() == ia.HIGH_CHECKS
+
+
+def test_read_lock_returns_none_for_corrupt_lock_file():
+    path = ia.lock_path("s-corrupt")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        f.write("{not json")
+    assert ia.read_lock("s-corrupt") is None

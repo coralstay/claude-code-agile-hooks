@@ -382,3 +382,11 @@ def test_wrapper_flags_are_skipped_before_git():
 
 def test_empty_cwd_is_not_a_backlog_project():
     assert ppc.is_backlog_project("") is False
+
+
+def test_segment_without_executable_or_subcommand_is_not_a_push():
+    # only env assignments: command_head runs off the end of the segment
+    assert not ppc.command_invokes_git_push("FOO=1 BAR=2")
+    # git with only global flags: no subcommand at all
+    assert not ppc.command_invokes_git_push("git -C /r --no-pager")
+    assert ppc.command_invokes_git_push("FOO=1; git -C /r push")

@@ -127,3 +127,13 @@ def test_leaderboard_aggregates_and_sorts(isolate_log):
 
 def test_leaderboard_empty_when_no_log():
     assert ch.leaderboard() == []
+
+
+def test_leaderboard_skips_blank_corrupt_non_cost_and_pathless_lines(isolate_log):
+    with open(isolate_log, "w") as f:
+        f.write("\n")
+        f.write("{not json\n")
+        f.write(json.dumps({"event": "other", "file_path": "/x", "tokens": 99}) + "\n")
+        f.write(json.dumps({"event": "cost", "tokens": 7}) + "\n")
+        f.write(json.dumps({"event": "cost", "file_path": "/a", "tokens": 3}) + "\n")
+    assert ch.leaderboard() == [("/a", 3)]

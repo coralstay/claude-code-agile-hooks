@@ -129,3 +129,10 @@ def test_allows_path_looking_argument_outside_verb_position(monkeypatch):
     # "/bin/rm" appearing only as an argument to another command (with no
     # target following it) must not be treated as an rm invocation.
     assert run_main(monkeypatch, "Bash", {"command": "echo /bin/rm"}) == 0
+
+
+def test_blocks_rm_test_file_even_when_line_is_unparseable(monkeypatch, capsys):
+    # shlex fails on the unterminated quote; the whitespace-split fallback still
+    # sees rm and the test file, so the deletion stays blocked.
+    assert run_main(monkeypatch, "Bash", {"command": "rm test_foo.py 'oops"}) == 2
+    assert "삭제" in capsys.readouterr().err

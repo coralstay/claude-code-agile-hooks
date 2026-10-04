@@ -162,6 +162,13 @@ cd ~/githubs/claude-rails && ./install.sh
 (이벤트, matcher) 그룹에 추가하므로 다시 실행해도 중복되지 않습니다. 쓰기 전에
 `settings.json.bak.<timestamp>`로 백업하고, 추가/갱신된 항목을 목록으로 보여 드립니다.
 
+테스트와 커버리지는 저장소 루트에서 확인합니다. 설정은 [`pyproject.toml`](pyproject.toml)에
+있고, `hooks/`·`scripts/` 전체의 줄·분기 커버리지가 100% 미만이면 실패합니다.
+
+```bash
+uvx --with pytest-cov pytest -q --cov
+```
+
 ## 더 자세한 내용이 궁금하시다면
 
 - **전체 스펙**(Phase 명세, HITL 표, 설치/삭제, 파일 구성)은 `backlog doc view doc-2`
