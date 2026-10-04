@@ -1,14 +1,18 @@
 ---
-id: DRAFT-5
+id: TASK-48
 title: 'config_guard: hooks-logs 경로를 보호 hooks 디렉토리로 오인하는 오탐'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-03 18:45'
-updated_date: '2026-10-03 18:45'
+updated_date: '2026-10-04 01:15'
 labels:
   - hooks
   - bug
 dependencies: []
+references:
+  - TASK-35
+  - TASK-44
+  - TASK-47
 priority: high
 ---
 
