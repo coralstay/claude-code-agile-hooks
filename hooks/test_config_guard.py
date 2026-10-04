@@ -335,3 +335,102 @@ def test_readonly_commands_on_protected_paths_pass(command):
 )
 def test_write_bypass_attempts_still_blocked(command):
     assert cg.bash_targets_protected_config(command) is True
+
+
+# --- TASK-41: 남은 분기 — 각 분기가 지켜야 할 차단/통과를 단언 ---
+
+S = "/Users/x/.claude/settings.json"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # legacy_rules: 빈 하위 명령(`;` 연속)은 건너뛰고 다음 하위 명령을 본다
+        f"echo a;; rm {S}",
+        # tokenize 실패(미종결 따옴표) -> 인터프리터 포함 legacy 규칙으로 판정
+        f"python3 -c \"open('{S}','w')",
+        # 래퍼 플래그(env -i) 건너뛰고 명령 위치의 rm을 본다
+        f"env -i rm {S}",
+        # 프로세스 치환 본문은 별개 명령으로 검사한다
+        f"diff x <(rm {S})",
+        f"diff <(cat a) <(rm {S})",  # 세그먼트가 `<(`로 시작
+        # 따옴표 안 백틱 치환 본문도 재귀 검사한다
+        f'echo "`rm {S}`"',
+        # 러너: uv run 옵션, nice -n N, timeout DURATION 뒤의 실제 명령
+        f"uv run --frozen rm {S}",
+        f"nice -n 5 rm {S}",
+        f"timeout 5 rm {S}",
+        # 따옴표 안 $HOME 경로: legacy 정규식은 놓치고 토큰화된 리다이렉트가 잡는다
+        'echo x > "$HOME/.claude/settings.json"',
+        # bash 인자 형태: --, 긴 옵션, -o 옵션 인자, -s/- (stdin), 스크립트
+        "bash -- ~/.claude/hooks/x.sh",
+        f"bash --norc -c 'rm {S}'",
+        f"bash --rcfile rc -c 'rm {S}'",
+        f"bash -e -o pipefail -c 'rm {S}'",
+        f"bash -s <<'EOF'\nrm {S}\nEOF",
+        f"bash - <<'EOF'\nrm {S}\nEOF",
+        f"bash -s {S} <<'EOF'\necho hi\nEOF",  # stdin 코드 + 보호 경로 인자
+        "bash ~/.claude/hooks/x.sh",
+        # here-string(<<<)도 셸이 실행하는 stdin 코드로 본다
+        f'bash <<< "rm {S}"',
+        # source /dev/stdin <<EOF 본문
+        f"source /dev/stdin <<'EOF'\nrm {S}\nEOF",
+        # python 인자 형태: 긴 옵션, -c 붙여쓰기, -m(불투명), -W 인자, -u
+        f"python3 --unknown-long -c \"open('{S}','w')\"",
+        f"python3 -c\"open('{S}','w')\"",
+        f"python3 -m json.tool {S}",
+        f"python3 -W ignore -c \"open('{S}','w')\"",
+        f"python3 -Wignore -c \"open('{S}','w')\"",
+        f"python3 -u -c \"open('{S}','w')\"",
+        # 따옴표 없는 heredoc: 셸이 $( )를 먼저 실행하므로 읽기 코드여도 차단
+        f'python3 <<EOF\nx = "$(id)"\nprint(open("{S}").read())\nEOF',
+        # python 코드 분석: 속성 open/스타 인자/키워드 모드/동적 호출/import
+        f"python3 -c \"import os; os.open('{S}', os.O_WRONLY)\"",
+        f"python3 -c \"from pathlib import Path; Path('{S}').open('w')\"",
+        f"python3 -c \"import io; io.open('{S}', 'w')\"",
+        f"python3 -c \"a=['{S}','w']; open(*a)\"",
+        f"python3 -c \"kw=dict(mode='w'); open('{S}', **kw)\"",
+        f"python3 -c \"open('{S}', mode='w')\"",
+        f"python3 -c \"(lambda: 0)(); print('{S}')\"",
+        f"python3 -c \"import ctypes; print('{S}')\"",
+        f"python3 -c \"from ctypes import CDLL; print('{S}')\"",
+        f"python3 -c \"import shutil; w = shutil.copy; print('{S}')\"",
+        # 중첩이 MAX_DEPTH를 넘으면 보호 경로 언급만으로 차단(보수적 폴백)
+        "eval " * 12 + f"cat {S}",
+        # 토크나이저가 본 `<<`에 대응하는 본문이 없으면 legacy 규칙으로 판정
+        f"node x.js {S} << @@",
+        # $( ) 안의 heredoc(토크나이저가 못 본 `<<`)도 legacy 규칙으로 판정
+        f"python3 -c \"$(cat <<'EOF'\nopen('{S}','w')\nEOF\n)\"",
+    ],
+)
+def test_remaining_write_forms_are_blocked(command):
+    assert cg.bash_targets_protected_config(command) is True
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo hi;",  # 빈 하위 명령만 있는 경우
+        'echo "unterminated',  # 토큰화 실패 + 보호 경로 없음
+        f"cat x <(cat {S})",  # 프로세스 치환 본문이 읽기뿐
+        "cat <( )",  # 빈 프로세스 치환
+        "bash build.sh",  # 보호 경로 언급 없는 스크립트
+        ". ./env.sh",  # source: 보호 경로 언급 없음
+        "find . -name '*.pyc' | xargs rm",  # xargs + rm이지만 보호 경로 언급 없음
+        f"python3 <<< \"print(open('{S}').read())\"",  # here-string 읽기 코드
+        f"python3 -c \"from pathlib import Path; print(Path('{S}').open().read())\"",
+        f"python3 -c \"print(open('{S}', mode='r').read())\"",
+        f"python3 -c \"print(open('{S}', encoding='utf-8').read())\"",
+        f"python3 -c \"from json import load; print(load(open('{S}')))\"",
+        "eval " * 12 + "echo hi",  # 깊은 중첩이어도 보호 경로 언급이 없으면 통과
+        "cat << @@",  # 본문 없는 `<<` -> legacy 규칙: 통과
+        f"git commit -m \"$(cat <<'EOF'\nmention {S}\nEOF\n)\"",
+    ],
+)
+def test_remaining_read_or_unrelated_forms_pass(command):
+    assert cg.bash_targets_protected_config(command) is False
+
+
+def test_mentions_protected_false_for_empty_text():
+    assert cg.mentions_protected("") is False
+    assert cg.mentions_protected(None) is False

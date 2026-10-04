@@ -255,7 +255,9 @@ def test_rewrite_matches_bash_argv_except_receipt(monkeypatch, capsys, cmd):
         return r.stdout
 
     before, after = run(cmd), run(new)
-    stripped = re.sub(r"(\n\n)?---\n\*\*AI 관여도.*?- 작성 도구: Claude Code", "", after, flags=re.S)
+    stripped = re.sub(
+        r"(\n\n)?---\n\*\*AI 관여도.*?- 작성 도구: Claude Code", "", after, flags=re.S
+    )
     assert stripped != after
     stripped = stripped.replace("<--body><>", "")
     assert stripped == before
@@ -267,3 +269,69 @@ def test_single_command_still_stamped_exactly_once(monkeypatch, capsys):
     new = _new_command(capsys)
     assert new is not None
     assert _body_of(new).count("AI 관여도") == 1
+
+
+# --- TASK-41: defensive branches --------------------------------------------
+
+
+def test_count_session_prompts_skips_corrupt_lines_and_non_prompt_events(
+    monkeypatch, tmp_path
+):
+    import os
+
+    log_dir = tmp_path / "sessions"
+    log_dir.mkdir()
+    (log_dir / "s3.jsonl").write_text(
+        json.dumps({"event": "prompt"})
+        + "\n{not json\n"
+        + json.dumps({"event": "tool"})
+        + "\n"
+        + json.dumps({"event": "prompt"})
+        + "\n"
+    )
+    real_expanduser = os.path.expanduser
+    monkeypatch.setattr(
+        os.path,
+        "expanduser",
+        lambda p: (
+            p.replace("~/.claude/hooks-logs", str(tmp_path))
+            if "hooks-logs" in p
+            else real_expanduser(p)
+        ),
+    )
+    assert pps.count_session_prompts("s3") == 2
+
+
+def test_inject_receipt_returns_command_unchanged_when_unparseable():
+    cmd = 'gh pr create --title "unterminated'
+    assert pps.inject_receipt_into_command(cmd, "RECEIPT") == cmd
+
+
+def test_trailing_escaped_space_segment_is_left_byte_identical(monkeypatch, capsys):
+    # Stripping the trailing blank leaves a dangling backslash shlex can't
+    # parse; inject_receipt_into_command then gives the segment back as-is.
+    cmd = f"{PRC} --title x\\ ; echo hi"
+    assert run_main(monkeypatch, cmd) == 0
+    new = _new_command(capsys)
+    assert new == cmd
+    assert "AI 관여도" not in new
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        f"{PRC} --title t --body b &>/dev/null",  # &> redirection
+        f'{PRC} --title "unterminated',  # unterminated quote
+        f"{PRC} --title t \\",  # trailing backslash: shlex can't split the segment
+    ],
+)
+def test_unsafe_or_unparseable_pr_command_passes_through_unstamped(
+    monkeypatch, capsys, cmd
+):
+    assert run_main(monkeypatch, cmd) == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_ampersand_redirection_marks_only_its_segment_unsafe():
+    segments = pps.split_top_level_segments("echo a &>/dev/null; gh pr create")
+    assert [safe for _, _, safe in segments] == [False, True]

@@ -394,6 +394,9 @@ def test_prefixed_commit_all_is_simulated(monkeypatch, repo):
         ("git add $F && git commit", None),
         ('git commit -m "x', None),
         ("echo git commit", None),
+        # TASK-41: a segment of only env assignments / wrapper flags has no
+        # command head; it is skipped and the later commit is still planned
+        ("FOO=1; env -i; git commit -a", ([], True)),
         ("cat <<EOF\ngit add a\ngit commit\nEOF", None),
     ],
 )
@@ -418,6 +421,10 @@ def test_staging_plan(command, expected):
         (["--", "-a"], False),
         (["-"], False),
         (["path"], False),
+        # TASK-41: a flag cluster without `a` or an arg-taking flag doesn't
+        # end the scan - a later -a still means "stage everything"
+        (["-sv", "-a"], True),
+        (["-sv"], False),
     ],
 )
 def test_commit_stages_all(args, expected):
