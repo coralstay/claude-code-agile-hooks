@@ -26,6 +26,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/context_flags.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/recap_archive.py"
           }
         ]
       }
@@ -246,6 +250,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/standup_autopilot.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-rails/recap_archive.py"
           }
         ]
       }
