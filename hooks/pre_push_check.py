@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
-"""PreToolUse (matcher: Bash, if: Bash(git *))
+"""PreToolUse (matcher: Bash, no `if` filter)
 Phase 4.3: only push a task/<ID> branch once that task is Done and carries
 a final summary.
 
-The settings.json `if` filter only narrows to "any git command" - this
-script does its own subcommand detection so `git -C <path> push` (flags
-before the subcommand) is still recognized as a push, not just `git push`.
+TASK-46: registered without `if: Bash(git *)`. Measured 2026-10-04 in
+Claude Code: the filter matches each subcommand of a compound line by text
+prefix, so `true && git push ...` ran this hook but `/usr/bin/git push ...`
+skipped it and executed - a gate that a path-qualified call bypasses. The
+cost is one short python process per Bash call; a line without a push
+exits right after parsing, before any subprocess.
+hooks/test_hook_registration_contract.py keeps the registration and this
+detection in agreement.
+
+This script does its own subcommand detection so `git -C <path> push`
+(flags before the subcommand) is still recognized as a push, not just
+`git push`.
 
 TASK-34: only a `git push` in *command position* counts - the start of a
 shell segment (after `;`, `&&`, `||`, `|`, `&`, `(`, `{`, a newline, or the

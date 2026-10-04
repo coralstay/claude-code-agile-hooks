@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (matcher: Bash, if: Bash(git *))
+"""PreToolUse (matcher: Bash, no `if` filter)
 Optional coverage gate: if the project's .claude-rails.json configures a
 `coverageCommand` (e.g. "python3 -m pytest --cov=. --cov-fail-under=100"),
 run it before every push and show the real, measured report - every time,
@@ -10,9 +10,9 @@ gets no message at all. Every attempt (pass or fail) is also appended to
 <cwd>/.claude-rails/coverage-log.jsonl so there's a permanent record beyond
 the transcript, which scrolls away.
 
-The settings.json `if` filter only narrows to "any git command" - this
-script does its own subcommand detection so `git -C <path> push` (flags
-before the subcommand) is still recognized as a push, not just `git push`.
+This script does its own subcommand detection so `git -C <path> push`
+(flags before the subcommand) is still recognized as a push, not just
+`git push`.
 
 TASK-39: only a `git push` in *command position* counts, found the way
 pre_push_check.py (TASK-34) finds it - heredoc bodies dropped, the line
@@ -23,13 +23,15 @@ tokenized, any `push` substring counts as a push (conservative, like
 TASK-34: an extra coverage run costs time, a skipped one lets an
 under-covered push through).
 
-The `if: Bash(git *)` filter is kept on purpose: it matches the command
-text, so `/usr/bin/git push` or `FOO=1 git push` skip this report. Unlike
-pre_commit_check.py this hook is an opt-in report, every push is already
-gated by human approval (decision-4) and main is guarded by
-pre_git_safety_check.py, so a python process on every Bash call isn't
-worth it. The command-position parsing above still applies to every line
-the filter lets through.
+TASK-46: registered without `if: Bash(git *)` (TASK-39 had kept it). The
+filter matches the command text per subcommand (measured 2026-10-04), so
+`/usr/bin/git push` or `FOO=1 git push` skipped this report - and when the
+coverage command fails this hook denies the push, so it acts as a gate for
+projects that opt in. Same registration as pre_push_check.py for
+consistency; the cost is one short python process per Bash call, and a
+line without a push exits right after parsing, before reading the config
+or starting any subprocess. hooks/test_hook_registration_contract.py keeps
+the registration and this detection in agreement.
 
 Fully self-contained: no imports from any other file in this repo."""
 
