@@ -53,14 +53,28 @@ PROTECTED_RE = re.compile("|".join(f"(?:{p})" for p in PROTECTED_PATH_PATTERNS))
 _LOOSE_PATTERNS = [p[:-1] if p.endswith("$") else p for p in PROTECTED_PATH_PATTERNS]
 PROTECTED_RE_LOOSE = re.compile("|".join(f"(?:{p})" for p in _LOOSE_PATTERNS))
 
+# Where a path component ends inside a shell word or code text: end, `/`,
+# whitespace, a quote, or a shell/code delimiter (incl. glob/brace/`$`
+# expansion, which may still produce the hooks dir itself). Not `-`, `_`,
+# `.` or a word character - `.claude/hooks-logs` and `.claude/hooksx` are
+# different directories (TASK-48).
+_COMPONENT_END = r"(?=$|[/\s'\"`;&|()<>,:\[\]{}*?$])"
+
 # Mentions inside code/free text that PROTECTED_RE_LOOSE misses: a relative
 # path right after a quote (`open('.claude/settings.json')`), the hooks dir
 # without a trailing slash, and path components composed piecewise
 # (`os.path.join(home, '.claude', 'settings.json')`).
 MENTION_RE = re.compile(
-    r"(?<![\w-])\.(?:claude/(?:settings(?:\.local)?\.json|hooks\b)"
+    r"(?<![\w-])\.(?:claude/(?:settings(?:\.local)?\.json|hooks" + _COMPONENT_END + r")"
     r"|mcp\.json|claude-plugin/plugin\.json)"
     r"|['\"](?:\.claude|\.claude-plugin|\.mcp\.json|settings(?:\.local)?\.json)/?['\"]"
+)
+
+# A `..` component anywhere below `.claude/` (`.claude/hooks-logs/../hooks/x`)
+# can climb back into a protected path; text can't be normalized reliably, so
+# any such mention counts as protected (conservative, TASK-48).
+TRAVERSAL_MENTION_RE = re.compile(
+    r"(?<![\w-])\.claude/(?:[^\s'\"`;&|()<>]*/)?\.\." + _COMPONENT_END
 )
 
 # A protected *directory* as a target: `cp x ~/.claude/hooks`, `rm -rf ~/.claude`.
@@ -312,26 +326,35 @@ PY_MODE_ARG1_MODULES = {
 MODE_RE = re.compile(r"^[rwaxbtU+]*$")
 
 
+def _path_forms(path):
+    """The path as written and with `..`/`.` collapsed, so
+    `~/.claude/hooks-logs/../hooks/x` is judged as `~/.claude/hooks/x`."""
+    expanded = os.path.expanduser(path).replace("\\", "/")
+    return expanded, os.path.normpath(expanded)
+
+
 def is_protected_path(path):
     if not path:
         return False
-    expanded = os.path.expanduser(path).replace("\\", "/")
-    return bool(PROTECTED_RE.search(expanded))
+    return any(PROTECTED_RE.search(form) for form in _path_forms(path))
 
 
 def is_protected_target(token):
     """A protected file, or a protected directory a file could be put into."""
     if is_protected_path(token):
         return True
-    expanded = os.path.expanduser(token or "").replace("\\", "/")
-    return bool(PROTECTED_DIR_RE.search(expanded))
+    return any(PROTECTED_DIR_RE.search(form) for form in _path_forms(token or ""))
 
 
 def mentions_protected(text):
     if not text:
         return False
     text = text.replace("\\", "/")
-    return bool(PROTECTED_RE_LOOSE.search(text) or MENTION_RE.search(text))
+    return bool(
+        PROTECTED_RE_LOOSE.search(text)
+        or MENTION_RE.search(text)
+        or TRAVERSAL_MENTION_RE.search(text)
+    )
 
 
 def legacy_rules(command, interpreters=True):
