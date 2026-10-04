@@ -1,7 +1,7 @@
 ---
 id: TASK-49
 title: format_code.py 제거 — 포매터는 Claude 훅의 역할이 아니다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-04 01:48'
 updated_date: '2026-10-04 01:57'
