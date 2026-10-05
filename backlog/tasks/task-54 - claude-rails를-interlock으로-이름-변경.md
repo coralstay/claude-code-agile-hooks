@@ -1,7 +1,7 @@
 ---
-id: DRAFT-7
+id: TASK-54
 title: claude-rails를 interlock으로 이름 변경
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-05 07:49'
 labels:
