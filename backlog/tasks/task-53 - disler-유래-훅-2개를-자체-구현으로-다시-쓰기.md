@@ -1,9 +1,10 @@
 ---
 id: TASK-53
 title: disler 유래 훅 2개를 자체 구현으로 다시 쓰기
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-05 07:35'
+updated_date: '2026-10-05 07:35'
 labels:
   - license
 dependencies: []
@@ -20,3 +21,11 @@ hooks/permission_auto_allow.py와 hooks/pre_compact_backup.py는 라이선스가
 3. backlog/docs/doc-2의 disler MIT 표기를 바로잡는다
 4. 기존 테스트와 커버리지 100% 게이트를 통과한다
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 두 훅을 지우고 명세만 받은 구현자가 이전 코드와 disler 저장소를 보지 않고 새로 구현한다
+- [ ] #2 두 훅의 머리말에서 disler 포팅 표기를 빼고 자체 구현임을 적는다
+- [ ] #3 backlog/docs/doc-2의 disler MIT 표기를 바로잡는다
+- [ ] #4 기존 테스트와 커버리지 100% 게이트를 통과한다
+<!-- AC:END -->
