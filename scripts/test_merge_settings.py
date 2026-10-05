@@ -415,3 +415,134 @@ def test_install_sh_no_legacy_notice_on_clean_home(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert "안내:" not in result.stdout
     assert not (home / ".claude" / "hooks" / "claude-rails").exists()
+
+
+# --- TASK-54: migration from the old claude-rails install dir ------------------------
+
+OLD = "python3 $HOME/.claude/hooks/claude-rails/"
+HOME = "/Users/x"
+
+
+def test_legacy_entry_replaced_in_place_not_duplicated():
+    existing = foreign_settings()
+    existing["hooks"]["PreToolUse"].insert(
+        0, {"matcher": "Bash", "hooks": [cmd(OLD + "block_dangerous_commands.py", timeout=9)]}
+    )
+    existing["hooks"]["Stop"][0]["hooks"].append(cmd(OLD + "block_stop_if_dirty.py"))
+    merged, changes = ms.merge_hooks(existing, repo_hooks(), home=HOME)
+    pre = merged["hooks"]["PreToolUse"]
+    assert pre[0] == {
+        "matcher": "Bash",
+        "hooks": [cmd(OURS + "block_dangerous_commands.py")],
+    }
+    assert commands(merged["hooks"]["Stop"]) == [ITERM, OURS + "block_stop_if_dirty.py"]
+    assert commands(pre, "WebFetch") == [WEBFETCH_GUARD]
+    assert ("PreToolUse", "Bash", OURS + "block_dangerous_commands.py", "migrated") in changes
+    assert ("Stop", None, OURS + "block_stop_if_dirty.py", "migrated") in changes
+    assert not any(OLD in c for c in commands(pre, "Bash") + commands(pre))
+    # re-running is a no-op
+    assert ms.merge_hooks(merged, repo_hooks(), home=HOME)[1] == []
+
+
+@pytest.mark.parametrize(
+    "spelling",
+    [
+        "python3 ~/.claude/hooks/claude-rails/",
+        "python3 ${HOME}/.claude/hooks/claude-rails/",
+        "python3 /Users/x/.claude/hooks/claude-rails/",
+    ],
+)
+def test_legacy_entry_spelled_with_other_home_forms_is_migrated(spelling):
+    existing = {"hooks": {"Stop": [{"hooks": [cmd(spelling + "block_stop_if_dirty.py")]}]}}
+    repo = {"Stop": [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]}
+    merged, changes = ms.merge_hooks(existing, repo, home=HOME)
+    assert merged["hooks"]["Stop"] == [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]
+    assert changes == [("Stop", None, OURS + "block_stop_if_dirty.py", "migrated")]
+
+
+def test_legacy_entry_dropped_when_new_one_already_installed():
+    existing = {
+        "hooks": {
+            "Stop": [
+                {"hooks": [cmd(OLD + "block_stop_if_dirty.py")]},
+                {"hooks": [cmd(ITERM), cmd(OURS + "block_stop_if_dirty.py")]},
+            ]
+        }
+    }
+    repo = {"Stop": [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]}
+    merged, changes = ms.merge_hooks(existing, repo, home=HOME)
+    assert merged["hooks"]["Stop"] == [
+        {"hooks": [cmd(ITERM), cmd(OURS + "block_stop_if_dirty.py")]}
+    ]
+    assert changes == [("Stop", None, OURS + "block_stop_if_dirty.py", "migrated")]
+
+
+def test_legacy_entry_under_other_matcher_removed_and_new_one_added():
+    existing = {
+        "hooks": {
+            "PreToolUse": [
+                {"matcher": "Edit", "hooks": [cmd(ITERM), cmd(OLD + "block_dangerous_commands.py")]}
+            ]
+        }
+    }
+    repo = {"PreToolUse": [{"matcher": "Bash", "hooks": [cmd(OURS + "block_dangerous_commands.py")]}]}
+    merged, changes = ms.merge_hooks(existing, repo, home=HOME)
+    assert merged["hooks"]["PreToolUse"] == [
+        {"matcher": "Edit", "hooks": [cmd(ITERM)]},
+        {"matcher": "Bash", "hooks": [cmd(OURS + "block_dangerous_commands.py")]},
+    ]
+    assert [c[3] for c in changes] == ["migrated", "added"]
+
+
+def test_duplicate_legacy_copies_collapse_to_one():
+    existing = {
+        "hooks": {
+            "Stop": [
+                {"hooks": [cmd(OLD + "block_stop_if_dirty.py")]},
+                {"hooks": [cmd(OLD + "block_stop_if_dirty.py")]},
+            ]
+        }
+    }
+    repo = {"Stop": [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]}
+    merged, _ = ms.merge_hooks(existing, repo, home=HOME)
+    assert merged["hooks"]["Stop"] == [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]
+
+
+def test_legacy_without_counterpart_and_foreign_hooks_untouched():
+    gone = OLD + "hook_removed_from_repo.py"
+    lookalike = "python3 $HOME/.claude/hooks/other-tool/block_stop_if_dirty.py"
+    existing = {"hooks": {"Stop": [{"hooks": [cmd(gone), cmd(lookalike)]}]}}
+    repo = {"Stop": [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]}
+    merged, changes = ms.merge_hooks(existing, repo, home=HOME)
+    assert commands(merged["hooks"]["Stop"]) == [
+        gone,
+        lookalike,
+        OURS + "block_stop_if_dirty.py",
+    ]
+    assert changes == [("Stop", None, OURS + "block_stop_if_dirty.py", "added")]
+
+
+def test_is_legacy_copy_edge_cases():
+    assert ms.is_legacy_copy(None, OURS + "a.py", HOME) is False
+    assert ms.is_legacy_copy(OLD + "a.py", None, HOME) is False
+    assert ms.is_legacy_copy(OLD + "a.py", OURS + "b.py", HOME) is False
+    assert ms.is_legacy_copy(OLD + "a.py", OURS + "a.py", HOME) is True
+
+
+def test_merge_hooks_default_home_uses_expanduser(monkeypatch):
+    monkeypatch.setenv("HOME", "/home/someone")
+    old = "python3 /home/someone/.claude/hooks/claude-rails/block_stop_if_dirty.py"
+    existing = {"hooks": {"Stop": [{"hooks": [cmd(old)]}]}}
+    repo = {"Stop": [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]}
+    merged, _ = ms.merge_hooks(existing, repo)
+    assert merged["hooks"]["Stop"] == [{"hooks": [cmd(OURS + "block_stop_if_dirty.py")]}]
+
+
+def test_main_reports_migration(tmp_path, capsys):
+    existing = {"hooks": {"Stop": [{"hooks": [cmd(OLD + "block_stop_if_dirty.py")]}]}}
+    settings, repo = setup_files(tmp_path, existing)
+    assert ms.main(["merge_settings.py", str(settings), str(repo)]) == 0
+    out = capsys.readouterr().out
+    assert f"이전: Stop  {OURS}block_stop_if_dirty.py" in out
+    assert "1개 옛 경로에서 이전" in out
+    assert OLD not in settings.read_text()
