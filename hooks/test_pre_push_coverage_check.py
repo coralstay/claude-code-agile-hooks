@@ -330,7 +330,7 @@ def test_segment_of_only_assignments_is_not_a_push():
 
 
 # TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback.
-# 로그는 옛 설정만 쓰고 .claude-code-agile-hooks/이 아직 없을 때만 .claude-rails/에 남는다.
+# 로그는 옛 설정만 쓰고 .claude-code-agile-hooks/가 아직 없을 때만 .claude-rails/에 남는다.
 def test_config_only_new_name_logs_to_new_dir(tmp_path, monkeypatch, capsys):
     (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "echo new && exit 0"})

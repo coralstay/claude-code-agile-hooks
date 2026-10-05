@@ -1,6 +1,6 @@
 # backlog
 
-**무엇인가**: 이 저장소(interlock, 옛 이름 claude-rails)의 작업 기록 전체를 담는 최상위 디렉토리다. 할 일부터
+**무엇인가**: 이 저장소(claude-code-agile-hooks, 옛 이름 claude-rails)의 작업 기록 전체를 담는 최상위 디렉토리다. 할 일부터
 초안, 참고 문서, 의사결정, 마일스톤, 완료/보관 태스크까지 Backlog.md CLI가 관리하는
 모든 산출물이 여기 들어간다.
 

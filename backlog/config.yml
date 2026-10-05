@@ -1,4 +1,4 @@
-project_name: "interlock"
+project_name: "claude-code-agile-hooks"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Done"]
 labels: []

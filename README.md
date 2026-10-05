@@ -1,9 +1,9 @@
-# interlock
+# claude-code-agile-hooks
 
-[![CI](https://github.com/coralstay/interlock/actions/workflows/ci.yml/badge.svg)](https://github.com/coralstay/interlock/actions/workflows/ci.yml)
+[![CI](https://github.com/coralstay/claude-code-agile-hooks/actions/workflows/ci.yml/badge.svg)](https://github.com/coralstay/claude-code-agile-hooks/actions/workflows/ci.yml)
 
-> 이전 이름은 `claude-rails`입니다. 2026-10에 interlock(조건이 갖춰져야 동작을 허용하는 안전
-> 연동 장치)으로 이름을 바꾸었습니다. 옛 설정 파일 `.claude-rails.json`도 계속 읽습니다.
+> 이전 이름은 `claude-rails`입니다. 이름 그대로, Claude Code 작업에 애자일(스크럼·칸반) 절차와
+> 품질·안전 게이트를 거는 훅 모음입니다. 옛 설정 파일 `.claude-rails.json`도 계속 읽습니다.
 
 에이전트(Claude Code)를 사용하기 위해 개인적으로 만들어 사용하고 있는 훅 모음집입니다.
 Claude Code와 함께 작업할 때, Claude가 제가 의도한 대로 행동할 수 있도록 돕기 위해
@@ -160,16 +160,16 @@ flowchart TB
 ## 설치 방법을 안내해 드립니다
 
 ```bash
-cd ~/githubs/interlock && ./install.sh
+cd ~/githubs/claude-code-agile-hooks && ./install.sh
 ```
 
 `~/.claude/settings.json`에는 [`scripts/merge_settings.py`](scripts/merge_settings.py)로
-**추가 전용 병합**을 합니다. 다른 도구의 훅은 그대로 두고, 빠진 interlock 항목만
+**추가 전용 병합**을 합니다. 다른 도구의 훅은 그대로 두고, 빠진 claude-code-agile-hooks 항목만
 (이벤트, matcher) 그룹에 추가하므로 다시 실행해도 중복되지 않습니다. 쓰기 전에
 `settings.json.bak.<timestamp>`로 백업하고, 추가/갱신된 항목을 목록으로 보여 드립니다.
 
 옛 이름(`claude-rails`)으로 설치하셨다면 `~/.claude/hooks/claude-rails/`를 가리키던 훅 항목은 같은
-자리에서 새 경로(`~/.claude/hooks/interlock/`)로 바뀌므로 훅이 두 번 돌지 않습니다. 옛 설치
+자리에서 새 경로(`~/.claude/hooks/claude-code-agile-hooks/`)로 바뀌므로 훅이 두 번 돌지 않습니다. 옛 설치
 디렉토리와 `~/.claude/CLAUDE.md`의 옛 `CLAUDE-RAILS` 마커 블록은 설치 스크립트가 안내만 하고
 건드리지 않으니, 새 설치본이 동작하는 것을 확인하신 뒤 직접 지워 주세요.
 
@@ -193,10 +193,10 @@ uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov      # 병렬 
 ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커버리지가 100% 미만이면
 실패합니다.
 
-**로컬 게이트**: 이 저장소에도 [`.interlock.json`](.interlock.json)이 있어서, 설치된
+**로컬 게이트**: 이 저장소에도 [`.claude-code-agile-hooks.json`](.claude-code-agile-hooks.json)이 있어서, 설치된
 훅이 이 저장소에서 커밋할 때마다 `testCommand`(병렬 테스트, 커버리지 없이)를, push할
 때마다 `coverageCommand`(CI와 같은 명령)를 돌립니다. 실패하면 커밋·push가 막힙니다. push
-때의 실행 기록은 `.interlock/coverage-log.jsonl`에 남고, 이 디렉토리는 git에서
+때의 실행 기록은 `.claude-code-agile-hooks/coverage-log.jsonl`에 남고, 이 디렉토리는 git에서
 제외됩니다. 아직 옛 이름 `.claude-rails.json`만 쓰는 프로젝트에서는 그 설정을 그대로 읽고
 기록도 예전처럼 `.claude-rails/`에 남깁니다.
 
