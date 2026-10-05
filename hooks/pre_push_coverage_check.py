@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """PreToolUse (matcher: Bash, no `if` filter)
-Optional coverage gate: if the project's .claude-rails.json configures a
+Optional coverage gate: if the project's .interlock.json (or the legacy
+.claude-rails.json, see project_config_path()) configures a
 `coverageCommand` (e.g. "python3 -m pytest --cov=. --cov-fail-under=100"),
 run it before every push and show the real, measured report - every time,
 pass or fail. Blocks the push only when the command itself fails (e.g.
 coverage.py's own --cov-fail-under exits non-zero below the threshold).
 Never fabricates a percentage; a project with no coverageCommand configured
 gets no message at all. Every attempt (pass or fail) is also appended to
-<cwd>/.claude-rails/coverage-log.jsonl so there's a permanent record beyond
+<cwd>/.interlock/coverage-log.jsonl (legacy projects: .claude-rails/, see
+log_path()) so there's a permanent record beyond
 the transcript, which scrolls away.
 
 This script does its own subcommand detection so `git -C <path> push`
@@ -146,9 +148,20 @@ def command_runs_git(command, subcommand):
     return False
 
 
+def project_config_path(cwd):
+    """TASK-54: the project config was renamed from .claude-rails.json to
+    .interlock.json. Prefer the new name and fall back to the legacy one so
+    projects can rename at their own pace; None when neither exists."""
+    for name in (".interlock.json", ".claude-rails.json"):
+        path = os.path.join(cwd, name)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 def configured_coverage_command(cwd):
-    config_path = os.path.join(cwd, ".claude-rails.json")
-    if not os.path.isfile(config_path):
+    config_path = project_config_path(cwd)
+    if config_path is None:
         return None
     with open(config_path) as f:
         config = json.load(f)
@@ -183,7 +196,14 @@ def run_shell(cwd, command):
 
 
 def log_path(cwd):
-    return os.path.join(cwd, ".claude-rails", "coverage-log.jsonl")
+    """TASK-54: the log dir follows the config rename. Keep writing to the
+    legacy .claude-rails/ only while the project still uses only the legacy
+    .claude-rails.json and has no .interlock/ yet; otherwise .interlock/."""
+    legacy_only = project_config_path(cwd) == os.path.join(
+        cwd, ".claude-rails.json"
+    ) and not os.path.isdir(os.path.join(cwd, ".interlock"))
+    log_dir = ".claude-rails" if legacy_only else ".interlock"
+    return os.path.join(cwd, log_dir, "coverage-log.jsonl")
 
 
 def append_log(cwd, record):

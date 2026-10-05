@@ -61,6 +61,11 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
     ],
+    # TASK-54: .interlock.json 우선, 옛 .claude-rails.json fallback
+    "project_config_path": [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+    ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
     "tokenize": [
         "require_draft_first.py",
