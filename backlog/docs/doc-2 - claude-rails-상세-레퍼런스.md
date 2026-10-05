@@ -1,11 +1,14 @@
 ---
 id: doc-2
-title: claude-rails 상세 레퍼런스
+title: interlock 상세 레퍼런스
 type: specification
 created_date: '2026-09-19 04:46'
-updated_date: '2026-10-03 16:00'
+updated_date: '2026-10-05 08:00'
 ---
-# claude-rails 상세 레퍼런스
+# interlock 상세 레퍼런스
+
+> 이전 이름은 `claude-rails`다(TASK-54에서 interlock으로 변경). 완료 태스크·decision·회고 같은
+> 기록 문서는 당시 이름을 그대로 쓴다.
 
 README.md는 의도만 짧게 담고, 이 문서가 전체 스펙이다 — 운영/개인 레포 구분, 전체
 Phase 명세, HIL 지점 표, 27개(→28개→30개→31개→32개→33개→32개) 훅 하나하나의 이벤트/matcher/설명, 설치/삭제
@@ -137,12 +140,12 @@ Claude Code가 하는 모든 행동에 대한 보안 경계**다 — backlog.md�
 
 | 항목         | 경로                                                                                                                                |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 훅 스크립트  | `~/.claude/hooks/claude-rails/*.py` (32개, Python, 실행권한 불필요 — `python3 <path>`로 호출)                                       |
-| 훅 테스트    | `~/.claude/hooks/claude-rails/test_*.py` (훅과 같은 디렉토리에 훅마다 1개 + 등록·실행 계약 테스트 — `.coverage`/`.pytest_cache`도 이 디렉토리에서 생김) |
+| 훅 스크립트  | `~/.claude/hooks/interlock/*.py` (32개, Python, 실행권한 불필요 — `python3 <path>`로 호출)                                          |
+| 훅 테스트    | `~/.claude/hooks/interlock/test_*.py` (훅과 같은 디렉토리에 훅마다 1개 + 등록·실행 계약 테스트 — `.coverage`/`.pytest_cache`도 이 디렉토리에서 생김) |
 | 전역 설정    | `~/.claude/settings.json` (`hooks` 키만 병합됨, 기존 설정 보존)                                                                     |
-| 전역 지침    | `~/.claude/CLAUDE.md` (`<!-- CLAUDE-RAILS:BEGIN -->` 블록)                                                                          |
+| 전역 지침    | `~/.claude/CLAUDE.md` (`<!-- INTERLOCK:BEGIN -->` 블록)                                                                             |
 | 설치 전 백업 | `~/.claude/settings.json.bak.<timestamp>`                                                                                           |
-| 원본 소스    | 이 저장소 자체 ([github.com/coralstay/claude-rails](https://github.com/coralstay/claude-rails), private)                            |
+| 원본 소스    | 이 저장소 자체 ([github.com/coralstay/interlock](https://github.com/coralstay/interlock), private)                                  |
 
 각 훅 스크립트는 다른 훅 파일을 import하지 않는 **완전 독립형**이다 (bash 시절의
 공용 함수 파일 `_lib.sh`는 더 이상 없음 — 각 스크립트가 필요한 로직을 자체적으로
@@ -327,7 +330,7 @@ Progress 태스크 없이는 이후 어떤 Edit/Write도 불가.
 | 3-1 활성화            | `task edit -s "In Progress"` + `task/<ID>` 브랜치 전환                        | 🤖 `pre_commit_check.py` — 커밋 시 브랜치명 검사                                                |
 | 3-2 리서치 → 계획     | 코드베이스 재조사 후 `task edit --plan` (생성 시점 접근법을 그대로 믿지 않음) | ⚙️ 판단 영역, 강제 없음                                                                         |
 | 3-3 승인 게이트       | 중대한 설계/아키텍처 결정 포함 시 구현 전 승인 대기                           | 🧑? Claude Code Plan Mode 재사용                                                                |
-| 3-4 구현 서브루프     | 슬라이스 구현→테스트→`--append-notes`→원자적 커밋→반복                        | 🤖 `pre_commit_check.py` — `.claude-rails.json`에 `testCommand` 설정 시 테스트 실패면 커밋 차단 |
+| 3-4 구현 서브루프     | 슬라이스 구현→테스트→`--append-notes`→원자적 커밋→반복                        | 🤖 `pre_commit_check.py` — `.interlock.json`에 `testCommand` 설정 시 테스트 실패면 커밋 차단 |
 | 3-4b 미커밋 종료 방지 | —                                                                             | 🤖 `block_stop_if_dirty.py` — dirty tree + In Progress면 턴 종료 차단                           |
 | 3-5 스코프 이탈 감지  | AC 밖 발견 시 조용히 확장 않고 질문                                           | 🧑? 발견 시에만, 자동 검증은 미구현                                                             |
 | 3-6 서브태스크 처리   | 서브태스크 1개만 할당 시 다음으로 자동 진행 금지                              | 🧑? 1개만 할당된 경우에만                                                                       |
@@ -420,12 +423,12 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 
 | 훅                            | if 조건               | 🔒  | 설명                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ----------------------------- | --------------------- | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`pre_commit_check.py`](../../../hooks/pre_commit_check.py)         | (없음)                | 🔒  | `task/<ID>` 브랜치에서만 커밋 허용 + `.claude-rails.json`의 `testCommand` 설정 시 테스트 통과 필수. bash 시절 `pre-commit-check.sh`의 후신. 명령 위치의 `git commit`만 판정(TASK-39, `echo`·따옴표·heredoc 안 글자 무시, 파싱 실패 시 보수적으로 커밋 취급). `if` 필터는 절대경로 호출을 놓쳐 제거                                                                                                                                                                                                                                                                                                          |
+| [`pre_commit_check.py`](../../../hooks/pre_commit_check.py)         | (없음)                | 🔒  | `task/<ID>` 브랜치에서만 커밋 허용 + `.interlock.json`(없으면 옛 `.claude-rails.json`)의 `testCommand` 설정 시 테스트 통과 필수. bash 시절 `pre-commit-check.sh`의 후신. 명령 위치의 `git commit`만 판정(TASK-39, `echo`·따옴표·heredoc 안 글자 무시, 파싱 실패 시 보수적으로 커밋 취급). `if` 필터는 절대경로 호출을 놓쳐 제거                                                                                                                                                                                                                                                                                                          |
 | [`backlog_commit_scope.py`](../../../hooks/backlog_commit_scope.py)      | (없음)                | 🔒  | `git commit` 시 스테이징(`git diff --cached --name-status -M`)을 보고, 새 드래프트(`backlog/drafts/` 추가)와 그 밖의 파일이 섞이면, 또는 승격(`backlog/drafts/` → `backlog/tasks/` rename)과 `backlog/tasks/` 밖의 파일이 섞이면 차단. 승격된 태스크 파일 자체의 수정은 허용. PreToolUse 시점 인덱스를 보므로 같은 명령 안의 단순 `git add <args>`와 `commit -a`는 임시 인덱스(GIT_INDEX_FILE)에서 재현해 판정한다. `git rm/mv`, pathspec 커밋, `bash -c` 우회, 터미널 직접 커밋은 범위 밖(모듈 docstring 참고). 커밋 감지와 `git add` 재현 모두 명령 위치만 본다(TASK-39, `if` 필터 제거) |
 | [`require_draft_first.py`](../../../hooks/require_draft_first.py)       | (없음)                | 🔒  | 명령 위치에서 실제로 실행되는 `backlog task create`(basename 정규화, `;`/`&&`/`\|`/줄바꿈 세그먼트, env·래퍼 건너뜀)를 차단하고 `backlog draft create` → 승인 후 `draft promote`를 안내. 다른 명령의 따옴표 인자나 heredoc 본문 안의 텍스트는 통과. `bash -c`/`eval`/MCP 경유는 범위 밖(decision-1) |
-| [`dedup_drift_guard.py`](../../../hooks/dedup_drift_guard.py)        | `Bash(git *)`         |     | 이 저장소 자체를 지키는 self-guard — REGISTRY가 손으로 복붙된 함수 12개(`is_backlog_project`, `has_command`, `has_active_task`, `run_shell`, `tokenize`, `split_segments`, `background_tasks_running`, `strip_heredoc_bodies`, `is_outside_project`, `command_head`, `git_subcommand_index`, `command_runs_git`)가 어느 훅 파일들에 등장해야 하는지를 추적해, 사본 간에 어긋나면(정규화된 AST 비교) 커밋 시점에 차단. `backlog/config.yml` 유무와 무관하게 `hooks/` 디렉토리 존재만으로 동작 판단(즉 REGISTRY가 가리키는 파일들이 실제로 있는 저장소, 곧 claude-rails 자신에서만 작동). REGISTRY는 검사 대상 저장소의 `hooks/dedup_drift_guard.py`(작업 트리)에서 `ast.literal_eval`로 데이터만 읽어 쓰고(import·실행 없음), 읽을 수 없거나 형태가 틀리면 설치본 REGISTRY로 검사(TASK-40). 저장소 REGISTRY는 비워져도 그대로 신뢰 — 보안 장치가 아니라 drift 감지기. `if` 필터는 의도적으로 유지(TASK-46): `/usr/bin/git commit`(경로 호출)에선 실행되지 않지만 같은 drift를 `hooks/test_dedup_registry.py`가 테스트 스위트에서 잡으므로 조기 경고만 빠진다 — 계약 테스트 `hidden_ok`에 사유와 함께 등록 |
+| [`dedup_drift_guard.py`](../../../hooks/dedup_drift_guard.py)        | `Bash(git *)`         |     | 이 저장소 자체를 지키는 self-guard — REGISTRY가 손으로 복붙된 함수 13개(`is_backlog_project`, `has_command`, `has_active_task`, `run_shell`, `tokenize`, `split_segments`, `background_tasks_running`, `strip_heredoc_bodies`, `is_outside_project`, `command_head`, `git_subcommand_index`, `command_runs_git`, `project_config_path`)가 어느 훅 파일들에 등장해야 하는지를 추적해, 사본 간에 어긋나면(정규화된 AST 비교) 커밋 시점에 차단. `backlog/config.yml` 유무와 무관하게 `hooks/` 디렉토리 존재만으로 동작 판단(즉 REGISTRY가 가리키는 파일들이 실제로 있는 저장소, 곧 interlock 자신에서만 작동). REGISTRY는 검사 대상 저장소의 `hooks/dedup_drift_guard.py`(작업 트리)에서 `ast.literal_eval`로 데이터만 읽어 쓰고(import·실행 없음), 읽을 수 없거나 형태가 틀리면 설치본 REGISTRY로 검사(TASK-40). 저장소 REGISTRY는 비워져도 그대로 신뢰 — 보안 장치가 아니라 drift 감지기. `if` 필터는 의도적으로 유지(TASK-46): `/usr/bin/git commit`(경로 호출)에선 실행되지 않지만 같은 drift를 `hooks/test_dedup_registry.py`가 테스트 스위트에서 잡으므로 조기 경고만 빠진다 — 계약 테스트 `hidden_ok`에 사유와 함께 등록 |
 | [`pre_push_check.py`](../../../hooks/pre_push_check.py)           | (없음)                | 🔒  | `task/<ID>` 브랜치 push는 태스크가 Done && final summary 있을 때만 허용. bash 시절 `pre-push-check.sh`의 후신. `if` 필터는 `/usr/bin/git push`가 게이트를 우회하는 것이 실측돼 제거(TASK-46) |
-| [`pre_push_coverage_check.py`](../../../hooks/pre_push_coverage_check.py)  | (없음)                |     | `.claude-rails.json`의 `coverageCommand` 설정 시 push 전 실제로 실행해 리포트를 보여줌(성공/실패 무관하게 매번), 실패 시에만 차단. 결과는 `<cwd>/.claude-rails/coverage-log.jsonl`에도 기록. 명령 위치의 `git push`만 판정(TASK-39). 실패 시 push를 막는 게이트라 pre_push_check와 같이 `if` 필터 제거(TASK-46) — push가 아닌 줄은 설정 파일·subprocess 없이 파싱 직후 종료 |
+| [`pre_push_coverage_check.py`](../../../hooks/pre_push_coverage_check.py)  | (없음)                |     | `.interlock.json`(없으면 옛 `.claude-rails.json`)의 `coverageCommand` 설정 시 push 전 실제로 실행해 리포트를 보여줌(성공/실패 무관하게 매번), 실패 시에만 차단. 결과는 `<cwd>/.interlock/coverage-log.jsonl`(옛 설정만 쓰는 프로젝트는 `.claude-rails/`)에도 기록. 명령 위치의 `git push`만 판정(TASK-39). 실패 시 push를 막는 게이트라 pre_push_check와 같이 `if` 필터 제거(TASK-46) — push가 아닌 줄은 설정 파일·subprocess 없이 파싱 직후 종료 |
 | [`block_dangerous_commands.py`](../../../hooks/block_dangerous_commands.py) | (없음)                |     | 재앙적/고위험 셸 명령 차단. `HOOK_SAFETY_LEVEL`(critical\|high\|strict)로 룰셋 선택                                                                                                                                                                                                                                                                                                                                                                 |
 | [`pre_git_safety_check.py`](../../../hooks/pre_git_safety_check.py)     | (없음)                |     | main/master 직접 push, 보호 브랜치 삭제, 파괴적 `gh` 작업(pr merge/close, issue close, release/repo delete) 차단. git은 basename으로 비교(TASK-37). TASK-38: refspec 없는 bare push도 현재 브랜치·push.default·upstream으로 대상 판정. main/master는 `git ls-remote`로 원격 부재가 증명된 최초 push만 허용, 확인 실패·force·삭제는 차단. TASK-45: gh도 세그먼트별 명령 위치·basename으로 판정(`/usr/bin/gh`, `-R` 위치 무관), 같은 작업의 `gh api` 호출(PUT `pulls/N/merge`, DELETE repo·release, PATCH `state=closed`, GraphQL mutation)도 차단                                                                                                             |
 | [`case_insensitive_guard.py`](../../../hooks/case_insensitive_guard.py)   | (없음)                |     | 대소문자만 다른 형제 경로가 있을 때 `rm -rf` 같은 삭제 명령이 의도치 않게 다른 대상을 지우지 않도록 방지(APFS/exFAT/NTFS 대응)                                                                                                                                                                                                                                                                                                                      |
@@ -527,7 +530,7 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 
 ---
 
-## 9. 프로젝트별 설정 — `.claude-rails.json`
+## 9. 프로젝트별 설정 — `.interlock.json`
 
 프로젝트 루트에 두면 두 가지를 켤 수 있다:
 
@@ -545,19 +548,30 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 
 둘 다 없으면 해당 검사는 건너뛴다(`pre_commit_check.py`는 브랜치명 검사만 수행).
 `testCommand`/`coverageCommand` 모두 내부적으로 셸에 그대로 넘겨 실행되므로, 신뢰할 수
-있는 값만 넣을 것. 예시는 `.claude-rails.json.example` 참고(현재는 `testCommand`만
+있는 값만 넣을 것. 예시는 `.interlock.json.example` 참고(현재는 `testCommand`만
 포함 — 필요하면 `coverageCommand`를 직접 추가).
 
 실행 방식: 두 훅 모두 훅 입력의 `cwd`(Claude Code의 작업 디렉토리)에서 `shell=True`로
 실행한다. `pre_commit_check.py`는 `cwd`가 backlog 프로젝트 루트(`.git` + `backlog/config.yml`)
 일 때만 동작하므로, 하위 디렉토리로 `cd`한 채 커밋하면 테스트를 건너뛴다. 매 커밋마다
 돌기 때문에 `testCommand`는 빨라야 한다(Claude Code 훅 타임아웃 안에 끝나야 함).
-`pre_push_coverage_check.py`는 실행 기록을 `<cwd>/.claude-rails/coverage-log.jsonl`에 남기므로
-`.claude-rails/`를 `.gitignore`에 넣는다.
+`pre_push_coverage_check.py`는 실행 기록을 `<cwd>/.interlock/coverage-log.jsonl`에 남기므로
+`.interlock/`을 `.gitignore`에 넣는다.
+
+**옛 이름 호환 (TASK-54)**: 이름이 `claude-rails`에서 interlock으로 바뀌면서 프로젝트마다 설정
+파일 이름을 한꺼번에 바꿀 수 없으므로, 두 훅은 같은 헬퍼 `project_config_path()`(dedup
+REGISTRY 등록)로 설정을 찾는다.
+
+- `.interlock.json`이 있으면 그것을 읽는다(옛 `.claude-rails.json`이 함께 있어도 새 이름이 이긴다).
+- 없으면 옛 `.claude-rails.json`을 읽는다. 둘 다 없으면 설정이 없는 것으로 본다.
+- 커버리지 기록 디렉토리: 옛 `.claude-rails.json`만 쓰고 `.interlock/`이 아직 없는 프로젝트만
+  예전처럼 `.claude-rails/`에 남기고, 그 밖에는 `.interlock/`에 남긴다. 그래서 설정 파일 이름을
+  바꾸면 그다음 push부터 기록이 `.interlock/`으로 옮겨 간다(옛 기록은 옮기지 않는다).
+  두 디렉토리를 모두 `.gitignore`에 넣어 두면 안전하다.
 
 ### 이 저장소 자신의 게이트 (도그푸딩, TASK-43)
 
-이 저장소 루트에도 `.claude-rails.json`이 있다:
+이 저장소 루트에도 `.interlock.json`이 있다:
 
 ```json
 {
@@ -702,7 +716,7 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 **설치/재설치**:
 
 ```bash
-cd ~/githubs/claude-rails   # 이 저장소
+cd ~/githubs/interlock   # 이 저장소
 ./install.sh
 ```
 
@@ -714,9 +728,17 @@ settings.json 병합은 `scripts/merge_settings.py`가 **추가 전용**으로 �
 
 - 훅 항목은 (이벤트, matcher, command)로 식별한다. 없으면 같은 matcher의 첫 그룹에
   덧붙이고, 그런 그룹이 없으면 새로 만든다. 다른 도구의 항목과 `hooks` 외 최상위 키는
-  건드리지 않고, 아무것도 지우지 않는다.
+  건드리지 않고, 아래 옛 경로 이전 말고는 아무것도 지우지 않는다.
 - 같은 command가 이미 있는데 `if`/`timeout` 등이 저장소와 다르면 그 자리에서 저장소
-  값으로 갱신한다 (command가 `~/.claude/hooks/claude-rails/`를 가리키므로 저장소가 원본).
+  값으로 갱신한다 (command가 `~/.claude/hooks/interlock/`을 가리키므로 저장소가 원본).
+- 옛 경로 이전 (TASK-54): 같은 이벤트에서 옛 설치 디렉토리 `~/.claude/hooks/claude-rails/<file>`을
+  가리키는 항목 중, 그 디렉토리를 `.../hooks/interlock/`으로 읽으면 저장소 command와
+  정확히 같아지는 것만 옛 사본으로 본다(`$HOME`·`~`·`${HOME}`·펼친 홈 경로 표기 모두 인식).
+  같은 matcher의 첫 사본은 그 자리에서 새 항목으로 바꾸고("이전"으로 출력), 나머지 사본
+  (다른 matcher, 또는 새 command가 이미 있는 경우)은 지우며 그래서 빈 그룹도 지운다. 저장소에
+  대응 항목이 없는 옛 경로 command와 다른 도구의 항목은 건드리지 않는다.
+- 옛 설치 흔적 안내: `~/.claude/hooks/claude-rails/` 디렉토리나 `~/.claude/CLAUDE.md`의 옛
+  `<!-- CLAUDE-RAILS:BEGIN -->` 블록이 있으면 `install.sh`는 안내만 출력하고 고치거나 지우지 않는다.
 - 변경이 있을 때만 `settings.json.bak.<timestamp>` 백업 → 임시 파일에 쓰고 JSON 재검증 →
   원자적 교체. 기존 파일이 깨진 JSON이면 손대지 않고 중단한다. 추가/갱신 목록을 출력한다.
 - 한계: 저장소에서 어떤 훅의 matcher나 이벤트를 바꾸면 옛 위치의 항목은 남는다(삭제하지
@@ -727,8 +749,9 @@ settings.json 병합은 `scripts/merge_settings.py`가 **추가 전용**으로 �
 **삭제**:
 
 - `~/.claude/settings.json`에서 병합된 `hooks` 블록 제거
-- `~/.claude/CLAUDE.md`의 `<!-- CLAUDE-RAILS:BEGIN -->` ~ `END` 블록 제거
-- `~/.claude/hooks/claude-rails/` 삭제 (`.coverage`/`.pytest_cache`도 이 안에 있으므로
+- `~/.claude/CLAUDE.md`의 `<!-- INTERLOCK:BEGIN -->` ~ `END` 블록 제거 (옛 설치라면
+  `<!-- CLAUDE-RAILS:BEGIN -->` 블록도)
+- `~/.claude/hooks/interlock/` 삭제 (옛 설치본 `~/.claude/hooks/claude-rails/`가 남아 있으면 그것도) (`.coverage`/`.pytest_cache`도 이 안에 있으므로
   같이 지워짐)
 
 **검증**:
@@ -736,7 +759,7 @@ settings.json 병합은 `scripts/merge_settings.py`가 **추가 전용**으로 �
 ```bash
 python3 -m json.tool ~/.claude/settings.json >/dev/null && echo OK
 echo '{"cwd":"<backlog 프로젝트 경로>","transcript_path":"/nonexistent"}' \
-  | python3 ~/.claude/hooks/claude-rails/require_active_task.py; echo "exit: $?"
+  | python3 ~/.claude/hooks/interlock/require_active_task.py; echo "exit: $?"
 ```
 
 훅 변경 후 반영이 안 되면 `/hooks` 메뉴를 한 번 열거나 세션을 재시작.
@@ -745,7 +768,7 @@ echo '{"cwd":"<backlog 프로젝트 경로>","transcript_path":"/nonexistent"}' 
 `python3 -m pytest`로 돌려볼 것:
 
 ```bash
-cd ~/.claude/hooks/claude-rails && python3 -m pytest
+cd ~/.claude/hooks/interlock && python3 -m pytest
 ```
 
 저장소에서는 루트에서 `uvx --with pytest-cov pytest -q --cov`로 `hooks/`·`scripts/` 전체를
@@ -759,12 +782,12 @@ cd ~/.claude/hooks/claude-rails && python3 -m pytest
 ## 12. 파일 구성
 
 ```
-claude-rails/
+interlock/
 ├── README.md                # 이 문서 (단일 소스)
 ├── install.sh                # ~/.claude/에 설치하는 스크립트
 ├── settings.hooks.json       # ~/.claude/settings.json에 병합되는 hooks 블록
 ├── CLAUDE.md.snippet         # ~/.claude/CLAUDE.md에 추가되는 워크플로 안내
-├── .claude-rails.json.example
+├── .interlock.json.example
 ├── pyproject.toml            # pytest testpaths + coverage 설정(fail_under=100)
 ├── scripts/                   # 훅이 아닌 보조 스크립트 (설치되지 않음)
 │   └── merge_settings.py / test_merge_settings.py   # install.sh의 추가 전용 settings 병합
@@ -780,7 +803,7 @@ claude-rails/
 ```
 
 각 훅과 그 테스트는 같은 디렉토리에 나란히 산다(별도 `tests/` 서브폴더 없음) — 설치
-대상 디렉토리(`~/.claude/hooks/claude-rails/`)에 `.coverage`/`.pytest_cache`가 실제로
+대상 디렉토리(`~/.claude/hooks/interlock/`)에 `.coverage`/`.pytest_cache`가 실제로
 생기는 것도 테스트를 그 자리에서 그대로 돌리기 때문이다. `install.sh`도 이 컨벤션을
 그대로 따라 훅 본체와 테스트를 함께 설치한다.
 
