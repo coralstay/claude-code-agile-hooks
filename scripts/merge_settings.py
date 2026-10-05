@@ -13,7 +13,7 @@ tool's hooks under the same event (PreToolUse, Stop, ...) were wiped. This merge
   groups map to matcher-less installed groups).
 - If the command already exists there but its other fields differ (e.g. the repo changed
   `if` or `timeout`), that entry is replaced in place with the repo version. The command
-  string points into ~/.claude/hooks/claude-rails/, so the repo is its source of truth;
+  string points into ~/.claude/hooks/interlock/, so the repo is its source of truth;
   without this, re-running install.sh would never propagate such changes. Entries with
   other commands (other tools' hooks) are never modified.
 - Nothing is ever removed, so re-running gives the same result.

@@ -69,7 +69,7 @@ EDIT_TOOLS = {"Edit", "Write", "NotebookEdit", "MultiEdit"}
 EXCLUDED_PREFIXES = ("backlog/",)
 
 WARNING = (
-    "[claude-rails] 이 세션은 plan mode/ExitPlanMode 기록 없이 프로젝트 파일을 수정했습니다. "
+    "[interlock] 이 세션은 plan mode/ExitPlanMode 기록 없이 프로젝트 파일을 수정했습니다. "
     "작업 파이프라인(plan mode로 계획 → 유저 검토·승인 → 실행)을 건너뛴 것이라면 "
     "다음 작업부터는 plan mode로 계획을 먼저 보여주세요. (관측 전용 경고 — 차단하지 않음)"
 )

@@ -217,11 +217,11 @@ def main():
 
     if status != "Done":
         deny(
-            f"[claude-rails] {task_id} 가 아직 Done 상태가 아닙니다 (현재: {status}). 완료 처리 후 push하세요."
+            f"[interlock] {task_id} 가 아직 Done 상태가 아닙니다 (현재: {status}). 완료 처리 후 push하세요."
         )
     if not summary:
         deny(
-            f"[claude-rails] {task_id} 의 final summary가 비어있습니다. "
+            f"[interlock] {task_id} 의 final summary가 비어있습니다. "
             f"'backlog task edit {task_id} --final-summary \"...\"' 로 작성 후 push하세요."
         )
 

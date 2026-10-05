@@ -222,7 +222,7 @@ def main():
         branch = current_branch(cwd)
         if not branch.startswith("task/"):
             deny(
-                f"[claude-rails] 커밋하기 전에 태스크 브랜치(task/TASK-ID)로 전환하세요. 현재 브랜치: {branch}"
+                f"[interlock] 커밋하기 전에 태스크 브랜치(task/TASK-ID)로 전환하세요. 현재 브랜치: {branch}"
             )
 
     test_command = configured_test_command(cwd)
@@ -230,7 +230,7 @@ def main():
         exit_code, output = run_shell(cwd, test_command)
         if exit_code != 0:
             deny(
-                f"[claude-rails] 커밋 전 테스트 실패 ('{test_command}', exit {exit_code}):\n"
+                f"[interlock] 커밋 전 테스트 실패 ('{test_command}', exit {exit_code}):\n"
                 + output[-800:]
             )
 

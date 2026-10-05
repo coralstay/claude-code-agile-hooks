@@ -75,7 +75,7 @@ def main():
 
     if not has_active_task(cwd):
         deny(
-            "[claude-rails] In Progress 상태인 backlog 태스크가 없습니다. "
+            "[interlock] In Progress 상태인 backlog 태스크가 없습니다. "
             "먼저 'backlog task edit <ID> -s \"In Progress\"'로 태스크를 활성화하세요."
         )
 
@@ -84,7 +84,7 @@ def main():
             content = f.read()
         if "task view" not in content:
             deny(
-                "[claude-rails] 이 세션에서 'backlog task view <ID> --plain'으로 태스크를 먼저 읽지 않았습니다."
+                "[interlock] 이 세션에서 'backlog task view <ID> --plain'으로 태스크를 먼저 읽지 않았습니다."
             )
 
     sys.exit(0)

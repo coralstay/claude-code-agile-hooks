@@ -1,9 +1,9 @@
 
-<!-- CLAUDE-RAILS:BEGIN -->
-## Backlog.md 워크플로 (claude-rails)
+<!-- INTERLOCK:BEGIN -->
+## Backlog.md 워크플로 (interlock)
 
 이 환경에는 backlog.md 태스크를 중심으로 한 워크플로 일부가 훅으로 강제되어 있습니다.
-(설치: claude-rails 저장소, `~/.claude/hooks/claude-rails/*.py` + `~/.claude/settings.json`)
+(설치: interlock 저장소, `~/.claude/hooks/interlock/*.py` + `~/.claude/settings.json`)
 
 1. **브리핑**: 새 요청을 받으면 `backlog overview` / `backlog board view` / `backlog search`로
    현황을 먼저 파악한다.
@@ -20,15 +20,15 @@
      Edit/Write를 차단한다.
    - `backlog task edit <ID> -s "In Progress"` + `task/<ID>` 브랜치로 전환한다 — 훅이 In
      Progress 상태와 브랜치명을 확인한다.
-   - 작은 단위(AC 1개 수준)로 구현 → 테스트 → 커밋을 반복한다. 프로젝트에 `.claude-rails.json`
-     의 `testCommand`가 설정돼 있으면 테스트 실패 시 훅이 커밋을 막는다.
+   - 작은 단위(AC 1개 수준)로 구현 → 테스트 → 커밋을 반복한다. 프로젝트에 `.interlock.json`
+     (옛 이름 `.claude-rails.json`도 읽음)의 `testCommand`가 설정돼 있으면 테스트 실패 시 훅이 커밋을 막는다.
    - 변경사항을 커밋하지 않은 채 턴을 끝내려 하면 훅이 막는다 — 먼저 커밋부터 마무리한다.
    - AC 밖의 작업이 발견되면 조용히 범위를 넓히지 말고 유저에게 먼저 확인한다.
 5. **완료**: 테스트 통과 로그 등 객관적 증거를 확인한 뒤에만 `--check-ac`/`--check-dod`를
    체크하고 `--final-summary`를 쓴 다음 `-s Done`으로 옮긴다. Done 상태 + final summary가
    없으면 훅이 push를 막는다.
 
-## 명령 제안 형식 (claude-rails)
+## 명령 제안 형식 (interlock)
 
 사용자에게 제안하는 명령은 펜스 코드블록으로만 쓰고, 하네스 예약 태그(`<bash-input>` 등)는 출력하지 않는다.
 예약 태그는 사용자가 `!`로 직접 실행한 명령·출력이나 하네스 주입 메시지를 표시하는 형식이라, 어시스턴트가
@@ -37,4 +37,4 @@
 
 세부 설계와 아직 훅으로 강제하지 못하는 부분(스코프 판단, AC 증거 검증 등)은 저장소
 README.md를 참고.
-<!-- CLAUDE-RAILS:END -->
+<!-- INTERLOCK:END -->

@@ -259,7 +259,7 @@ def main():
                 else f"커버리지 기준 미달 (exit {exit_code})"
             ),
             "systemMessage": (
-                f"[claude-rails] 커버리지 리포트 ('{command}', exit {exit_code}):\n"
+                f"[interlock] 커버리지 리포트 ('{command}', exit {exit_code}):\n"
                 + output[-4000:]
             ),
         }

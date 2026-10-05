@@ -27,7 +27,7 @@ def recap(uuid, session="s1", ts="2026-10-03T07:40:50.510Z", **extra):
         "content": f"recap {uuid} (disable recaps in /config)",
         "timestamp": ts,
         "uuid": uuid,
-        "cwd": "/Users/me/githubs/claude-rails",
+        "cwd": "/Users/me/githubs/interlock",
         "sessionId": session,
         "gitBranch": "task/TASK-44",
         "slug": "x",
@@ -40,7 +40,7 @@ def other(text="hi"):
     return json.dumps({"type": "user", "message": {"role": "user", "content": text}})
 
 
-def transcript(dirs, name="s1", project="-Users-me-githubs-claude-rails"):
+def transcript(dirs, name="s1", project="-Users-me-githubs-interlock"):
     d = dirs["projects"] / project
     d.mkdir(exist_ok=True)
     return d / f"{name}.jsonl"
@@ -101,7 +101,7 @@ def test_archives_recaps_with_the_listed_fields(monkeypatch, dirs):
             "sessionId": "s1",
             "uuid": "u1",
             "gitBranch": "task/TASK-44",
-            "cwd": "/Users/me/githubs/claude-rails",
+            "cwd": "/Users/me/githubs/interlock",
             "content": "recap u1 (disable recaps in /config)",
         }
     ]
@@ -424,7 +424,7 @@ E2 = {
     "sessionId": "b",
     "uuid": "2",
     "gitBranch": "task/TASK-1",
-    "cwd": "/w/claude-rails",
+    "cwd": "/w/interlock",
     "content": "second",
 }
 E3 = {
@@ -432,7 +432,7 @@ E3 = {
     "sessionId": "c",
     "uuid": "3",
     "gitBranch": None,
-    "cwd": "/w/claude-rails",
+    "cwd": "/w/interlock",
     "content": "third",
 }
 
@@ -448,14 +448,14 @@ def test_query_prints_all_oldest_first(monkeypatch, capsys, dirs):
     assert code == 0
     assert out == (
         "2026-09-20T10:00:00Z  [main]  /w/git-format\n  first\n"
-        "2026-10-01T10:00:00Z  [task/TASK-1]  /w/claude-rails\n  second\n"
-        "2026-10-03T23:59:59Z  [-]  /w/claude-rails\n  third\n"
+        "2026-10-01T10:00:00Z  [task/TASK-1]  /w/interlock\n  second\n"
+        "2026-10-03T23:59:59Z  [-]  /w/interlock\n  third\n"
     )
 
 
 def test_query_filters_project_and_dates_inclusive(monkeypatch, capsys, dirs):
     seed(dirs, E1, E2, E3)
-    _, out = query(monkeypatch, capsys, "--project", "claude-rails", "--json")
+    _, out = query(monkeypatch, capsys, "--project", "interlock", "--json")
     assert [json.loads(line)["uuid"] for line in out.splitlines()] == ["2", "3"]
     _, out = query(
         monkeypatch, capsys, "--since", "2026-09-20", "--until", "2026-10-01", "--json"
