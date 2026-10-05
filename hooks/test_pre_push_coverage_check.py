@@ -16,9 +16,7 @@ def run_main(monkeypatch, stdin_data):
 
 
 def test_no_op_when_command_is_not_a_push(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 1"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
     code = run_main(
         monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": "git status"}}
     )
@@ -127,9 +125,7 @@ def _init_git_repo(cwd, branch):
 
 def test_log_includes_session_project_branch_task_id(tmp_path, monkeypatch):
     _init_git_repo(tmp_path, "task/TASK-42")
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 0"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 0"}))
     run_main(
         monkeypatch,
         {"cwd": str(tmp_path), "session_id": "sess-abc123", "tool_input": PUSH_INPUT},
@@ -145,9 +141,7 @@ def test_log_includes_session_project_branch_task_id(tmp_path, monkeypatch):
 
 def test_log_task_id_is_none_off_task_branch(tmp_path, monkeypatch):
     _init_git_repo(tmp_path, "main")
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 0"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 0"}))
     run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
 
     log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
@@ -163,13 +157,9 @@ def test_task_id_from_branch():
 
 
 def test_log_appends_across_multiple_push_attempts(tmp_path, monkeypatch):
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 1"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
     run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 0"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 0"}))
     run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
 
     log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
@@ -272,9 +262,7 @@ def test_command_runs_git_unparsable_falls_back_to_substring():
 def test_text_mentioning_push_runs_no_coverage(tmp_path, monkeypatch, capsys, command):
     # Regression (TASK-39): `echo git push` and heredoc bodies used to run the
     # coverage command and log an attempt.
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 1"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
     code = run_main(
         monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
     )
@@ -284,9 +272,7 @@ def test_text_mentioning_push_runs_no_coverage(tmp_path, monkeypatch, capsys, co
 
 
 def test_fires_on_prefixed_absolute_push_in_chain(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 1"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
     command = "git commit -m x && FOO=1 /usr/bin/git push"
     code = run_main(
         monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
@@ -308,9 +294,7 @@ def test_non_push_line_exits_before_config_or_subprocess(
 ):
     """A line without a push must stay cheap: no config read, no
     subprocess, no output."""
-    (tmp_path / ".interlock.json").write_text(
-        json.dumps({"coverageCommand": "exit 1"})
-    )
+    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
 
     def forbidden(*args, **kwargs):
         raise AssertionError("must not run before a push is detected")
