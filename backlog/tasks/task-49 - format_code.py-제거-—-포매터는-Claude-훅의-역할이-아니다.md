@@ -4,7 +4,7 @@ title: format_code.py 제거 — 포매터는 Claude 훅의 역할이 아니다
 status: Done
 assignee: []
 created_date: '2026-10-04 01:48'
-updated_date: '2026-10-04 06:11'
+updated_date: '2026-10-05 05:15'
 labels:
   - hooks
   - policy
@@ -46,7 +46,7 @@ lint 피드백(ruff check, tsc)은 필요해지면 "파일을 바꾸지 않고, 
 - [x] #2 settings.hooks.json에서 format_code 항목을 제거하고 계약 테스트(등록·실행)가 통과한다
 - [x] #3 README·doc-2에서 format_code 서술을 제거하고 훅 수를 맞춘다
 - [x] #4 전체 스위트와 커버리지 100% 게이트가 통과한다
-- [ ] #5 설치본과 ~/.claude/settings.json의 format_code 항목을 제거한다
+- [x] #5 설치본과 ~/.claude/settings.json의 format_code 항목을 제거한다
 <!-- AC:END -->
 
 ## Final Summary
