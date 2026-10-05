@@ -1,9 +1,10 @@
 ---
 id: TASK-51
 title: THIRD_PARTY_NOTICES로 외부 MIT 코드의 저작권 고지 보존
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-05 07:26'
+updated_date: '2026-10-05 07:27'
 labels:
   - license
 dependencies: []
@@ -18,3 +19,9 @@ hooks/의 17개 훅은 karanb192/claude-code-hooks(MIT)에서 포팅했다. MIT�
 1. THIRD_PARTY_NOTICES.md에 karanb192/claude-code-hooks의 MIT 고지 전문과 포팅한 파일 목록을 둔다
 2. README 라이선스 절이 THIRD_PARTY_NOTICES.md를 가리키고, disler 저장소를 MIT라고 하지 않는다
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 THIRD_PARTY_NOTICES.md에 karanb192/claude-code-hooks의 MIT 고지 전문과 포팅한 파일 목록을 둔다
+- [ ] #2 README 라이선스 절이 THIRD_PARTY_NOTICES.md를 가리키고, disler 저장소를 MIT라고 하지 않는다
+<!-- AC:END -->

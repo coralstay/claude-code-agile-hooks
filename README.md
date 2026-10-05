@@ -205,9 +205,9 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 네트워크 서비스 제공이나 상용 사용 시에도 AGPL 조건에 따라 수정 소스를 공개해야 합니다.
 
 - **외부 코드 —** `hooks/`의 일부 훅은 MIT 라이선스로 배포된
-  [karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks)와
-  [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery)를 포팅한 것입니다.
-  해당 파일 머리말에 출처를 남기며, 그 원 저작물에는 원래의 MIT 조건이 그대로 적용됩니다.
+  [karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks)를 포팅한 것입니다.
+  그 원 저작물에는 원래의 MIT 조건이 그대로 적용되며, 원 저작권 고지와 대상 파일 목록은
+  [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)에 있습니다.
 - **상용 라이선스 —** 위 외부 코드를 제외한 부분은 저작권자가 단독이므로 듀얼 라이선스가 가능합니다.
   AGPL 조건(네트워크 서비스 제공 시 수정 소스 공개)이 맞지 않는 상용 사용은 별도로 협의합니다.
   문의: <coralstay3595@gmail.com> (또는 이 저장소의 GitHub Issue).
