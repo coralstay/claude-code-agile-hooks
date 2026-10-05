@@ -174,10 +174,6 @@
           },
           {
             "type": "command",
-            "command": "python3 $HOME/.claude/hooks/claude-rails/format_code.py"
-          },
-          {
-            "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-rails/dead_rules_audit.py"
           },
           {
