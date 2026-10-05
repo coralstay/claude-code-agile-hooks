@@ -1,7 +1,7 @@
 ---
-id: DRAFT-5
+id: TASK-52
 title: session_logger의 프롬프트 로깅을 자체 구현으로 다시 쓰기
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-05 07:31'
 labels:
