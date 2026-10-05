@@ -1,10 +1,10 @@
 ---
 id: TASK-54
 title: claude-rails를 claude-code-agile-hooks로 이름 변경
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-05 07:49'
-updated_date: '2026-10-05 11:45'
+updated_date: '2026-10-05 11:46'
 labels:
   - rename
 dependencies: []
@@ -27,13 +27,13 @@ dependencies: []
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 설치 경로를 ~/.claude/hooks/claude-code-agile-hooks로 바꾼다 (install.sh, settings.hooks.json)
-- [ ] #2 훅 출력 접두사 [claude-rails]와 코드·주석·docstring의 이름을 claude-code-agile-hooks로 바꾼다
-- [ ] #3 프로젝트 설정은 .claude-code-agile-hooks.json을 먼저 읽고 없으면 .claude-rails.json을 읽는다(로그 디렉토리도 같음). 새 이름만/옛 이름만/둘 다 테스트
-- [ ] #4 이 저장소의 .claude-rails.json을 .claude-code-agile-hooks.json으로 바꾸고 .gitignore는 두 로그 디렉토리를 모두 무시
-- [ ] #5 install.sh는 옛 설치본이 있으면 안내만 하고 지우지 않는다
-- [ ] #6 README · CLAUDE.md.snippet · doc-2 등 레퍼런스 문서 이름 변경, 완료 태스크·decision·회고 기록은 그대로
-- [ ] #7 테스트·커버리지 100% 게이트 통과
+- [x] #1 설치 경로를 ~/.claude/hooks/claude-code-agile-hooks로 바꾼다 (install.sh, settings.hooks.json)
+- [x] #2 훅 출력 접두사 [claude-rails]와 코드·주석·docstring의 이름을 claude-code-agile-hooks로 바꾼다
+- [x] #3 프로젝트 설정은 .claude-code-agile-hooks.json을 먼저 읽고 없으면 .claude-rails.json을 읽는다(로그 디렉토리도 같음). 새 이름만/옛 이름만/둘 다 테스트
+- [x] #4 이 저장소의 .claude-rails.json을 .claude-code-agile-hooks.json으로 바꾸고 .gitignore는 두 로그 디렉토리를 모두 무시
+- [x] #5 install.sh는 옛 설치본이 있으면 안내만 하고 지우지 않는다
+- [x] #6 README · CLAUDE.md.snippet · doc-2 등 레퍼런스 문서 이름 변경, 완료 태스크·decision·회고 기록은 그대로
+- [x] #7 테스트·커버리지 100% 게이트 통과
 <!-- AC:END -->
 
 ## Final Summary
