@@ -3,9 +3,8 @@
 Writes a durable JSONL log of everything that happens in a session: cwd, git
 branch, every prompt submitted, every file touched, every bash command run
 (secrets best-effort redacted). Ported from karanb192/claude-code-hooks'
-session-logger plugin (MIT license), with disler/claude-code-hooks-mastery's
-user_prompt_submit logging folded in as one more event type in the same log
-instead of a separate file (see plan's "겹침 정리" #2).
+session-logger plugin (MIT license). UserPromptSubmit prompt logging is this
+repository's own implementation, written into the same log as one more event type.
 
 CC_SESSION_LOG_DIR overrides the log directory (e.g. point it at an Obsidian
 vault); defaults to ~/.claude/hooks-logs/sessions/.
