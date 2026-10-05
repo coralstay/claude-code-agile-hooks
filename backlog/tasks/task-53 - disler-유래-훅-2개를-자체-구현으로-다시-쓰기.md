@@ -1,7 +1,7 @@
 ---
-id: DRAFT-5
+id: TASK-53
 title: disler 유래 훅 2개를 자체 구현으로 다시 쓰기
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-05 07:35'
 labels:
