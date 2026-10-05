@@ -85,7 +85,7 @@ def main():
 
     if is_dirty(cwd):
         deny(
-            "[claude-rails] 커밋하지 않은 변경사항이 있습니다. 작은 단위로 커밋을 마무리한 뒤 턴을 종료하세요."
+            "[claude-code-agile-hooks] 커밋하지 않은 변경사항이 있습니다. 작은 단위로 커밋을 마무리한 뒤 턴을 종료하세요."
         )
 
     sys.exit(0)

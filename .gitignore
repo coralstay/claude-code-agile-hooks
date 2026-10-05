@@ -5,4 +5,6 @@ __pycache__/
 .coverage.*
 .DS_Store
 # pre_push_coverage_check.py가 남기는 로컬 커버리지 실행 기록 (TASK-43)
+# TASK-54: 새 이름 .claude-code-agile-hooks/, 옛 설정만 쓰던 시절의 .claude-rails/ 둘 다
+.claude-code-agile-hooks/
 .claude-rails/

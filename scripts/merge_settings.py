@@ -13,10 +13,20 @@ tool's hooks under the same event (PreToolUse, Stop, ...) were wiped. This merge
   groups map to matcher-less installed groups).
 - If the command already exists there but its other fields differ (e.g. the repo changed
   `if` or `timeout`), that entry is replaced in place with the repo version. The command
-  string points into ~/.claude/hooks/claude-rails/, so the repo is its source of truth;
+  string points into ~/.claude/hooks/claude-code-agile-hooks/, so the repo is its source of truth;
   without this, re-running install.sh would never propagate such changes. Entries with
   other commands (other tools' hooks) are never modified.
-- Nothing is ever removed, so re-running gives the same result.
+- Migration from the old name (TASK-54: claude-rails was renamed to claude-code-agile-hooks). An installed
+  entry under the same event whose command points into the old install dir
+  (`$HOME/.claude/hooks/claude-rails/<file>`, also written as `~/...`, `${HOME}/...` or the
+  expanded home path) and becomes exactly a repo command once that dir is read as
+  `.../hooks/claude-code-agile-hooks/` is the old copy of that repo hook. The first such entry under the
+  same matcher is replaced in place by the repo entry ("migrated"), so the hook does not run
+  twice from both dirs. Any other old copies of that same hook (a different matcher, or the
+  new command was already installed) are removed, and a group left empty by that removal is
+  dropped. Old-dir commands with no counterpart in the repo (a hook since deleted) and every
+  other command are left untouched.
+- Apart from that migration nothing is ever removed, so re-running gives the same result.
 
 The CLI backs up the existing file (<settings>.bak.<timestamp>), writes to a temp file in
 the same directory, re-validates it as JSON, then atomically replaces the original, and
@@ -33,10 +43,63 @@ import tempfile
 import time
 
 
-def merge_hooks(settings, repo_hooks):
+LEGACY_DIR = "/.claude/hooks/claude-rails/"
+CURRENT_DIR = "/.claude/hooks/claude-code-agile-hooks/"
+
+
+def _canonical(command, home):
+    """Spell the home dir one way ($HOME) so `~/...`, `${HOME}/...` and the
+    expanded path compare equal."""
+    for prefix in (home, "~", "${HOME}"):
+        command = command.replace(prefix + "/.claude/", "$HOME/.claude/")
+    return command
+
+
+def is_legacy_copy(installed_command, repo_command, home):
+    """True if installed_command is the pre-rename (claude-rails dir) copy of
+    repo_command."""
+    if not isinstance(installed_command, str) or LEGACY_DIR not in installed_command:
+        return False
+    if not isinstance(repo_command, str):
+        return False
+    renamed = _canonical(installed_command, home).replace(LEGACY_DIR, CURRENT_DIR)
+    return renamed == _canonical(repo_command, home)
+
+
+def _migrate_legacy(inst_groups, matcher, hook, has_current, home):
+    """Replace/remove old-dir copies of `hook` in inst_groups (see module
+    docstring). Returns (found, replaced_in_place)."""
+    command = hook.get("command")
+    legacy = [
+        (g, i)
+        for g in inst_groups
+        for i, h in enumerate(g.get("hooks", []))
+        if is_legacy_copy(h.get("command"), command, home)
+    ]
+    if not legacy:
+        return False, False
+    keep = None
+    if not has_current:
+        keep = next((gi for gi in legacy if gi[0].get("matcher") == matcher), None)
+    emptied = []
+    for g, i in reversed(legacy):
+        if keep is not None and g is keep[0] and i == keep[1]:
+            g["hooks"][i] = copy.deepcopy(hook)
+        else:
+            del g["hooks"][i]
+            if not g["hooks"]:
+                emptied.append(g)
+    inst_groups[:] = [g for g in inst_groups if not any(g is e for e in emptied)]
+    return True, keep is not None
+
+
+def merge_hooks(settings, repo_hooks, home=None):
     """Return (merged_settings, changes); inputs are not mutated.
 
-    changes is a list of (event, matcher, command, "added" | "updated")."""
+    changes is a list of (event, matcher, command, "added" | "updated" | "migrated").
+    home defaults to the current user's home dir (for spotting expanded paths)."""
+    if home is None:
+        home = os.path.expanduser("~")
     merged = copy.deepcopy(settings)
     installed = merged.setdefault("hooks", {})
     changes = []
@@ -46,6 +109,19 @@ def merge_hooks(settings, repo_hooks):
             matcher = group.get("matcher")
             for hook in group.get("hooks", []):
                 command = hook.get("command")
+                has_current = any(
+                    h.get("command") == command
+                    for g in inst_groups
+                    if g.get("matcher") == matcher
+                    for h in g.get("hooks", [])
+                )
+                found, replaced = _migrate_legacy(
+                    inst_groups, matcher, hook, has_current, home
+                )
+                if found:
+                    changes.append((event, matcher, command, "migrated"))
+                if replaced:
+                    continue
                 same_matcher = [g for g in inst_groups if g.get("matcher") == matcher]
                 existing = next(
                     (
@@ -132,13 +208,14 @@ def main(argv):
             os.unlink(tmp)
         raise
 
+    labels = {"added": "추가", "updated": "갱신", "migrated": "이전"}
     for event, matcher, command, kind in changes:
-        label = "추가" if kind == "added" else "갱신"
         where = event if matcher is None else f"{event} [{matcher}]"
-        print(f"    {label}: {where}  {command}")
-    added = sum(1 for c in changes if c[3] == "added")
+        print(f"    {labels[kind]}: {where}  {command}")
+    counts = {kind: sum(1 for c in changes if c[3] == kind) for kind in labels}
     print(
-        f"    총 {added}개 추가, {len(changes) - added}개 갱신 (다른 도구의 훅은 그대로 보존)"
+        f"    총 {counts['added']}개 추가, {counts['updated']}개 갱신, "
+        f"{counts['migrated']}개 옛 경로에서 이전 (다른 도구의 훅은 그대로 보존)"
     )
     return 0
 
