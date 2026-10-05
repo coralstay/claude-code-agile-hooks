@@ -116,9 +116,9 @@ backlog 전용 훅 2개가 늘어 총 30개가 됐다. TASK-30에서 하네스 �
 - **범용 안전/관측 훅** (25개, backlog.md 여부와 무관하게 항상 동작) — 시크릿 보호,
   위험 명령 차단, 설정 변조 감시, 훅 자신의 복붙 코드가 사본 간에 어긋나지 않는지
   감시하는 self-guard(`dedup_drift_guard.py`), 세션 로깅, PR 리뷰 보조 등. 대부분
-  [karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks)와
-  [disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery)의
-  MIT 라이선스 플러그인을 포팅한 것이다 (8장에 훅별로 출처 표시).
+  [karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks)의
+  MIT 라이선스 플러그인을 포팅한 것이다 (원 저작권 고지는
+  [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md)).
 
 즉 이 32개는 "백로그 프로젝트의 워크플로 위반"만 막는 도구가 아니라, **이 컴퓨터에서
 Claude Code가 하는 모든 행동에 대한 보안 경계**다 — backlog.md를 쓰지 않는 프로젝트
@@ -381,10 +381,9 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 
 각 훅은 완전 독립형(다른 훅 파일을 import하지 않음)이다. 설명은 각 스크립트 최상단의
 모듈 docstring을 그대로 옮긴 것 — 실제로 읽지 않은 동작은 적지 않는다. "출처" 열은
-포팅 원본이 있는 경우만 표시(대부분
-[karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks) 또는
-[disler/claude-code-hooks-mastery](https://github.com/disler/claude-code-hooks-mastery), 둘 다
-MIT/오픈소스). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없으면 즉시 통과), 나머지는
+포팅 원본이 있는 경우만 표시(모두
+[karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks), MIT — 원 저작권
+고지는 [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md)). 🔒 backlog.md 프로젝트 전용(`backlog/config.yml` 없으면 즉시 통과), 나머지는
 항상 동작.
 
 ### SessionStart
