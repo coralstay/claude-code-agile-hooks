@@ -1,7 +1,7 @@
 ---
-id: DRAFT-5
+id: TASK-51
 title: THIRD_PARTY_NOTICES로 외부 MIT 코드의 저작권 고지 보존
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-05 07:26'
 labels:
