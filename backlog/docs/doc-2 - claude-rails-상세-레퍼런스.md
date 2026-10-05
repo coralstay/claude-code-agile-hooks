@@ -751,8 +751,8 @@ settings.json 병합은 `scripts/merge_settings.py`가 **추가 전용**으로 �
 - `~/.claude/settings.json`에서 병합된 `hooks` 블록 제거
 - `~/.claude/CLAUDE.md`의 `<!-- INTERLOCK:BEGIN -->` ~ `END` 블록 제거 (옛 설치라면
   `<!-- CLAUDE-RAILS:BEGIN -->` 블록도)
-- `~/.claude/hooks/interlock/` 삭제 (옛 설치본 `~/.claude/hooks/claude-rails/`가 남아 있으면 그것도) (`.coverage`/`.pytest_cache`도 이 안에 있으므로
-  같이 지워짐)
+- `~/.claude/hooks/interlock/` 삭제 (`.coverage`/`.pytest_cache`도 이 안에 있으므로
+  같이 지워짐). 옛 설치본 `~/.claude/hooks/claude-rails/`가 남아 있으면 그것도 삭제
 
 **검증**:
 
