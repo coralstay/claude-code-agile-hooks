@@ -2,7 +2,7 @@
 
 Run from the repo root together with the hook tests: `uvx pytest -q hooks scripts`.
 These live next to the script (not in hooks/) because install.sh copies hooks/*.py to
-~/.claude/hooks/interlock, where the script and install.sh would not exist.
+~/.claude/hooks/claude-code-agile-hooks, where the script and install.sh would not exist.
 """
 
 import copy
@@ -21,7 +21,7 @@ SCRIPT = os.path.join(SCRIPTS_DIR, "merge_settings.py")
 INSTALL_SH = os.path.join(REPO_DIR, "install.sh")
 REPO_HOOKS_JSON = os.path.join(REPO_DIR, "settings.hooks.json")
 
-OURS = "python3 $HOME/.claude/hooks/interlock/"
+OURS = "python3 $HOME/.claude/hooks/claude-code-agile-hooks/"
 ITERM = "~/.claude/iterm-status.sh"
 WEBFETCH_GUARD = "python3 ~/.claude/webfetch_guard.py"
 
@@ -148,7 +148,7 @@ def test_non_hook_keys_untouched_and_input_not_mutated():
     }
 
 
-def test_existing_interlock_entry_updated_in_place_when_fields_change():
+def test_existing_own_entry_updated_in_place_when_fields_change():
     target = OURS + "block_dangerous_commands.py"
     settings = {
         "hooks": {
@@ -369,10 +369,10 @@ def test_install_sh_preserves_foreign_hooks(tmp_path):
     assert ITERM in commands(merged["hooks"]["Stop"])
     assert merged["model"] == "opus"
     assert (
-        home / ".claude" / "hooks" / "interlock" / "require_active_task.py"
+        home / ".claude" / "hooks" / "claude-code-agile-hooks" / "require_active_task.py"
     ).is_file()
     assert (home / ".claude" / "CLAUDE.md").read_text().count(
-        "<!-- INTERLOCK:BEGIN -->"
+        "<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->"
     ) == 1
 
 
@@ -399,7 +399,7 @@ def test_install_sh_only_notifies_about_legacy_install(tmp_path):
     assert (legacy_dir / "require_active_task.py").read_text() == "# old copy\n"
     text = claude_md.read_text()
     assert text.startswith(legacy_block)
-    assert text.count("<!-- INTERLOCK:BEGIN -->") == 1
+    assert text.count("<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->") == 1
 
 
 def test_install_sh_no_legacy_notice_on_clean_home(tmp_path):

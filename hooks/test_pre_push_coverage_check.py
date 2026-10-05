@@ -16,32 +16,34 @@ def run_main(monkeypatch, stdin_data):
 
 
 def test_no_op_when_command_is_not_a_push(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
     code = run_main(
         monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": "git status"}}
     )
     assert code == 0
     assert capsys.readouterr().out == ""
-    assert not (tmp_path / ".interlock" / "coverage-log.jsonl").exists()
+    assert not (tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl").exists()
 
 
 def test_no_op_when_no_config_file(tmp_path, monkeypatch, capsys):
     code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
     assert code == 0
     assert capsys.readouterr().out == ""
-    assert not (tmp_path / ".interlock" / "coverage-log.jsonl").exists()
+    assert not (tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl").exists()
 
 
 def test_no_op_when_coverage_command_key_missing(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(json.dumps({}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(json.dumps({}))
     code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
     assert code == 0
     assert capsys.readouterr().out == ""
-    assert not (tmp_path / ".interlock" / "coverage-log.jsonl").exists()
+    assert not (tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl").exists()
 
 
 def test_allows_and_reports_when_command_succeeds(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "echo 'TOTAL 100%' && exit 0"})
     )
     code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
@@ -51,7 +53,7 @@ def test_allows_and_reports_when_command_succeeds(tmp_path, monkeypatch, capsys)
     assert hso["permissionDecision"] == "allow"
     assert "TOTAL 100%" in hso["systemMessage"]
 
-    log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
+    log_file = tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     lines = log_file.read_text().splitlines()
     assert len(lines) == 1
     record = json.loads(lines[0])
@@ -62,7 +64,7 @@ def test_allows_and_reports_when_command_succeeds(tmp_path, monkeypatch, capsys)
 
 
 def test_denies_and_reports_when_command_fails(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "echo 'TOTAL 42%' && exit 1"})
     )
     code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
@@ -73,7 +75,7 @@ def test_denies_and_reports_when_command_fails(tmp_path, monkeypatch, capsys):
     assert "미달" in hso["permissionDecisionReason"]
     assert "TOTAL 42%" in hso["systemMessage"]
 
-    log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
+    log_file = tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     record = json.loads(log_file.read_text().splitlines()[0])
     assert record["passed"] is False
     assert record["exit_code"] == 1
@@ -82,7 +84,7 @@ def test_denies_and_reports_when_command_fails(tmp_path, monkeypatch, capsys):
 def test_fires_on_dash_c_push(tmp_path, monkeypatch, capsys):
     # Regression: `git -C <path> push ...` must still be recognized, not
     # just a literal `git push` prefix.
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "echo ran && exit 0"})
     )
     code = run_main(
@@ -125,13 +127,15 @@ def _init_git_repo(cwd, branch):
 
 def test_log_includes_session_project_branch_task_id(tmp_path, monkeypatch):
     _init_git_repo(tmp_path, "task/TASK-42")
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 0"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 0"})
+    )
     run_main(
         monkeypatch,
         {"cwd": str(tmp_path), "session_id": "sess-abc123", "tool_input": PUSH_INPUT},
     )
 
-    log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
+    log_file = tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     record = json.loads(log_file.read_text().splitlines()[0])
     assert record["session_id"] == "sess-abc123"
     assert record["project"] == tmp_path.name
@@ -141,10 +145,12 @@ def test_log_includes_session_project_branch_task_id(tmp_path, monkeypatch):
 
 def test_log_task_id_is_none_off_task_branch(tmp_path, monkeypatch):
     _init_git_repo(tmp_path, "main")
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 0"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 0"})
+    )
     run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
 
-    log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
+    log_file = tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     record = json.loads(log_file.read_text().splitlines()[0])
     assert record["branch"] == "main"
     assert record["task_id"] is None
@@ -157,12 +163,16 @@ def test_task_id_from_branch():
 
 
 def test_log_appends_across_multiple_push_attempts(tmp_path, monkeypatch):
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
     run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 0"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 0"})
+    )
     run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
 
-    log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
+    log_file = tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     lines = log_file.read_text().splitlines()
     assert len(lines) == 2
     assert json.loads(lines[0])["passed"] is False
@@ -171,13 +181,13 @@ def test_log_appends_across_multiple_push_attempts(tmp_path, monkeypatch):
 
 def test_append_log_creates_directory(tmp_path):
     ppc.append_log(str(tmp_path), {"a": 1})
-    log_file = tmp_path / ".interlock" / "coverage-log.jsonl"
+    log_file = tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     assert json.loads(log_file.read_text().strip()) == {"a": 1}
 
 
 def test_log_path(tmp_path):
     assert ppc.log_path(str(tmp_path)) == str(
-        tmp_path / ".interlock" / "coverage-log.jsonl"
+        tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     )
 
 
@@ -190,7 +200,7 @@ def test_main_exits_cleanly_on_malformed_stdin(monkeypatch, capsys):
 
 
 def test_configured_coverage_command_reads_file(tmp_path):
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "pytest --cov"})
     )
     assert ppc.configured_coverage_command(str(tmp_path)) == "pytest --cov"
@@ -262,17 +272,21 @@ def test_command_runs_git_unparsable_falls_back_to_substring():
 def test_text_mentioning_push_runs_no_coverage(tmp_path, monkeypatch, capsys, command):
     # Regression (TASK-39): `echo git push` and heredoc bodies used to run the
     # coverage command and log an attempt.
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
     code = run_main(
         monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
     )
     assert code == 0
     assert capsys.readouterr().out == ""
-    assert not (tmp_path / ".interlock" / "coverage-log.jsonl").exists()
+    assert not (tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl").exists()
 
 
 def test_fires_on_prefixed_absolute_push_in_chain(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
     command = "git commit -m x && FOO=1 /usr/bin/git push"
     code = run_main(
         monkeypatch, {"cwd": str(tmp_path), "tool_input": {"command": command}}
@@ -294,7 +308,9 @@ def test_non_push_line_exits_before_config_or_subprocess(
 ):
     """A line without a push must stay cheap: no config read, no
     subprocess, no output."""
-    (tmp_path / ".interlock.json").write_text(json.dumps({"coverageCommand": "exit 1"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
+        json.dumps({"coverageCommand": "exit 1"})
+    )
 
     def forbidden(*args, **kwargs):
         raise AssertionError("must not run before a push is detected")
@@ -313,15 +329,15 @@ def test_segment_of_only_assignments_is_not_a_push():
     assert ppc.command_runs_git("FOO=1 BAR=2; git push", "push") is True
 
 
-# TASK-54: .interlock.json 우선, 옛 .claude-rails.json fallback.
-# 로그는 옛 설정만 쓰고 .interlock/이 아직 없을 때만 .claude-rails/에 남는다.
-def test_config_only_new_name_logs_to_interlock(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(
+# TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback.
+# 로그는 옛 설정만 쓰고 .claude-code-agile-hooks/이 아직 없을 때만 .claude-rails/에 남는다.
+def test_config_only_new_name_logs_to_new_dir(tmp_path, monkeypatch, capsys):
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "echo new && exit 0"})
     )
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT}) == 0
     assert "new" in capsys.readouterr().out
-    assert (tmp_path / ".interlock" / "coverage-log.jsonl").exists()
+    assert (tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl").exists()
     assert not (tmp_path / ".claude-rails").exists()
 
 
@@ -332,11 +348,11 @@ def test_config_only_legacy_name_logs_to_legacy_dir(tmp_path, monkeypatch, capsy
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT}) == 0
     assert "old" in capsys.readouterr().out
     assert (tmp_path / ".claude-rails" / "coverage-log.jsonl").exists()
-    assert not (tmp_path / ".interlock").exists()
+    assert not (tmp_path / ".claude-code-agile-hooks").exists()
 
 
 def test_config_both_names_new_wins(tmp_path, monkeypatch, capsys):
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"coverageCommand": "echo new && exit 0"})
     )
     (tmp_path / ".claude-rails.json").write_text(
@@ -346,15 +362,15 @@ def test_config_both_names_new_wins(tmp_path, monkeypatch, capsys):
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT}) == 0
     out = capsys.readouterr().out
     assert "new" in out and "old" not in out
-    assert (tmp_path / ".interlock" / "coverage-log.jsonl").exists()
+    assert (tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl").exists()
     assert not (tmp_path / ".claude-rails").exists()
 
 
-def test_legacy_config_with_existing_interlock_dir_logs_to_interlock(tmp_path):
+def test_legacy_config_with_existing_new_dir_logs_to_new_dir(tmp_path):
     (tmp_path / ".claude-rails.json").write_text(json.dumps({}))
-    (tmp_path / ".interlock").mkdir()
+    (tmp_path / ".claude-code-agile-hooks").mkdir()
     assert ppc.log_path(str(tmp_path)) == str(
-        tmp_path / ".interlock" / "coverage-log.jsonl"
+        tmp_path / ".claude-code-agile-hooks" / "coverage-log.jsonl"
     )
 
 

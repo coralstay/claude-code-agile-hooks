@@ -13,14 +13,14 @@ tool's hooks under the same event (PreToolUse, Stop, ...) were wiped. This merge
   groups map to matcher-less installed groups).
 - If the command already exists there but its other fields differ (e.g. the repo changed
   `if` or `timeout`), that entry is replaced in place with the repo version. The command
-  string points into ~/.claude/hooks/interlock/, so the repo is its source of truth;
+  string points into ~/.claude/hooks/claude-code-agile-hooks/, so the repo is its source of truth;
   without this, re-running install.sh would never propagate such changes. Entries with
   other commands (other tools' hooks) are never modified.
-- Migration from the old name (TASK-54: claude-rails was renamed to interlock). An installed
+- Migration from the old name (TASK-54: claude-rails was renamed to claude-code-agile-hooks). An installed
   entry under the same event whose command points into the old install dir
   (`$HOME/.claude/hooks/claude-rails/<file>`, also written as `~/...`, `${HOME}/...` or the
   expanded home path) and becomes exactly a repo command once that dir is read as
-  `.../hooks/interlock/` is the old copy of that repo hook. The first such entry under the
+  `.../hooks/claude-code-agile-hooks/` is the old copy of that repo hook. The first such entry under the
   same matcher is replaced in place by the repo entry ("migrated"), so the hook does not run
   twice from both dirs. Any other old copies of that same hook (a different matcher, or the
   new command was already installed) are removed, and a group left empty by that removal is
@@ -44,7 +44,7 @@ import time
 
 
 LEGACY_DIR = "/.claude/hooks/claude-rails/"
-CURRENT_DIR = "/.claude/hooks/interlock/"
+CURRENT_DIR = "/.claude/hooks/claude-code-agile-hooks/"
 
 
 def _canonical(command, home):

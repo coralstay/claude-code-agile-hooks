@@ -372,7 +372,7 @@ def check_scope(entries):
         ]
         if offenders:
             return (
-                "[interlock] 드래프트 생성 커밋은 드래프트만 담는다 — 스테이징에 새 "
+                "[claude-code-agile-hooks] 드래프트 생성 커밋은 드래프트만 담는다 — 스테이징에 새 "
                 "드래프트(backlog/drafts/)와 그 밖의 파일이 섞여 있습니다:\n"
                 + format_offenders(offenders)
                 + "\n드래프트만 먼저 커밋하고, 나머지는 'git restore --staged <path>'로 "
@@ -392,7 +392,7 @@ def check_scope(entries):
         ]
         if offenders:
             return (
-                "[interlock] 승격 커밋은 승격만 담는다 — 스테이징에 드래프트 승격"
+                "[claude-code-agile-hooks] 승격 커밋은 승격만 담는다 — 스테이징에 드래프트 승격"
                 "(backlog/drafts/ → backlog/tasks/)과 그 밖의 파일이 섞여 있습니다:\n"
                 + format_offenders(offenders)
                 + "\n승격(과 승격된 태스크의 ref/doc 연결)만 먼저 커밋하고, 나머지는 "

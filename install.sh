@@ -1,12 +1,12 @@
 #!/bin/bash
-# Installs interlock globally: copies hook scripts to ~/.claude/hooks/interlock,
+# Installs claude-code-agile-hooks globally: copies hook scripts to ~/.claude/hooks/claude-code-agile-hooks,
 # merges settings.hooks.json into ~/.claude/settings.json additively via
 # scripts/merge_settings.py (other tools' hooks are kept, nothing is duplicated), and
 # appends the workflow snippet to ~/.claude/CLAUDE.md. Safe to re-run.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_HOOKS_DIR="$HOME/.claude/hooks/interlock"
+TARGET_HOOKS_DIR="$HOME/.claude/hooks/claude-code-agile-hooks"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 
@@ -22,7 +22,7 @@ echo "==> settings.json에 hooks 병합 (추가 전용 — 다른 도구의 훅�
 python3 "$REPO_DIR/scripts/merge_settings.py" "$SETTINGS_FILE" "$REPO_DIR/settings.hooks.json"
 
 echo "==> CLAUDE.md에 워크플로 규칙 추가"
-MARKER="<!-- INTERLOCK:BEGIN -->"
+MARKER="<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->"
 if [ -f "$CLAUDE_MD" ] && grep -q "$MARKER" "$CLAUDE_MD"; then
   echo "    이미 설치되어 있어 건너뜀 (갱신하려면 마커 블록을 지우고 다시 실행)"
 else
@@ -30,12 +30,12 @@ else
   echo "    추가 완료: $CLAUDE_MD"
 fi
 
-# TASK-54: claude-rails에서 interlock으로 이름이 바뀌었다. 옛 설치 흔적은 안내만 하고
+# TASK-54: claude-rails에서 claude-code-agile-hooks로 이름이 바뀌었다. 옛 설치 흔적은 안내만 하고
 # 절대 직접 고치거나 지우지 않는다(사용자 판단).
 LEGACY_MARKER="<!-- CLAUDE-RAILS:BEGIN -->"
 if [ -f "$CLAUDE_MD" ] && grep -q "$LEGACY_MARKER" "$CLAUDE_MD"; then
   echo "==> 안내: $CLAUDE_MD 에 옛 claude-rails 마커 블록(CLAUDE-RAILS:BEGIN ~ END)이 남아 있습니다."
-  echo "    새 INTERLOCK 블록과 내용이 겹치니 옛 블록을 직접 지워 주세요 (자동으로 고치지 않음)."
+  echo "    새 CLAUDE-CODE-AGILE-HOOKS 블록과 내용이 겹치니 옛 블록을 직접 지워 주세요 (자동으로 고치지 않음)."
 fi
 LEGACY_HOOKS_DIR="$HOME/.claude/hooks/claude-rails"
 if [ -d "$LEGACY_HOOKS_DIR" ]; then

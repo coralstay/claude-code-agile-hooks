@@ -1,0 +1,4 @@
+{
+  "testCommand": "uvx --with pytest-xdist pytest -q -n auto -p no:cacheprovider",
+  "coverageCommand": "uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov -p no:cacheprovider"
+}

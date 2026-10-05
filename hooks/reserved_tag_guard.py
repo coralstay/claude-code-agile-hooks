@@ -158,7 +158,7 @@ def main():
     # Backticked so the feedback itself never shows a bare reserved tag.
     listed = ", ".join(f"`<{t}>`" for t in tags)
     deny(
-        f"[interlock] 직전 응답에 하네스 예약 태그가 들어 있습니다: {listed}\n"
+        f"[claude-code-agile-hooks] 직전 응답에 하네스 예약 태그가 들어 있습니다: {listed}\n"
         "이 태그들은 하네스가 사용자가 직접 실행한 명령·출력이나 시스템 주입 메시지를 "
         "표시할 때만 쓰는 형식이라, 어시스턴트가 만들어 내면 '사용자가 실행했다'는 "
         "기록을 위조하는 셈이 됩니다.\n"

@@ -58,7 +58,7 @@ def test_skips_branch_check_when_no_active_task(monkeypatch, tmp_path):
 
 
 def test_passes_when_test_command_succeeds(monkeypatch, tmp_path):
-    (tmp_path / ".interlock.json").write_text(json.dumps({"testCommand": "exit 0"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(json.dumps({"testCommand": "exit 0"}))
     monkeypatch.setattr(pcc, "has_command", lambda name: True)
     monkeypatch.setattr(pcc, "is_backlog_project", lambda cwd: True)
     monkeypatch.setattr(pcc, "has_active_task", lambda cwd: False)
@@ -66,7 +66,7 @@ def test_passes_when_test_command_succeeds(monkeypatch, tmp_path):
 
 
 def test_denies_when_test_command_fails(monkeypatch, capsys, tmp_path):
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"testCommand": "echo boom && exit 1"})
     )
     monkeypatch.setattr(pcc, "has_command", lambda name: True)
@@ -254,7 +254,7 @@ def test_is_backlog_project_false_for_empty_cwd():
 
 
 def test_configured_test_command_reads_file(tmp_path):
-    (tmp_path / ".interlock.json").write_text(
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(
         json.dumps({"testCommand": "pytest -q"})
     )
     assert pcc.configured_test_command(str(tmp_path)) == "pytest -q"
@@ -300,9 +300,9 @@ def test_run_shell_captures_combined_output():
     assert "out" in output and "err" in output
 
 
-# TASK-54: .interlock.json 우선, 옛 .claude-rails.json fallback
+# TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback
 def test_config_only_new_name(tmp_path):
-    (tmp_path / ".interlock.json").write_text(json.dumps({"testCommand": "new"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(json.dumps({"testCommand": "new"}))
     assert pcc.configured_test_command(str(tmp_path)) == "new"
 
 
@@ -312,7 +312,7 @@ def test_config_only_legacy_name(tmp_path):
 
 
 def test_config_both_names_new_wins(tmp_path):
-    (tmp_path / ".interlock.json").write_text(json.dumps({"testCommand": "new"}))
+    (tmp_path / ".claude-code-agile-hooks.json").write_text(json.dumps({"testCommand": "new"}))
     (tmp_path / ".claude-rails.json").write_text(json.dumps({"testCommand": "old"}))
     assert pcc.configured_test_command(str(tmp_path)) == "new"
 

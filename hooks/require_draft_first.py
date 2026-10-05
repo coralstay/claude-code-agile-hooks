@@ -137,7 +137,7 @@ def main():
         sys.exit(0)
 
     deny(
-        "[interlock] 'backlog task create'로 태스크를 바로 만들 수 없습니다. "
+        "[claude-code-agile-hooks] 'backlog task create'로 태스크를 바로 만들 수 없습니다. "
         "새 작업은 먼저 'backlog draft create'(+ 'backlog draft edit')로 드래프트에 담고 "
         "커밋한 뒤, 유저가 드래프트를 검토·승인하면 'backlog draft promote <ID>'로 "
         "승격하고 그 승격을 별도 커밋으로 남기세요."

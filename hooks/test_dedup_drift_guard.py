@@ -162,7 +162,7 @@ def test_no_op_when_command_is_not_a_commit(monkeypatch, tmp_path):
 
 
 def test_passes_when_hooks_dir_missing_registry_files(monkeypatch, tmp_path):
-    # self-guard: not the interlock repo (no hooks/ at all)
+    # self-guard: not the claude-code-agile-hooks repo (no hooks/ at all)
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 0
 
 

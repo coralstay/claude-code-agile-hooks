@@ -61,7 +61,7 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
     ],
-    # TASK-54: .interlock.json 우선, 옛 .claude-rails.json fallback
+    # TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback
     "project_config_path": [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
@@ -222,7 +222,7 @@ def load_repo_registry(hooks_dir):
 
 
 def registry_files_present(hooks_dir, registry=REGISTRY):
-    """Self-guard: only act inside interlock's own hooks/ directory. If
+    """Self-guard: only act inside claude-code-agile-hooks's own hooks/ directory. If
     any file the REGISTRY references is missing, this isn't that repo -
     stay quiet."""
     all_files = {f for files in registry.values() for f in files}
@@ -307,7 +307,7 @@ def main():
     problems = find_drift(hooks_dir, registry)
     if problems:
         deny(
-            "[interlock] 복붙된 훅 함수가 사본 간에 어긋났습니다 (dedup drift). "
+            "[claude-code-agile-hooks] 복붙된 훅 함수가 사본 간에 어긋났습니다 (dedup drift). "
             "모든 사본을 동일하게 수정한 뒤 다시 커밋하세요:\n" + "\n".join(problems)
         )
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse (matcher: Bash, no `if` filter)
 Phase 3-1 + 3-4: commits must happen on a task/<ID> branch, and (if the
-project opted in via .interlock.json, or the legacy .claude-rails.json)
+project opted in via .claude-code-agile-hooks.json, or the legacy .claude-rails.json)
 tests must pass first.
 
 TASK-39: registered without `if: Bash(git *)` - that filter matches the
@@ -171,9 +171,9 @@ def current_branch(cwd):
 
 def project_config_path(cwd):
     """TASK-54: the project config was renamed from .claude-rails.json to
-    .interlock.json. Prefer the new name and fall back to the legacy one so
+    .claude-code-agile-hooks.json. Prefer the new name and fall back to the legacy one so
     projects can rename at their own pace; None when neither exists."""
-    for name in (".interlock.json", ".claude-rails.json"):
+    for name in (".claude-code-agile-hooks.json", ".claude-rails.json"):
         path = os.path.join(cwd, name)
         if os.path.isfile(path):
             return path
@@ -222,7 +222,7 @@ def main():
         branch = current_branch(cwd)
         if not branch.startswith("task/"):
             deny(
-                f"[interlock] 커밋하기 전에 태스크 브랜치(task/TASK-ID)로 전환하세요. 현재 브랜치: {branch}"
+                f"[claude-code-agile-hooks] 커밋하기 전에 태스크 브랜치(task/TASK-ID)로 전환하세요. 현재 브랜치: {branch}"
             )
 
     test_command = configured_test_command(cwd)
@@ -230,7 +230,7 @@ def main():
         exit_code, output = run_shell(cwd, test_command)
         if exit_code != 0:
             deny(
-                f"[interlock] 커밋 전 테스트 실패 ('{test_command}', exit {exit_code}):\n"
+                f"[claude-code-agile-hooks] 커밋 전 테스트 실패 ('{test_command}', exit {exit_code}):\n"
                 + output[-800:]
             )
 

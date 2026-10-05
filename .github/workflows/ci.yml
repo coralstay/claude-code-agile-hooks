@@ -1,5 +1,5 @@
 # TASK-43: the same gate as the local pre-push coverageCommand
-# (.interlock.json) - the whole suite in parallel with branch coverage;
+# (.claude-code-agile-hooks.json) - the whole suite in parallel with branch coverage;
 # pyproject.toml's fail_under = 100 fails the job below 100%.
 name: CI
 
@@ -47,7 +47,7 @@ jobs:
         run: |
           bash -n install.sh
           python3 -m json.tool settings.hooks.json > /dev/null
-          python3 -m json.tool .interlock.json > /dev/null
+          python3 -m json.tool .claude-code-agile-hooks.json > /dev/null
 
       - name: Tests + coverage (fail under 100%)
         run: uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov

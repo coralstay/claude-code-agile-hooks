@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PreToolUse (matcher: Bash, no `if` filter)
-Optional coverage gate: if the project's .interlock.json (or the legacy
+Optional coverage gate: if the project's .claude-code-agile-hooks.json (or the legacy
 .claude-rails.json, see project_config_path()) configures a
 `coverageCommand` (e.g. "python3 -m pytest --cov=. --cov-fail-under=100"),
 run it before every push and show the real, measured report - every time,
@@ -8,7 +8,7 @@ pass or fail. Blocks the push only when the command itself fails (e.g.
 coverage.py's own --cov-fail-under exits non-zero below the threshold).
 Never fabricates a percentage; a project with no coverageCommand configured
 gets no message at all. Every attempt (pass or fail) is also appended to
-<cwd>/.interlock/coverage-log.jsonl (legacy projects: .claude-rails/, see
+<cwd>/.claude-code-agile-hooks/coverage-log.jsonl (legacy projects: .claude-rails/, see
 log_path()) so there's a permanent record beyond
 the transcript, which scrolls away.
 
@@ -150,9 +150,9 @@ def command_runs_git(command, subcommand):
 
 def project_config_path(cwd):
     """TASK-54: the project config was renamed from .claude-rails.json to
-    .interlock.json. Prefer the new name and fall back to the legacy one so
+    .claude-code-agile-hooks.json. Prefer the new name and fall back to the legacy one so
     projects can rename at their own pace; None when neither exists."""
-    for name in (".interlock.json", ".claude-rails.json"):
+    for name in (".claude-code-agile-hooks.json", ".claude-rails.json"):
         path = os.path.join(cwd, name)
         if os.path.isfile(path):
             return path
@@ -198,11 +198,11 @@ def run_shell(cwd, command):
 def log_path(cwd):
     """TASK-54: the log dir follows the config rename. Keep writing to the
     legacy .claude-rails/ only while the project still uses only the legacy
-    .claude-rails.json and has no .interlock/ yet; otherwise .interlock/."""
+    .claude-rails.json and has no .claude-code-agile-hooks/ yet; otherwise .claude-code-agile-hooks/."""
     legacy_only = project_config_path(cwd) == os.path.join(
         cwd, ".claude-rails.json"
-    ) and not os.path.isdir(os.path.join(cwd, ".interlock"))
-    log_dir = ".claude-rails" if legacy_only else ".interlock"
+    ) and not os.path.isdir(os.path.join(cwd, ".claude-code-agile-hooks"))
+    log_dir = ".claude-rails" if legacy_only else ".claude-code-agile-hooks"
     return os.path.join(cwd, log_dir, "coverage-log.jsonl")
 
 
@@ -259,7 +259,7 @@ def main():
                 else f"커버리지 기준 미달 (exit {exit_code})"
             ),
             "systemMessage": (
-                f"[interlock] 커버리지 리포트 ('{command}', exit {exit_code}):\n"
+                f"[claude-code-agile-hooks] 커버리지 리포트 ('{command}', exit {exit_code}):\n"
                 + output[-4000:]
             ),
         }
