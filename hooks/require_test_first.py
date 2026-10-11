@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse (matcher: Edit|Write)
+"""PreToolUse (matcher: Edit|Write, and Bash with no `if` filter)
 TASK-56: test first, one acceptance criterion at a time (AC-level TDD),
 and the tests cover the card's business rules too (RAIL-019).
 
@@ -28,6 +28,17 @@ rule tied to AC n must exist, else deny listing the missing markers and
 their texts. All ACs checked -> allow (clean-up phase). Tests, docs,
 config and files outside the project are never gated.
 
+Bash `backlog task edit <ID> ... -s Done` (`--status Done`,
+`--status=Done`, any case) for the branch's task (`AO-27`, `ao-27`, `27`):
+every AC marker and every rule marker must exist, else deny listing the
+missing ones - no rule ends untested. The command is parsed in command
+position like pre_commit_check.py (heredoc bodies dropped, continuations
+joined, segments split, env assignments and wrappers skipped, `backlog`
+compared by basename), so `echo ... -s Done` or a commit message quoting it
+is not a Done move. Unbalanced quotes: a text match stands in (gate).
+Indirection (`bash -c`, `eval`, scripts) and the backlog MCP server / web UI
+are not seen.
+
 Glob semantics (repo-relative posix paths, whole path must match): `**`
 matches any run of characters including `/` (so `**/` also matches zero
 directories), `*` any run without `/`, `?` one character other than `/`;
@@ -45,6 +56,7 @@ Fully self-contained: no imports from any other file in this repo."""
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -58,6 +70,16 @@ AC_RE = re.compile(r"^- \[( |x|X)\] #(\d+) ?(.*)$")
 RULE_RE = re.compile(r"^- B(\d+) \(AC #(\d+)\) (\S.*)$")
 TASK_LINE_RE = re.compile(r"^Task (\S+) - ")
 STATUS_RE = re.compile(r"^Status:.*\bIn Progress\s*$")
+SEPARATOR_CHARS = set(";&|()\n")
+WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
+ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
+BACKLOG_EXECUTABLES = {"backlog", "backlog.md"}
+DONE_FALLBACK_RE = re.compile(
+    r"(?:^|[;&|(\s])(?:\S*/)?backlog(?:\.md)?\s+tasks?\s+edit\s+(\S+)"
+    r".*?(?:^|\s)(?:-s|--status)(?:=|\s+)['\"]?done\b",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def has_command(name):
@@ -127,6 +149,110 @@ def load_test_first(cwd):
     if not block:
         return None
     return list(block.get("sourceGlobs") or []), list(block.get("testGlobs") or [])
+
+
+# --- command parsing (strip_heredoc_bodies/tokenize/split_segments/
+# command_head are registered in dedup_drift_guard.REGISTRY) ---
+
+
+def strip_heredoc_bodies(command):
+    """Drop the body lines of `<<EOF ... EOF` heredocs. The line holding
+    the `<<` operator itself is kept (it is a real command)."""
+    kept = []
+    pending = []  # delimiters whose bodies are still open, in order
+    for line in command.split("\n"):
+        if pending:
+            if line.strip() == pending[0]:
+                pending.pop(0)
+            continue
+        kept.append(line)
+        pending.extend(m.group(3) for m in HEREDOC_RE.finditer(line))
+    return "\n".join(kept)
+
+
+def tokenize(command):
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>\n")
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    return list(lexer)
+
+
+def split_segments(tokens):
+    segments = [[]]
+    for tok in tokens:
+        if tok and set(tok) <= SEPARATOR_CHARS:
+            segments.append([])
+        else:
+            segments[-1].append(tok)
+    return [s for s in segments if s]
+
+
+def command_head(segment):
+    """Index of the executable in `segment`, skipping env assignments and
+    simple wrappers (same rules as require_draft_first.py)."""
+    i = 0
+    while i < len(segment):
+        tok = segment[i]
+        if tok in ("{", "!") or ASSIGNMENT_RE.match(tok):
+            i += 1
+            continue
+        if tok in WRAPPERS:
+            i += 1
+            while i < len(segment) and segment[i].startswith("-"):
+                i += 1
+            continue
+        break
+    return i
+
+
+def segment_done_target(segment):
+    """The task argument of `backlog task edit <ID> ... -s Done` in command
+    position, else None."""
+    i = command_head(segment)
+    if i >= len(segment) or os.path.basename(segment[i]) not in BACKLOG_EXECUTABLES:
+        return None
+    rest = segment[i + 1 :]
+    if len(rest) < 2 or rest[0] not in ("task", "tasks") or rest[1] != "edit":
+        return None
+    target = None
+    status = None
+    j = 2
+    while j < len(rest):
+        tok = rest[j]
+        if tok in ("-s", "--status"):
+            status = rest[j + 1] if j + 1 < len(rest) else None
+            j += 2
+            continue
+        if tok.startswith("--status="):
+            status = tok[len("--status=") :]
+        elif not tok.startswith("-") and target is None:
+            target = tok
+        j += 1
+    if target is None or status is None or status.lower() != "done":
+        return None
+    return target
+
+
+def done_targets(command):
+    """Task arguments of every `backlog task edit <ID> ... -s Done` in
+    command position. Unbalanced quotes: a text match stands in (gate)."""
+    if not command:
+        return []
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
+    try:
+        tokens = tokenize(stripped)
+    except ValueError:
+        return [m.group(1) for m in DONE_FALLBACK_RE.finditer(stripped)]
+    targets = [segment_done_target(s) for s in split_segments(tokens)]
+    return [t for t in targets if t is not None]
+
+
+def same_task(token, task_id):
+    """`AO-27`, `ao-27` and `27` all name task AO-27."""
+    if token.upper() == task_id.upper():
+        return True
+    return token.isdigit() and task_id.rsplit("-", 1)[-1] == token
 
 
 # --- globs ---
@@ -300,6 +426,18 @@ def check_edit(cwd, path, source_globs, test_globs, card):
         deny_missing(task_id, missing, labels, f"소스 {rel}을(를) 고치기 전에 AC #{n}의")
 
 
+def check_done(cwd, test_globs, card):
+    task_id = card["id"]
+    labels = {}
+    for n, _, ac_text in card["acs"]:
+        labels[ac_marker(task_id, n)] = f"(AC #{n}) {ac_text}"
+    for k, rule_ac, rule_text in card["rules"]:
+        labels[rule_marker(task_id, k)] = f"(B{k}, AC #{rule_ac}) {rule_text}"
+    missing = missing_markers(cwd, test_globs, list(labels))
+    if missing:
+        deny_missing(task_id, missing, labels, f"{task_id}을(를) Done으로 옮기기 전에 모든 AC · 비즈니스 규칙의")
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -309,9 +447,19 @@ def main():
     cwd = data.get("cwd", "")
     tool_name = data.get("tool_name", "")
     tool_input = data.get("tool_input") or {}
-    if not isinstance(tool_input, dict) or tool_name not in ("Edit", "Write"):
+    if not isinstance(tool_input, dict):
         sys.exit(0)
-    path = tool_input.get("file_path") or ""
+    path = ""
+    targets = []
+    if tool_name in ("Edit", "Write"):
+        path = tool_input.get("file_path") or ""
+    elif tool_name == "Bash":
+        # cheap parse first: most Bash lines leave before any subprocess
+        targets = done_targets(tool_input.get("command") or "")
+        if not targets:
+            sys.exit(0)
+    else:
+        sys.exit(0)
 
     if not has_command("backlog") or not is_backlog_project(cwd):
         sys.exit(0)
@@ -330,7 +478,11 @@ def main():
     if not card["in_progress"]:
         sys.exit(0)
 
-    check_edit(cwd, path, source_globs, test_globs, card)
+    if tool_name == "Bash":
+        if any(same_task(t, card["id"]) for t in targets):
+            check_done(cwd, test_globs, card)
+    else:
+        check_edit(cwd, path, source_globs, test_globs, card)
     sys.exit(0)
 
 

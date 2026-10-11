@@ -255,6 +255,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_commit_check.py",  # TASK-39
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
+        "require_test_first.py",  # TASK-56
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -419,6 +420,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_git_safety_check.py",  # TASK-37
             "pre_commit_check.py",  # TASK-39
             "pre_push_coverage_check.py",  # TASK-39
+            "require_test_first.py",  # TASK-56
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -428,6 +430,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_commit_check.py",  # TASK-39
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
+        "require_test_first.py",  # TASK-56
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
@@ -611,6 +614,10 @@ def test_registry_covers_task56_require_test_first_helpers():
         "has_command",
         "project_config_path",
         "is_outside_project",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
     ):
         assert "require_test_first.py" in ddg.REGISTRY[name]
     import os

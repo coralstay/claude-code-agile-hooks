@@ -259,3 +259,109 @@ def test_test_files_skip_git_dir_and_missing_base(project):
     project.write(".git/x_test.py", "x")
     assert list(rtf.iter_test_files(str(project.root), ["**/*_test.py"])) == []
     assert list(rtf.iter_test_files(str(project.root), ["nope/**"])) == []
+
+
+# --- AC #2: `backlog task edit <ID> -s Done` needs every AC and rule marker ---
+
+
+def bash(project, command):
+    return {
+        "cwd": str(project.root),
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+    }
+
+
+RULED_CARD = make_card(
+    [(True, "구간 고르기"), (True, "기록")],
+    rules=["- B1 (AC #1) 상한과 같으면 고른다", "- B2 (AC #2) 고른 정책을 기록한다"],
+)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "backlog task edit AO-27 -s Done",
+        "backlog task edit AO-27 --status Done",
+        "backlog task edit AO-27 --status=Done",
+        "backlog task edit ao-27 -s done",
+        "backlog task edit 27 -s Done --final-summary 'x'",
+        "backlog task edit AO-27 --check-ac 2 -s 'Done'",
+        "cd x && /opt/homebrew/bin/backlog task edit AO-27 -s Done",
+        "FOO=1 backlog task edit AO-27 \\\n  -s Done",
+    ],
+)
+def test_done_denied_when_rule_marker_missing(project, monkeypatch, capsys, command):
+    project.card = RULED_CARD
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#2 AO-27#B1")
+    assert run_main(monkeypatch, bash(project, command)) == 2
+    err = capsys.readouterr().err
+    assert err.startswith("[claude-code-agile-hooks]")
+    assert "AO-27#B2" in err and "고른 정책을 기록한다" in err
+    assert "AO-27#B1 " not in err
+
+
+def test_done_denied_when_ac_marker_missing(project, monkeypatch, capsys):
+    project.card = make_card([(True, "a"), (True, "b")])
+    project.write("src/test/java/a/T.java", "AO-27#2")
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 2
+    assert "AO-27#1" in capsys.readouterr().err
+
+
+def test_done_allowed_when_every_marker_present(project, monkeypatch):
+    project.card = RULED_CARD
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#2 AO-27#B1 AO-27#B2")
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "backlog task edit AO-27 -s 'In Progress'",
+        "backlog task edit AO-27 --check-ac 1",
+        "backlog task edit AO-28 -s Done",
+        "backlog task view AO-27 --plain",
+        "echo backlog task edit AO-27 -s Done",
+        "git commit -m 'backlog task edit AO-27 -s Done'",
+        "cat <<EOF\nbacklog task edit AO-27 -s Done\nEOF",
+        "backlog task edit AO-27 -s",
+        "backlog",
+        "ls",
+        "",
+    ],
+)
+def test_other_commands_pass(project, monkeypatch, command):
+    project.card = RULED_CARD
+    assert run_main(monkeypatch, bash(project, command)) == 0
+
+
+def test_unbalanced_quote_falls_back_to_text_match(project, monkeypatch):
+    project.card = RULED_CARD
+    command = "backlog task edit AO-27 -s Done --notes \"unclosed"
+    assert run_main(monkeypatch, bash(project, command)) == 2
+    assert run_main(monkeypatch, bash(project, "echo \"unclosed")) == 0
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("backlog task edit AO-27 -s Done", ["AO-27"]),
+        ("backlog tasks edit 3 --status=DONE", ["3"]),
+        ("backlog.md task edit X-1 -s Done; backlog task edit X-2 -s Done", ["X-1", "X-2"]),
+        ("sudo backlog task edit X-1 -s Done", ["X-1"]),
+        ("backlog task edit -s Done X-1", ["X-1"]),
+        ("backlog task edit X-1 -s Doneish", []),
+        ("backlog task create X -s Done", []),
+        ("backlog draft edit X-1 -s Done", []),
+    ],
+)
+def test_done_targets(command, expected):
+    assert rtf.done_targets(command) == expected
+
+
+def test_same_task_matches_id_forms():
+    assert rtf.same_task("AO-27", "AO-27")
+    assert rtf.same_task("ao-27", "AO-27")
+    assert rtf.same_task("27", "AO-27")
+    assert not rtf.same_task("2", "AO-27")
+    assert not rtf.same_task("AO-270", "AO-27")
