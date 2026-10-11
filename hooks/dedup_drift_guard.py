@@ -43,6 +43,7 @@ REGISTRY = {
         "session_start.py",
         "require_draft_first.py",
         "backlog_commit_scope.py",
+        "require_test_first.py",
     ],
     "has_command": [
         "block_stop_if_dirty.py",
@@ -51,6 +52,7 @@ REGISTRY = {
         "require_active_task.py",
         "session_start.py",
         "backlog_commit_scope.py",
+        "require_test_first.py",
     ],
     "has_active_task": [
         "block_stop_if_dirty.py",
@@ -65,6 +67,7 @@ REGISTRY = {
     "project_config_path": [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_test_first.py",
     ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
     "tokenize": [
@@ -125,6 +128,7 @@ REGISTRY = {
     "is_outside_project": [
         "require_active_task.py",
         "pipeline_trace.py",
+        "require_test_first.py",
     ],
     # TASK-31: Stop payload의 background_tasks로 parallel_session을 판정하는 헬퍼
     "background_tasks_running": [

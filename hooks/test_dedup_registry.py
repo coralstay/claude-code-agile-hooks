@@ -24,6 +24,7 @@ MODULES = [
     "session_start.py",
     "require_draft_first.py",
     "backlog_commit_scope.py",
+    "require_test_first.py",
 ]
 
 
