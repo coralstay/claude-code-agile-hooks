@@ -1,5 +1,5 @@
 // 3.01 시스템 구성 — Claude Code 훅 이벤트 × 훅의 세 가지 성격.
-// 왼쪽 열은 훅 생애주기 이벤트, 오른쪽 세 클러스터는 성격별 훅(32개, 각 훅은 한 성격에만 속한다).
+// 왼쪽 열은 훅 생애주기 이벤트, 오른쪽 세 클러스터는 성격별 훅(33개, 각 훅은 한 성격에만 속한다).
 // 간선 하나 = settings.hooks.json의 등록 하나(이벤트 · matcher). 굵은 실선은 막을 수 있는 등록,
 // 점선은 기록 · 주입 · 경고만 하는 등록이다. 색은 센티넬 hex(_common.gv) — build-diagrams.py가 치환한다.
 digraph three_natures {
@@ -22,11 +22,11 @@ digraph three_natures {
   }
 
   subgraph cluster_proc {
-    label="① 절차 강제 (8)"; fontname="Helvetica"; fontsize=11; fontcolor="#f00009";
+    label="① 절차 강제 (9)"; fontname="Helvetica"; fontsize=11; fontcolor="#f00009";
     style="rounded,filled"; fillcolor="#f0000a"; color="#f00009";
     node [color="#f00009"];
     session_start; require_draft_first; backlog_commit_scope; require_active_task;
-    pre_commit_check; auto_stage; block_stop_if_dirty; pre_push_check;
+    pre_commit_check; auto_stage; block_stop_if_dirty; pre_push_check; require_test_first;
   }
 
   subgraph cluster_gate {
@@ -55,6 +55,9 @@ digraph three_natures {
   PreToolUse -> require_active_task [penwidth=1.6];
   PreToolUse -> pre_commit_check [penwidth=1.6];
   PreToolUse -> pre_push_check [penwidth=1.6];
+  // require_test_first: 등록 2건(matcher Edit|Write · Bash)
+  PreToolUse -> require_test_first [penwidth=1.6];
+  PreToolUse -> require_test_first [penwidth=1.6];
   PostToolUse -> auto_stage [style=dashed];
   Stop -> block_stop_if_dirty [penwidth=1.6];
 

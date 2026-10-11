@@ -4,10 +4,12 @@ title: 테스트 먼저(AC 단위 TDD + 비즈니스 규칙)를 훅으로 강제
 status: In Progress
 assignee: []
 created_date: '2026-10-11 08:33'
-updated_date: '2026-10-11 08:35'
+updated_date: '2026-10-11 08:47'
 labels:
   - feature
 dependencies: []
+references:
+  - decision-12
 ---
 
 ## Description

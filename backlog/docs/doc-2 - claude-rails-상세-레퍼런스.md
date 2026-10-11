@@ -11,7 +11,7 @@ updated_date: '2026-10-05 08:00'
 > 기록 문서는 당시 이름을 그대로 쓴다.
 
 README.md는 의도만 짧게 담고, 이 문서가 전체 스펙이다 — 운영/개인 레포 구분, 전체
-Phase 명세, HIL 지점 표, 27개(→28개→30개→31개→32개→33개→32개) 훅 하나하나의 이벤트/matcher/설명, 설치/삭제
+Phase 명세, HIL 지점 표, 27개(→28개→30개→31개→32개→33개→32개→33개) 훅 하나하나의 이벤트/matcher/설명, 설치/삭제
 절차, 파일 구성까지 전부 여기 있다. README가 "왜"를 말한다면, 이 문서는 "무엇을,
 어떻게"를 말한다.
 
@@ -110,12 +110,12 @@ backlog 전용 훅 2개가 늘어 총 30개가 됐다. TASK-30에서 하네스 �
 `reserved_tag_guard.py`가 더해져 범용 24개, 총 31개가 됐다. TASK-31에서 세션별 컨텍스트
 플래그 파일을 기록하는 범용 훅 `context_flags.py`가 더해져 범용 25개, 총 32개가 됐다. TASK-32에서
 작업 파이프라인(plan mode → 승인 → 드래프트 → 커밋 → 승격) 진행을 세션별로 기록하는 범용 관측 훅
-`pipeline_trace.py`가 더해져 범용 26개, 총 33개가 됐다. TASK-49에서 편집한 파일을 통째로 다시 쓰던 포매터 훅 `format_code.py`를 제거해(포맷은 프로젝트의 pre-commit·CI 책임) 범용 25개, 총 32개다:
+`pipeline_trace.py`가 더해져 범용 26개, 총 33개가 됐다. TASK-49에서 편집한 파일을 통째로 다시 쓰던 포매터 훅 `format_code.py`를 제거해(포맷은 프로젝트의 pre-commit·CI 책임) 범용 25개, 총 32개가 됐다. TASK-56에서 테스트 먼저(AC 단위 TDD + 비즈니스 규칙 테스트)를 강제하는 backlog 전용 훅 `require_test_first.py`가 더해져 backlog 전용 8개, 총 33개다:
 
-- **backlog.md 워크플로 전용** (7개, `backlog/config.yml`이 있는 프로젝트에서만 동작) —
+- **backlog.md 워크플로 전용** (8개, `backlog/config.yml`이 있는 프로젝트에서만 동작) —
   `session_start.py`, `require_active_task.py`, `pre_commit_check.py`,
   `pre_push_check.py`, `block_stop_if_dirty.py`(원래 bash로 있던 것과 1:1 대응),
-  `require_draft_first.py`, `backlog_commit_scope.py`(TASK-29에서 추가).
+  `require_draft_first.py`, `backlog_commit_scope.py`(TASK-29에서 추가), `require_test_first.py`(TASK-56에서 추가, 프로젝트 설정 `testFirst` opt-in).
 - **범용 안전/관측 훅** (25개, backlog.md 여부와 무관하게 항상 동작) — 시크릿 보호,
   위험 명령 차단, 설정 변조 감시, 훅 자신의 복붙 코드가 사본 간에 어긋나지 않는지
   감시하는 self-guard(`dedup_drift_guard.py`), 세션 로깅, PR 리뷰 보조 등. 대부분
@@ -123,7 +123,7 @@ backlog 전용 훅 2개가 늘어 총 30개가 됐다. TASK-30에서 하네스 �
   MIT 라이선스 플러그인을 포팅한 것이다 (원 저작권 고지는
   [`THIRD_PARTY_NOTICES.md`](../../../THIRD_PARTY_NOTICES.md)).
 
-즉 이 32개는 "백로그 프로젝트의 워크플로 위반"만 막는 도구가 아니라, **이 컴퓨터에서
+즉 이 33개는 "백로그 프로젝트의 워크플로 위반"만 막는 도구가 아니라, **이 컴퓨터에서
 Claude Code가 하는 모든 행동에 대한 보안 경계**다 — backlog.md를 쓰지 않는 프로젝트
 에서도 25개는 항상 켜져 있고, 그중 어느 하나도 Phase 2/4.3처럼 사람 판단이 필요한 것을
 대신 판단해주지는 않는다. 기계적으로 검증 가능한 것과 아닌 것을 정확히 나눈 뒤, 전자는
@@ -134,13 +134,13 @@ Claude Code가 하는 모든 행동에 대한 보안 경계**다 — backlog.md�
 
 ## 2. 지금 이 컴퓨터에 뭐가 설치돼 있는가
 
-전역 설치되어 있어 **모든 세션에 자동으로 적용**된다. 다만 1장에서 설명했듯 32개 중
-7개(backlog.md 워크플로 훅)만 `backlog/config.yml`이 있는 프로젝트로 한정되고, 나머지
+전역 설치되어 있어 **모든 세션에 자동으로 적용**된다. 다만 1장에서 설명했듯 33개 중
+8개(backlog.md 워크플로 훅)만 `backlog/config.yml`이 있는 프로젝트로 한정되고, 나머지
 25개는 프로젝트 종류와 무관하게 항상 동작한다.
 
 | 항목         | 경로                                                                                                                                |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 훅 스크립트  | `~/.claude/hooks/claude-code-agile-hooks/*.py` (32개, Python, 실행권한 불필요 — `python3 <path>`로 호출)                                          |
+| 훅 스크립트  | `~/.claude/hooks/claude-code-agile-hooks/*.py` (33개, Python, 실행권한 불필요 — `python3 <path>`로 호출)                                          |
 | 훅 테스트    | `~/.claude/hooks/claude-code-agile-hooks/test_*.py` (훅과 같은 디렉토리에 훅마다 1개 + 등록·실행 계약 테스트 — `.coverage`/`.pytest_cache`도 이 디렉토리에서 생김) |
 | 전역 설정    | `~/.claude/settings.json` (`hooks` 키만 병합됨, 기존 설정 보존)                                                                     |
 | 전역 지침    | `~/.claude/CLAUDE.md` (`<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->` 블록)                                                                             |
@@ -164,7 +164,7 @@ CLAUDE.md는 마커로 중복 방지).
    `PermissionRequest`, `InstructionsLoaded`) 각각에 등록된 스크립트가 `matcher`(도구
    이름)와 `if`(명령 패턴) 조건에 맞을 때 자동 실행된다. 하나의 이벤트/매처에 여러
    훅이 걸려 있으면 등록 순서대로 전부 실행된다.
-3. 32개 중 **backlog.md 워크플로 전용 7개**만 가장 먼저 "지금 이 디렉토리가 backlog.md
+3. 33개 중 **backlog.md 워크플로 전용 8개**만 가장 먼저 "지금 이 디렉토리가 backlog.md
    프로젝트인가(`backlog/config.yml` 존재 여부)"부터 확인하고, 아니면 즉시 통과한다.
    나머지 **25개는 이 확인 없이 항상 동작**한다 — 시크릿 보호나 위험 명령 차단이 backlog
    프로젝트가 아니라고 꺼지면 안 되기 때문이다.
@@ -175,7 +175,7 @@ CLAUDE.md는 마커로 중복 방지).
    `systemMessage`) 다른 이벤트(`UserPromptSubmit`/`PreToolUse`)와 짝을 이뤄 우회 차단하는
    방식을 쓴다(`instructions_audit.py`가 대표 사례, 8장 참고).
 5. 차단이 아닌 훅도 많다 — 세션 로그 기록, TODO/FIXME 채점, 포매터 실행, 컨텍스트 비용
-   집계처럼 **강제 없이 관측/보조만 하는 훅**이 32개 중 절반 가까이 된다(4장 범례의 ⚙️).
+   집계처럼 **강제 없이 관측/보조만 하는 훅**이 33개 중 절반 가까이 된다(4장 범례의 ⚙️).
 6. 막히면 Claude는 그 이유(스크립트가 stderr/JSON으로 낸 메시지)를 그대로 보고, 조건을
    충족시킨 뒤 다시 시도한다.
 
@@ -198,7 +198,7 @@ CLAUDE.md는 마커로 중복 방지).
 ## 5. 사용 흐름 — 태스크 하나 따라가기 (backlog.md 워크플로)
 
 까먹고 다시 왔을 때 이 섹션만 봐도 바로 쓸 수 있게, 실제로 손으로 치는 순서를 그대로
-적는다. 이 흐름은 32개 훅 중 **backlog.md 워크플로 전용 7개**(2·3장 참고)가 관여하는
+적는다. 이 흐름은 33개 훅 중 **backlog.md 워크플로 전용 8개**(2·3장 참고)가 관여하는
 부분이다 — 시크릿 보호, 위험 명령 차단 같은 나머지 25개는 이 흐름과 별개로 항상
 백그라운드에서 같이 동작한다.
 
@@ -261,7 +261,7 @@ CLAUDE.md는 마커로 중복 방지).
 
 ## 6. 전체 프로세스 명세 (Phase -1 ~ 5)
 
-기호는 4장 표기 범례와 동일. backlog.md 워크플로 전용 훅 7개가 어느 Phase에서
+기호는 4장 표기 범례와 동일. backlog.md 워크플로 전용 훅 8개가 어느 Phase에서
 관여하는지 표시한다.
 
 ### Phase -1. 셋업 🧑 (프로젝트당 최초 1회)
@@ -331,10 +331,11 @@ Progress 태스크 없이는 이후 어떤 Edit/Write도 불가.
 | 3-2 리서치 → 계획     | 코드베이스 재조사 후 `task edit --plan` (생성 시점 접근법을 그대로 믿지 않음) | ⚙️ 판단 영역, 강제 없음                                                                         |
 | 3-3 승인 게이트       | 중대한 설계/아키텍처 결정 포함 시 구현 전 승인 대기                           | 🧑? Claude Code Plan Mode 재사용                                                                |
 | 3-4 구현 서브루프     | 슬라이스 구현→테스트→`--append-notes`→원자적 커밋→반복                        | 🤖 `pre_commit_check.py` — `.claude-code-agile-hooks.json`에 `testCommand` 설정 시 테스트 실패면 커밋 차단 |
+| 3-4a 테스트 먼저      | AC 하나씩: 테스트(`<ID>#<n>`·관련 규칙 `<ID>#B<k>` 표식) → 최소 구현 → 커밋 → 다음 AC | 🤖 `require_test_first.py` — 프로젝트 설정에 `testFirst`가 있으면 다음 AC의 표식이 테스트에 없을 때 소스 편집 차단 |
 | 3-4b 미커밋 종료 방지 | —                                                                             | 🤖 `block_stop_if_dirty.py` — dirty tree + In Progress면 턴 종료 차단                           |
 | 3-5 스코프 이탈 감지  | AC 밖 발견 시 조용히 확장 않고 질문                                           | 🧑? 발견 시에만, 자동 검증은 미구현                                                             |
 | 3-6 서브태스크 처리   | 서브태스크 1개만 할당 시 다음으로 자동 진행 금지                              | 🧑? 1개만 할당된 경우에만                                                                       |
-| 3-7 완료 전환         | 증거(테스트 통과 로그 등) 확보 후에만 AC 체크                                 | ⚙️ 판단 영역, 자동 검증 미구현                                                                  |
+| 3-7 완료 전환         | 증거(테스트 통과 로그 등) 확보 후에만 AC 체크                                 | ⚙️ 판단 영역, 자동 검증 미구현. 단 `testFirst` opt-in이면 🤖 `require_test_first.py`가 모든 AC·규칙 표식 없이는 `-s Done`을 차단 |
 
 ### Phase 4. 완료 & 종결 🧑 + 🤖
 
@@ -380,7 +381,7 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 
 ---
 
-## 8. 훅 상세 스펙 — 32개, 이벤트별 정리
+## 8. 훅 상세 스펙 — 33개, 이벤트별 정리
 
 각 훅은 완전 독립형(다른 훅 파일을 import하지 않음)이다. 설명은 각 스크립트 최상단의
 모듈 docstring을 그대로 옮긴 것 — 실제로 읽지 않은 동작은 적지 않는다. "출처" 열은
@@ -417,6 +418,7 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 | 훅                       | 🔒  | 설명                                                                                                                                          |
 | ------------------------ | --- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`require_active_task.py`](../../../hooks/require_active_task.py) | 🔒  | In Progress 태스크가 있고 이번 세션에 `backlog task view`로 그 내용을 읽은 적이 있어야만 편집 허용. 대상 경로(realpath 기준)가 프로젝트 루트 밖이면(plan/memory/scratchpad 등) 검사하지 않는다. bash 시절 `require-active-task.sh`의 후신 |
+| [`require_test_first.py`](../../../hooks/require_test_first.py)  | 🔒  | 테스트 먼저(AC 단위 TDD + 비즈니스 규칙, TASK-56 · RAIL-019). 프로젝트 설정의 `testFirst`(`sourceGlobs`·`testGlobs`) opt-in + `task/<ID>` 브랜치 + 그 태스크 In Progress일 때만 동작. 저장소 기준 경로가 sourceGlobs에 맞고 testGlobs에 안 맞는 파일을 고치기 전에, 체크 안 된 첫 AC n의 표식 `<ID>#<n>`과 관련 AC가 n인 비즈니스 규칙의 표식 `<ID>#B<k>`가 testGlobs 파일 어딘가에 있어야 한다(표식 뒤에 숫자가 이어지면 불인정 — `AO-27#1`은 `AO-27#10`으로 채워지지 않음). AC 전부 체크면 허용. 규칙은 카드 설명의 `## 비즈니스 규칙` 절에 `- B<k> (AC #<n>) <규칙>` 형식 — 절이 없으면 AC 표식만, 형식이 틀리면 형식 안내와 함께 차단. 글롭: `**`는 `/` 포함 임의 문자열(`**/`는 0단계 디렉토리도), `*`는 `/` 제외, `?`는 한 글자, 나머지는 글자 그대로. 한계: Bash로 쓴 소스, 테스트가 실제로 먼저 실패했는지(빨강), 표식 문자열 외의 매칭은 보지 않는다 |
 | [`dead_end_registry.py`](../../../hooks/dead_end_registry.py)   |     | 등록된 죽은 접근을 다시 건드리려 하면 경고(차단 아님 — PreToolUse는 차단 이벤트에서 `additionalContext`를 지원하지 않으므로 stderr로만 표시)  |
 
 #### matcher: `Bash`
@@ -426,6 +428,7 @@ Phase 2와 Phase 4.3, 두 곳 모두 **항상, 예외 없이** 발생하는 필�
 | [`pre_commit_check.py`](../../../hooks/pre_commit_check.py)         | (없음)                | 🔒  | `task/<ID>` 브랜치에서만 커밋 허용 + `.claude-code-agile-hooks.json`(없으면 옛 `.claude-rails.json`)의 `testCommand` 설정 시 테스트 통과 필수. bash 시절 `pre-commit-check.sh`의 후신. 명령 위치의 `git commit`만 판정(TASK-39, `echo`·따옴표·heredoc 안 글자 무시, 파싱 실패 시 보수적으로 커밋 취급). `if` 필터는 절대경로 호출을 놓쳐 제거                                                                                                                                                                                                                                                                                                          |
 | [`backlog_commit_scope.py`](../../../hooks/backlog_commit_scope.py)      | (없음)                | 🔒  | `git commit` 시 스테이징(`git diff --cached --name-status -M`)을 보고, 새 드래프트(`backlog/drafts/` 추가)와 그 밖의 파일이 섞이면, 또는 승격(`backlog/drafts/` → `backlog/tasks/` rename)과 `backlog/tasks/` 밖의 파일이 섞이면 차단. 승격된 태스크 파일 자체의 수정은 허용. PreToolUse 시점 인덱스를 보므로 같은 명령 안의 단순 `git add <args>`와 `commit -a`는 임시 인덱스(GIT_INDEX_FILE)에서 재현해 판정한다. `git rm/mv`, pathspec 커밋, `bash -c` 우회, 터미널 직접 커밋은 범위 밖(모듈 docstring 참고). 커밋 감지와 `git add` 재현 모두 명령 위치만 본다(TASK-39, `if` 필터 제거) |
 | [`require_draft_first.py`](../../../hooks/require_draft_first.py)       | (없음)                | 🔒  | 명령 위치에서 실제로 실행되는 `backlog task create`(basename 정규화, `;`/`&&`/`\|`/줄바꿈 세그먼트, env·래퍼 건너뜀)를 차단하고 `backlog draft create` → 승인 후 `draft promote`를 안내. 다른 명령의 따옴표 인자나 heredoc 본문 안의 텍스트는 통과. `bash -c`/`eval`/MCP 경유는 범위 밖(decision-1) |
+| [`require_test_first.py`](../../../hooks/require_test_first.py)        | (없음)                | 🔒  | Edit\|Write 항목과 같은 조건에서, 명령 위치의 `backlog task edit <ID> ... -s Done`(`--status Done`, `--status=Done`, 대소문자 무관)이 브랜치의 태스크(`AO-27`·`ao-27`·`27`)를 가리키면 카드의 모든 AC 표식과 모든 규칙 표식이 testGlobs에 있어야 허용 — 규칙을 하나라도 테스트하지 않고 끝내지 못한다. 명령 파싱은 pre_commit_check.py와 같은 헬퍼(heredoc 본문 제외, env·래퍼 건너뜀, basename 비교), 따옴표가 안 닫히면 텍스트 매칭으로 대신(게이트). `bash -c`/`eval`/MCP·웹 UI 경유는 범위 밖 |
 | [`dedup_drift_guard.py`](../../../hooks/dedup_drift_guard.py)        | `Bash(git *)`         |     | 이 저장소 자체를 지키는 self-guard — REGISTRY가 손으로 복붙된 함수 13개(`is_backlog_project`, `has_command`, `has_active_task`, `run_shell`, `tokenize`, `split_segments`, `background_tasks_running`, `strip_heredoc_bodies`, `is_outside_project`, `command_head`, `git_subcommand_index`, `command_runs_git`, `project_config_path`)가 어느 훅 파일들에 등장해야 하는지를 추적해, 사본 간에 어긋나면(정규화된 AST 비교) 커밋 시점에 차단. `backlog/config.yml` 유무와 무관하게 `hooks/` 디렉토리 존재만으로 동작 판단(즉 REGISTRY가 가리키는 파일들이 실제로 있는 저장소, 곧 claude-code-agile-hooks 자신에서만 작동). REGISTRY는 검사 대상 저장소의 `hooks/dedup_drift_guard.py`(작업 트리)에서 `ast.literal_eval`로 데이터만 읽어 쓰고(import·실행 없음), 읽을 수 없거나 형태가 틀리면 설치본 REGISTRY로 검사(TASK-40). 저장소 REGISTRY는 비워져도 그대로 신뢰 — 보안 장치가 아니라 drift 감지기. `if` 필터는 의도적으로 유지(TASK-46): `/usr/bin/git commit`(경로 호출)에선 실행되지 않지만 같은 drift를 `hooks/test_dedup_registry.py`가 테스트 스위트에서 잡으므로 조기 경고만 빠진다 — 계약 테스트 `hidden_ok`에 사유와 함께 등록 |
 | [`pre_push_check.py`](../../../hooks/pre_push_check.py)           | (없음)                | 🔒  | `task/<ID>` 브랜치 push는 태스크가 Done && final summary 있을 때만 허용. bash 시절 `pre-push-check.sh`의 후신. `if` 필터는 `/usr/bin/git push`가 게이트를 우회하는 것이 실측돼 제거(TASK-46) |
 | [`pre_push_coverage_check.py`](../../../hooks/pre_push_coverage_check.py)  | (없음)                |     | `.claude-code-agile-hooks.json`(없으면 옛 `.claude-rails.json`)의 `coverageCommand` 설정 시 push 전 실제로 실행해 리포트를 보여줌(성공/실패 무관하게 매번), 실패 시에만 차단. 결과는 `<cwd>/.claude-code-agile-hooks/coverage-log.jsonl`(옛 설정만 쓰는 프로젝트는 `.claude-rails/`)에도 기록. 명령 위치의 `git push`만 판정(TASK-39). 실패 시 push를 막는 게이트라 pre_push_check와 같이 `if` 필터 제거(TASK-46) — push가 아닌 줄은 설정 파일·subprocess 없이 파싱 직후 종료 |
@@ -568,6 +571,29 @@ REGISTRY 등록)로 설정을 찾는다.
   예전처럼 `.claude-rails/`에 남기고, 그 밖에는 `.claude-code-agile-hooks/`에 남긴다. 그래서 설정 파일 이름을
   바꾸면 그다음 push부터 기록이 `.claude-code-agile-hooks/`으로 옮겨 간다(옛 기록은 옮기지 않는다).
   두 디렉토리를 모두 `.gitignore`에 넣어 두면 안전하다.
+
+### 테스트 먼저 — `testFirst` (TASK-56)
+
+```json
+{
+  "testFirst": {
+    "sourceGlobs": ["src/main/java/**"],
+    "testGlobs": ["src/test/java/**"]
+  }
+}
+```
+
+있으면 `require_test_first.py`가 AC 하나씩 TDD를 강제한다(8장). 두 목록 모두 비어 있지 않은
+문자열 목록이어야 하고, 형식이 틀리거나 설정 파일을 읽을 수 없으면 태스크 브랜치에서 편집·Done
+전환을 막는다(설정 파일 자신의 편집은 허용 — 고칠 수 있게). 테스트 이름·표시 이름·주석에
+`<카드 ID>#<n>`(AC)과 `<카드 ID>#B<k>`(비즈니스 규칙)를 넣는다. 예:
+`@DisplayName("AO-27#1 …")`, `@DisplayName("AO-27#B2 …")`. 카드 쪽 규칙 절:
+
+```
+## 비즈니스 규칙
+- B1 (AC #1) 예상 토큰이 구간 상한과 같으면 그 구간의 모델을 고른다
+- B2 (AC #1) 예상 토큰이 음수면 거부한다
+```
 
 ### 이 저장소 자신의 게이트 (도그푸딩, TASK-43)
 
@@ -791,7 +817,7 @@ claude-code-agile-hooks/
 ├── pyproject.toml            # pytest testpaths + coverage 설정(fail_under=100)
 ├── scripts/                   # 훅이 아닌 보조 스크립트 (설치되지 않음)
 │   └── merge_settings.py / test_merge_settings.py   # install.sh의 추가 전용 settings 병합
-└── hooks/                     # 32개 훅 + 훅별 test_*.py와 계약 테스트, 전부 flat
+└── hooks/                     # 33개 훅 + 훅별 test_*.py와 계약 테스트, 전부 flat
     ├── session_start.py / test_session_start.py                    # 🔒 backlog 전용
     ├── require_active_task.py / test_require_active_task.py        # 🔒 backlog 전용
     ├── pre_commit_check.py / test_pre_commit_check.py               # 🔒 backlog 전용
@@ -799,6 +825,7 @@ claude-code-agile-hooks/
     ├── block_stop_if_dirty.py / test_block_stop_if_dirty.py         # 🔒 backlog 전용
     ├── require_draft_first.py / test_require_draft_first.py         # 🔒 backlog 전용
     ├── backlog_commit_scope.py / test_backlog_commit_scope.py       # 🔒 backlog 전용
+    ├── require_test_first.py / test_require_test_first.py           # 🔒 backlog 전용 (testFirst opt-in)
     └── (나머지 25개 훅 + 대응 test_*.py — 8장 이벤트별 표 참고)
 ```
 

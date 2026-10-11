@@ -20,8 +20,13 @@
      Edit/Write를 차단한다.
    - `backlog task edit <ID> -s "In Progress"` + `task/<ID>` 브랜치로 전환한다 — 훅이 In
      Progress 상태와 브랜치명을 확인한다.
-   - 작은 단위(AC 1개 수준)로 구현 → 테스트 → 커밋을 반복한다. 프로젝트에 `.claude-code-agile-hooks.json`
-     (옛 이름 `.claude-rails.json`도 읽음)의 `testCommand`가 설정돼 있으면 테스트 실패 시 훅이 커밋을 막는다.
+   - AC 하나씩: 테스트(`<ID>#<n>` · `<ID>#B<k>` 표식) → 구현 → 커밋을 반복한다. 테스트 이름 · 표시
+     이름 · 주석에 AC 표식 `<ID>#<n>`과, 그 AC에 묶인 비즈니스 규칙 표식 `<ID>#B<k>`를 넣는다. 비즈니스
+     규칙은 카드 설명의 `## 비즈니스 규칙` 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적는다. 프로젝트 설정에
+     `testFirst`(`sourceGlobs` · `testGlobs`)가 있으면, 다음 AC의 표식이 테스트에 없을 때 소스 편집을, 모든
+     AC · 규칙 표식이 없을 때 `-s Done`을 훅이 막는다.
+   - 프로젝트에 `.claude-code-agile-hooks.json`(옛 이름 `.claude-rails.json`도 읽음)의 `testCommand`가
+     설정돼 있으면 테스트 실패 시 훅이 커밋을 막는다.
    - 변경사항을 커밋하지 않은 채 턴을 끝내려 하면 훅이 막는다 — 먼저 커밋부터 마무리한다.
    - AC 밖의 작업이 발견되면 조용히 범위를 넓히지 말고 유저에게 먼저 확인한다.
 5. **완료**: 테스트 통과 로그 등 객관적 증거를 확인한 뒤에만 `--check-ac`/`--check-dod`를
