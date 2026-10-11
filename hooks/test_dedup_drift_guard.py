@@ -210,6 +210,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "require_active_task.py",
         "session_start.py",
         "backlog_commit_scope.py",
+        "require_test_first.py",  # TASK-56
     ]
     assert ddg.REGISTRY["has_active_task"] == [
         "block_stop_if_dirty.py",
@@ -225,6 +226,7 @@ def test_registry_covers_newly_added_dedup_functions():
     assert ddg.REGISTRY["project_config_path"] == [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_test_first.py",  # TASK-56
     ]
 
 
@@ -253,6 +255,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_commit_check.py",  # TASK-39
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
+        "require_test_first.py",  # TASK-56
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -417,6 +420,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_git_safety_check.py",  # TASK-37
             "pre_commit_check.py",  # TASK-39
             "pre_push_coverage_check.py",  # TASK-39
+            "require_test_first.py",  # TASK-56
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -426,10 +430,12 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_commit_check.py",  # TASK-39
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
+        "require_test_first.py",  # TASK-56
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
         "pipeline_trace.py",
+        "require_test_first.py",  # TASK-56
     ]
 
 
@@ -598,3 +604,23 @@ def test_repo_registry_read_from_working_tree_not_index(monkeypatch, tmp_path):
     path = hooks_dir / "dedup_drift_guard.py"
     path.write_text(path.read_text().split("\nREGISTRY = ")[0] + "\n")
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
+
+
+def test_registry_covers_task56_require_test_first_helpers():
+    # TASK-56: require_test_first.py copies the backlog/config/path helpers
+    # verbatim; every copy must be registered so drift is caught.
+    for name in (
+        "is_backlog_project",
+        "has_command",
+        "project_config_path",
+        "is_outside_project",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert "require_test_first.py" in ddg.REGISTRY[name]
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []

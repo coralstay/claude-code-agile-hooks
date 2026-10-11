@@ -67,6 +67,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dead_end_registry.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_test_first.py"
           }
         ]
       },
@@ -84,6 +88,10 @@
           {
             "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_draft_first.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_test_first.py"
           },
           {
             "type": "command",

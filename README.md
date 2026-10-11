@@ -22,10 +22,10 @@ CLAUDE.md에 "이렇게 해주세요"라고 적어두는 약속만으로는 매�
 ## 무엇을 만들었는지 말씀드립니다
 
 Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 동작하는
-32개의 스크립트를 만들었습니다.
+33개의 스크립트를 만들었습니다.
 [Backlog.md](https://github.com/MrLesk/Backlog.md)(Git 저장소 안에 마크다운 파일로
 태스크·문서·의사결정을 관리하는 CLI 기반 프로젝트 관리 도구입니다) 워크플로 전용
-7개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
+8개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
 있습니다. 모든 훅은 개인 fork 안에서만 강하게 적용되며, 운영 레포로 올리는 PR은
 항상 사람이 직접 열도록 하였습니다.
 
@@ -44,7 +44,7 @@ Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 �
 
 Claude Code의 훅은 [공식 문서](https://code.claude.com/docs/ko/hooks)에 정의된
 특정 이벤트(생애주기 단계)에 등록되어, 그 시점에만 실행됩니다. 전체 흐름을 먼저
-그림으로 보여드린 뒤, 이 저장소에 있는 32개의 훅이 각각 어느 단계에서 동작하는지
+그림으로 보여드린 뒤, 이 저장소에 있는 33개의 훅이 각각 어느 단계에서 동작하는지
 표로 정리해 드리겠습니다.
 
 ```mermaid
@@ -96,7 +96,7 @@ flowchart TB
 
 이 저장소의 훅은 이 흐름 중 필요한 지점마다 걸려 있습니다 — 예를 들어
 `require_active_task.py`는 `PreToolUse`(Edit\|Write)에, `block_stop_if_dirty.py`는
-`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 32개 훅 전체가 정확히
+`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 33개 훅 전체가 정확히
 어느 단계에 걸려 있는지 나열한 것입니다. 훅 이름을 누르시면 실제 소스 파일로
 이동합니다.
 
@@ -115,6 +115,7 @@ flowchart TB
 | UserPromptSubmit                    | [`pipeline_trace.py`](hooks/pipeline_trace.py)                     | 범용       | plan mode 진입 기록               |
 | PreToolUse: Edit\|Write             | [`require_active_task.py`](hooks/require_active_task.py)           | 🔒 backlog | In Progress 태스크 없으면 차단 (프로젝트 밖 경로는 제외) |
 | PreToolUse: Edit\|Write             | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 죽은 접근 재시도 경고             |
+| PreToolUse: Edit\|Write             | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 다음 AC의 `<ID>#<n>`·관련 규칙 `<ID>#B<k>` 테스트 표식 없으면 소스 편집 차단 |
 | PreToolUse: Bash                    | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
 | PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격 커밋에 다른 변경 섞이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
@@ -122,6 +123,7 @@ flowchart TB
 | PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
+| PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
 | PreToolUse: Bash(gh pr create*)     | [`pr_provenance_stamp.py`](hooks/pr_provenance_stamp.py)           | 범용       | PR 본문에 provenance 삽입         |
@@ -199,6 +201,15 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 때의 실행 기록은 `.claude-code-agile-hooks/coverage-log.jsonl`에 남고, 이 디렉토리는 git에서
 제외됩니다. 아직 옛 이름 `.claude-rails.json`만 쓰는 프로젝트에서는 그 설정을 그대로 읽고
 기록도 예전처럼 `.claude-rails/`에 남깁니다.
+
+**테스트 먼저(opt-in)**: 프로젝트 설정에
+`"testFirst": {"sourceGlobs": ["src/main/java/**"], "testGlobs": ["src/test/java/**"]}`를 넣으면
+`require_test_first.py`가 AC 하나씩 TDD를 강제합니다. `task/<ID>` 브랜치에서 그 태스크가 In
+Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 표식 `<ID>#<n>`과 그 AC에 묶인
+비즈니스 규칙 표식 `<ID>#B<k>`가 테스트 파일 어딘가에 있어야 하고, `backlog task edit <ID> -s
+Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙`
+절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
+실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
 
 ## 더 자세한 내용이 궁금하시다면
 
