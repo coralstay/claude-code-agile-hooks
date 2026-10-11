@@ -39,6 +39,13 @@ is not a Done move. Unbalanced quotes: a text match stands in (gate).
 Indirection (`bash -c`, `eval`, scripts) and the backlog MCP server / web UI
 are not seen.
 
+Both checks deny first when the card has a `## 비즈니스 규칙` heading with a
+line under it that isn't `- B<k> (AC #<n>) <rule>` or names an AC the card
+lacks (the message shows the expected format). No heading -> only AC
+markers are required. A card with no ACs requires nothing. A malformed
+`testFirst` block (or unreadable config) denies on the task branch - the
+project asked for the gate - except edits of the config file itself.
+
 Glob semantics (repo-relative posix paths, whole path must match): `**`
 matches any run of characters including `/` (so `**/` also matches zero
 directories), `*` any run without `/`, `?` one character other than `/`;
@@ -62,6 +69,7 @@ import subprocess
 import sys
 
 TAG = "[claude-code-agile-hooks]"
+CONFIG_NAMES = (".claude-code-agile-hooks.json", ".claude-rails.json")
 SECTION_RE = re.compile(r"^([A-Z][A-Za-z ]+):$")
 RULE_LINE = "- B<k> (AC #<n>) <규칙>"
 RULES_HEADING_RE = re.compile(r"^##\s+비즈니스\s+규칙\s*$")
@@ -138,17 +146,42 @@ def task_view(cwd, task_id):
     return result.stdout
 
 
+class ConfigError(Exception):
+    pass
+
+
+def is_glob_list(value):
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(g, str) and g for g in value)
+    )
+
+
 def load_test_first(cwd):
-    """(sourceGlobs, testGlobs) when the project opted in, else None."""
+    """(sourceGlobs, testGlobs) when the project opted in, else None.
+    ConfigError when the config can't be read or the opt-in block is
+    malformed - the project asked for the gate, so it must not silently
+    turn off."""
     path = project_config_path(cwd)
     if path is None:
         return None
-    with open(path) as f:
-        config = json.load(f)
-    block = config.get("testFirst")
-    if not block:
+    try:
+        with open(path) as f:
+            config = json.load(f)
+    except (OSError, ValueError) as exc:
+        raise ConfigError(f"{os.path.basename(path)}을(를) 읽을 수 없습니다: {exc}")
+    block = config.get("testFirst") if isinstance(config, dict) else None
+    if block is None:
         return None
-    return list(block.get("sourceGlobs") or []), list(block.get("testGlobs") or [])
+    if not isinstance(block, dict) or not (
+        is_glob_list(block.get("sourceGlobs")) and is_glob_list(block.get("testGlobs"))
+    ):
+        raise ConfigError(
+            'testFirst는 {"sourceGlobs": ["..."], "testGlobs": ["..."]} 형식이어야 '
+            "합니다(둘 다 비어 있지 않은 문자열 목록)."
+        )
+    return block["sourceGlobs"], block["testGlobs"]
 
 
 # --- command parsing (strip_heredoc_bodies/tokenize/split_segments/
@@ -396,6 +429,28 @@ def deny(message):
     sys.exit(2)
 
 
+def rule_errors(card):
+    """Bad lines under `## 비즈니스 규칙`, plus rules naming an AC the card
+    doesn't have."""
+    errors = list(card["errors"])
+    numbers = {n for n, _, _ in card["acs"]}
+    for k, n, text in card["rules"]:
+        if n not in numbers:
+            errors.append(f"- B{k} (AC #{n}) {text}  <- 카드에 AC #{n}이 없습니다")
+    return errors
+
+
+def deny_if_rules_malformed(card):
+    errors = rule_errors(card)
+    if errors:
+        deny(
+            f"{TAG} 태스크 카드의 '## 비즈니스 규칙' 절 형식이 틀렸습니다. "
+            f"한 줄에 규칙 하나, '{RULE_LINE}' 형식으로 적으세요 "
+            "(예: '- B1 (AC #1) 예상 토큰이 음수면 거부한다').\n"
+            "틀린 줄:\n" + "\n".join(f"  {e}" for e in errors)
+        )
+
+
 def deny_missing(task_id, missing, labels, why):
     lines = [f"  - {m}  {labels[m]}" for m in missing]
     deny(
@@ -412,6 +467,7 @@ def check_edit(cwd, path, source_globs, test_globs, card):
     rel = os.path.relpath(target, os.path.realpath(cwd)).replace(os.sep, "/")
     if not matches_any(rel, source_globs) or matches_any(rel, test_globs):
         return
+    deny_if_rules_malformed(card)
     task_id = card["id"]
     pending = [ac for ac in card["acs"] if not ac[1]]
     if not pending:
@@ -427,6 +483,7 @@ def check_edit(cwd, path, source_globs, test_globs, card):
 
 
 def check_done(cwd, test_globs, card):
+    deny_if_rules_malformed(card)
     task_id = card["id"]
     labels = {}
     for n, _, ac_text in card["acs"]:
@@ -463,7 +520,12 @@ def main():
 
     if not has_command("backlog") or not is_backlog_project(cwd):
         sys.exit(0)
-    globs = load_test_first(cwd)
+    config_error = None
+    try:
+        globs = load_test_first(cwd)
+    except ConfigError as exc:
+        config_error = str(exc)
+        globs = ([], [])
     if globs is None:
         sys.exit(0)
     source_globs, test_globs = globs
@@ -471,12 +533,21 @@ def main():
     branch = current_branch(cwd)
     if not branch.startswith("task/"):
         sys.exit(0)
-    text = task_view(cwd, branch[len("task/") :])
+    branch_task = branch[len("task/") :]
+    text = task_view(cwd, branch_task)
     if text is None:
         sys.exit(0)
     card = parse_card(text)
+    card["id"] = card["id"] or branch_task
     if not card["in_progress"]:
         sys.exit(0)
+
+    if config_error is not None:
+        # the opted-in project's config is broken: block, but keep the
+        # config itself editable so it can be fixed
+        if os.path.basename(path) in CONFIG_NAMES:
+            sys.exit(0)
+        deny(f"{TAG} testFirst 설정 오류: {config_error}")
 
     if tool_name == "Bash":
         if any(same_task(t, card["id"]) for t in targets):

@@ -365,3 +365,221 @@ def test_same_task_matches_id_forms():
     assert rtf.same_task("27", "AO-27")
     assert not rtf.same_task("2", "AO-27")
     assert not rtf.same_task("AO-270", "AO-27")
+
+
+# --- AC #3: no rules section, malformed rules, all ACs checked, non-targets ---
+
+
+def test_without_rules_section_only_ac_markers_are_needed(project, monkeypatch):
+    project.card = make_card([(False, "a")], desc="설명\n\n## 메모\n- B1 아무 형식")
+    project.write("src/test/java/a/T.java", "AO-27#1")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+    project.card = make_card([(True, "a")])
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 0
+
+
+@pytest.mark.parametrize(
+    "bad_line",
+    [
+        "- B1 상한과 같으면 고른다",
+        "- B1 (AC 1) 상한",
+        "- (AC #1) 상한",
+        "* B1 (AC #1) 상한",
+        "- B1 (AC #1)",
+        "B1 (AC #1) 상한",
+    ],
+)
+def test_malformed_rule_line_denies_with_expected_format(
+    project, monkeypatch, capsys, bad_line
+):
+    project.card = make_card([(False, "a")], rules=["- B2 (AC #1) 정상", bad_line])
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#B2")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 2
+    err = capsys.readouterr().err
+    assert err.startswith("[claude-code-agile-hooks]")
+    assert "- B<k> (AC #<n>) <규칙>" in err
+    assert bad_line.strip() in err
+
+
+def test_malformed_rules_deny_done_too(project, monkeypatch, capsys):
+    project.card = make_card([(True, "a")], rules=["- B1 규칙"])
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#B1")
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 2
+    assert "- B<k> (AC #<n>) <규칙>" in capsys.readouterr().err
+
+
+def test_rule_naming_a_missing_ac_is_a_format_error(project, monkeypatch, capsys):
+    project.card = make_card([(False, "a")], rules=["- B1 (AC #9) 없는 AC"])
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#B1")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 2
+    assert "AC #9" in capsys.readouterr().err
+
+
+def test_rules_section_ends_at_next_heading(project, monkeypatch):
+    project.card = make_card(
+        [(False, "a")], rules=["- B1 (AC #1) 규칙", "", "## 메모", "자유 형식 메모"]
+    )
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#B1")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_all_acs_checked_allows_source_edit(project, monkeypatch):
+    project.card = make_card([(True, "a"), (True, "b")], rules=["- B1 (AC #1) r"])
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_card_without_acs_allows_source_edit(project, monkeypatch):
+    project.card = make_card([])
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_task_id_falls_back_to_branch_when_card_has_no_header(
+    project, monkeypatch, capsys
+):
+    project.card = make_card([(False, "a")]).replace("Task AO-27 - 제목", "")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 2
+    assert "AO-27#1" in capsys.readouterr().err
+
+
+def test_passes_when_backlog_not_installed(project, monkeypatch):
+    monkeypatch.setattr(rtf, "has_command", lambda name: False)
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_passes_when_not_a_backlog_project(project, monkeypatch):
+    monkeypatch.setattr(rtf, "is_backlog_project", lambda cwd: False)
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_passes_without_project_config(project, monkeypatch):
+    os.remove(project.root / ".claude-code-agile-hooks.json")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_passes_when_config_has_no_test_first(project, monkeypatch):
+    project.config({"testCommand": "pytest"})
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"testFirst": ["src/**"]},
+        {"testFirst": {"sourceGlobs": "src/**", "testGlobs": ["t/**"]}},
+        {"testFirst": {"sourceGlobs": ["src/**"]}},
+        {"testFirst": {"sourceGlobs": [], "testGlobs": ["t/**"]}},
+        {"testFirst": {"sourceGlobs": ["src/**"], "testGlobs": [1]}},
+    ],
+)
+def test_malformed_test_first_config_denies(project, monkeypatch, capsys, config):
+    project.config(config)
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 2
+    assert "testFirst" in capsys.readouterr().err
+
+
+def test_unreadable_config_json_denies(project, monkeypatch, capsys):
+    project.write(".claude-code-agile-hooks.json", "{not json")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 2
+    assert "testFirst" in capsys.readouterr().err
+
+
+def test_passes_off_task_branch(project, monkeypatch):
+    project.branch = "main"
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_passes_when_task_not_in_progress(project, monkeypatch):
+    project.card = make_card([(False, "a")], status="○ To Do")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+def test_done_for_another_task_passes(project, monkeypatch):
+    project.card = make_card([(True, "a")])
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-28 -s Done")) == 0
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"tool_name": "Read", "tool_input": {"file_path": SOURCE}},
+        {"tool_name": "Edit", "tool_input": "not a dict"},
+        {"tool_name": "Edit", "tool_input": {}},
+        {},
+    ],
+)
+def test_other_payloads_pass(project, monkeypatch, payload):
+    payload = dict(payload, cwd=str(project.root))
+    assert run_main(monkeypatch, payload) == 0
+
+
+def test_main_exits_cleanly_on_malformed_stdin(monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO("not json"))
+    with pytest.raises(SystemExit) as exc_info:
+        rtf.main()
+    assert exc_info.value.code == 0
+
+
+# --- subprocess wrappers ---
+
+
+class Done:
+    def __init__(self, returncode, stdout):
+        self.returncode = returncode
+        self.stdout = stdout
+
+
+def test_task_view_returns_stdout_or_none(monkeypatch):
+    calls = []
+
+    def fake_run(args, **kwargs):
+        calls.append((args, kwargs.get("cwd")))
+        return Done(0, "card")
+
+    monkeypatch.setattr(rtf.subprocess, "run", fake_run)
+    assert rtf.task_view("/p", "AO-27") == "card"
+    assert calls == [(["backlog", "task", "view", "AO-27", "--plain"], "/p")]
+    monkeypatch.setattr(rtf.subprocess, "run", lambda *a, **k: Done(1, "err"))
+    assert rtf.task_view("/p", "AO-27") is None
+
+
+def test_current_branch_strips_output(monkeypatch):
+    monkeypatch.setattr(rtf.subprocess, "run", lambda *a, **k: Done(0, "task/AO-27\n"))
+    assert rtf.current_branch("/p") == "task/AO-27"
+
+
+def test_malformed_config_still_lets_the_config_be_fixed(project, monkeypatch):
+    project.config({"testFirst": ["src/**"]})
+    assert run_main(monkeypatch, edit(project, ".claude-code-agile-hooks.json")) == 0
+    assert run_main(monkeypatch, edit(project, ".claude-rails.json")) == 0
+    assert run_main(monkeypatch, edit(project, "README.md")) == 2
+
+
+def test_malformed_config_off_task_branch_passes(project, monkeypatch):
+    project.config({"testFirst": ["src/**"]})
+    project.branch = "main"
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+
+
+# --- copied helpers (REGISTRY keeps them identical to their originals) ---
+
+
+def test_has_command_and_is_backlog_project(tmp_path):
+    assert rtf.has_command("python3")
+    assert not rtf.has_command("definitely-not-a-command-xyz")
+    assert not rtf.is_backlog_project("")
+    assert not rtf.is_backlog_project(str(tmp_path))
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "backlog").mkdir()
+    (tmp_path / "backlog" / "config.yml").write_text("x")
+    assert rtf.is_backlog_project(str(tmp_path))
+
+
+def test_is_outside_project(tmp_path):
+    assert not rtf.is_outside_project("", str(tmp_path))
+    assert not rtf.is_outside_project("a/b", str(tmp_path))
+    assert rtf.is_outside_project("../x", str(tmp_path))
+
+
+def test_done_targets_skip_wrapper_flags():
+    assert rtf.done_targets("sudo -E -H backlog task edit X-1 -s Done") == ["X-1"]
+    assert rtf.done_targets("FOO=1 sudo -E") == []
