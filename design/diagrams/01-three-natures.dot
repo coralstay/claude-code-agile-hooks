@@ -1,0 +1,93 @@
+// 3.01 시스템 구성 — Claude Code 훅 이벤트 × 훅의 세 가지 성격.
+// 왼쪽 열은 훅 생애주기 이벤트, 오른쪽 세 클러스터는 성격별 훅(32개, 각 훅은 한 성격에만 속한다).
+// 간선 하나 = settings.hooks.json의 등록 하나(이벤트 · matcher). 굵은 실선은 막을 수 있는 등록,
+// 점선은 기록 · 주입 · 경고만 하는 등록이다. 색은 센티넬 hex(_common.gv) — build-diagrams.py가 치환한다.
+digraph three_natures {
+  bgcolor="transparent"; rankdir=LR; nodesep=0.10; ranksep=2.2; newrank=true;
+  node [shape=box, style="filled,rounded", fillcolor="#f00004", color="#f00003",
+        fontcolor="#f00001", fontname="Helvetica", fontsize=10, margin="0.12,0.05", penwidth=1.1];
+  edge [color="#f00003", arrowsize=0.55, penwidth=0.9];
+
+  subgraph cluster_events {
+    label="Claude Code 훅 이벤트"; fontname="Helvetica"; fontsize=11; fontcolor="#f00002";
+    style="rounded,dashed"; color="#f00003";
+    node [fillcolor="#f00007", color="#f00006", fontcolor="#f00008", fontsize=10.5];
+    SessionStart; UserPromptSubmit; InstructionsLoaded; PreToolUse; PermissionRequest;
+    PostToolUse; PostToolUseFailure; Stop; PreCompact; ConfigChange; SessionEnd;
+    SessionStart -> UserPromptSubmit -> InstructionsLoaded -> PreToolUse -> PermissionRequest
+      -> PostToolUse -> PostToolUseFailure -> Stop -> PreCompact -> ConfigChange -> SessionEnd
+      [style=invis];
+    { rank=same; SessionStart; UserPromptSubmit; InstructionsLoaded; PreToolUse; PermissionRequest;
+      PostToolUse; PostToolUseFailure; Stop; PreCompact; ConfigChange; SessionEnd; }
+  }
+
+  subgraph cluster_proc {
+    label="① 절차 강제 (8)"; fontname="Helvetica"; fontsize=11; fontcolor="#f00009";
+    style="rounded,filled"; fillcolor="#f0000a"; color="#f00009";
+    node [color="#f00009"];
+    session_start; require_draft_first; backlog_commit_scope; require_active_task;
+    pre_commit_check; auto_stage; block_stop_if_dirty; pre_push_check;
+  }
+
+  subgraph cluster_gate {
+    label="② 품질 · 안전 게이트 (12)"; fontname="Helvetica"; fontsize=11; fontcolor="#f0000b";
+    style="rounded,filled"; fillcolor="#f0000c"; color="#f0000b";
+    node [color="#f0000b"];
+    instructions_audit; protect_secrets; protect_tests; config_guard; block_dangerous_commands;
+    case_insensitive_guard; pre_git_safety_check; pre_push_coverage_check; dedup_drift_guard;
+    permission_auto_allow; reserved_tag_guard; config_watch;
+  }
+
+  subgraph cluster_obs {
+    label="③ 기록 · 관측 (12)"; fontname="Helvetica"; fontsize=11; fontcolor="#f0000f";
+    style="rounded,filled"; fillcolor="#f00010"; color="#f0000f";
+    node [color="#f0000f"];
+    session_logger; standup_autopilot; recap_archive; dead_end_registry; dead_rules_audit;
+    nerf_receipts; context_hogs; pipeline_trace; bounty_board; context_flags;
+    pre_compact_backup; pr_provenance_stamp;
+  }
+
+  // ① 절차 강제
+  edge [color="#f00009"];
+  SessionStart -> session_start [style=dashed];
+  PreToolUse -> require_draft_first [penwidth=1.6];
+  PreToolUse -> backlog_commit_scope [penwidth=1.6];
+  PreToolUse -> require_active_task [penwidth=1.6];
+  PreToolUse -> pre_commit_check [penwidth=1.6];
+  PreToolUse -> pre_push_check [penwidth=1.6];
+  PostToolUse -> auto_stage [style=dashed];
+  Stop -> block_stop_if_dirty [penwidth=1.6];
+
+  // ② 품질 · 안전 게이트
+  edge [color="#f0000b"];
+  InstructionsLoaded -> instructions_audit [style=dashed];
+  UserPromptSubmit -> instructions_audit [penwidth=1.6];
+  PreToolUse -> instructions_audit [penwidth=1.6];
+  PreToolUse -> protect_secrets [penwidth=1.6];
+  PreToolUse -> protect_tests [penwidth=1.6];
+  PreToolUse -> config_guard [penwidth=1.6];
+  PreToolUse -> block_dangerous_commands [penwidth=1.6];
+  PreToolUse -> case_insensitive_guard [penwidth=1.6];
+  PreToolUse -> pre_git_safety_check [penwidth=1.6];
+  PreToolUse -> pre_push_coverage_check [penwidth=1.6];
+  PreToolUse -> dedup_drift_guard [penwidth=1.6];
+  PermissionRequest -> permission_auto_allow [style=dashed];
+  Stop -> reserved_tag_guard [penwidth=1.6];
+  ConfigChange -> config_watch [penwidth=1.6];
+
+  // ③ 기록 · 관측
+  edge [color="#f0000f", style=dashed];
+  SessionStart -> session_logger; UserPromptSubmit -> session_logger;
+  PostToolUse -> session_logger; SessionEnd -> session_logger;
+  SessionStart -> standup_autopilot; Stop -> standup_autopilot; SessionEnd -> standup_autopilot;
+  SessionStart -> recap_archive; SessionEnd -> recap_archive;
+  UserPromptSubmit -> dead_end_registry; PreToolUse -> dead_end_registry;
+  SessionStart -> dead_rules_audit; PostToolUse -> dead_rules_audit; SessionEnd -> dead_rules_audit;
+  PostToolUse -> nerf_receipts; PostToolUseFailure -> nerf_receipts; Stop -> nerf_receipts;
+  PostToolUse -> context_hogs;
+  UserPromptSubmit -> pipeline_trace; PostToolUse -> pipeline_trace; Stop -> pipeline_trace;
+  SessionStart -> bounty_board; PostToolUse -> bounty_board;
+  SessionStart -> context_flags; PreCompact -> context_flags; Stop -> context_flags;
+  PreCompact -> pre_compact_backup;
+  PreToolUse -> pr_provenance_stamp;
+}

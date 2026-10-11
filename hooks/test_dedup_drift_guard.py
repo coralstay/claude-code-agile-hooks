@@ -91,6 +91,10 @@ BASELINE_BODIES = {
         def command_runs_git(command, subcommand):
             return False
         """,
+    "project_config_path": """
+        def project_config_path(cwd):
+            return None
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -158,7 +162,7 @@ def test_no_op_when_command_is_not_a_commit(monkeypatch, tmp_path):
 
 
 def test_passes_when_hooks_dir_missing_registry_files(monkeypatch, tmp_path):
-    # self-guard: not the claude-rails repo (no hooks/ at all)
+    # self-guard: not the claude-code-agile-hooks repo (no hooks/ at all)
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 0
 
 
@@ -217,6 +221,11 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_push_coverage_check.py",
     ]
     assert "current_branch" not in ddg.REGISTRY
+    # TASK-54: 설정 파일 이름 fallback 헬퍼도 두 게이트에 복사돼 있다
+    assert ddg.REGISTRY["project_config_path"] == [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+    ]
 
 
 def test_registry_covers_task29_draft_workflow_hooks():

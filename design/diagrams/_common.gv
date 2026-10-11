@@ -1,0 +1,6 @@
+// 이 파일은 참고용 주석이다. 실제 공통 설정은 각 .dot 상단에 복제돼 있다.
+// 색은 전부 센티넬 hex로 쓰고, build-diagrams.py가 CSS 변수로 치환한다.
+//   #f00001 ink   #f00002 ink-muted  #f00003 line    #f00004 surface
+//   #f00005 surface-2  #f00006 accent  #f00007 accent-bg  #f00008 accent-ink
+//   #f00009 role-impl  #f0000a role-impl-bg  #f0000b role-review  #f0000c role-review-bg
+//   #f0000d role-verify #f0000e role-verify-bg #f0000f role-logger #f00010 role-logger-bg

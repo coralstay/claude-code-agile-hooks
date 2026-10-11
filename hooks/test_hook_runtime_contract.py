@@ -8,11 +8,11 @@ is installed), a crash on an empty or broken stdin, an exit code Claude Code
 reads as "block" where the hook meant "pass". This file checks that form:
 
 1. Files: every registered command is `python3 $HOME/.claude/hooks/
-   claude-rails/<name>.py` with an existing hooks/<name>.py, every hook has
+   claude-code-agile-hooks/<name>.py` with an existing hooks/<name>.py, every hook has
    a hooks/test_<name>.py, and every hook is registered somewhere (or is
    listed in UNREGISTERED_BY_DESIGN with a reason).
 2. Runtime: every (event, tool) registration is run the way Claude Code
-   runs it - the hook files copied to $HOME/.claude/hooks/claude-rails as
+   runs it - the hook files copied to $HOME/.claude/hooks/claude-code-agile-hooks as
    install.sh does, the registered command string run through `sh -c` -
    with an empty stdin, malformed JSON and a minimal valid payload for the
    event. No traceback, exit code 0 (EXPECTED_EXIT lists reasoned
@@ -39,9 +39,9 @@ HOOKS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(HOOKS_DIR)
 SETTINGS = os.path.join(REPO_ROOT, "settings.hooks.json")
 COMMAND_RE = re.compile(
-    r"^python3 \$HOME/\.claude/hooks/claude-rails/([a-z0-9_]+)\.py$"
+    r"^python3 \$HOME/\.claude/hooks/claude-code-agile-hooks/([a-z0-9_]+)\.py$"
 )
-INSTALL_SUBDIR = os.path.join(".claude", "hooks", "claude-rails")
+INSTALL_SUBDIR = os.path.join(".claude", "hooks", "claude-code-agile-hooks")
 RUN_TIMEOUT = 20
 
 # hook files deliberately not registered in settings.hooks.json: name -> reason
@@ -128,7 +128,7 @@ def test_registered_command_points_to_an_existing_hook(event, matcher, command):
     name = hook_name(command)
     assert name, (
         f"{event} command {command!r} is not `python3 $HOME/.claude/hooks/"
-        "claude-rails/<name>.py` - install.sh only installs that layout"
+        "claude-code-agile-hooks/<name>.py` - install.sh only installs that layout"
     )
     assert os.path.isfile(os.path.join(HOOKS_DIR, f"{name}.py")), (
         f"{event} registers {name}.py, which is not in hooks/"
@@ -326,7 +326,7 @@ def test_sandbox_redirects_the_default_log_paths(sandbox):
     """The isolation is real: a hook that logs under ~/.claude/hooks-logs
     writes into the tmp HOME (if HOME were ignored this would land in the
     real one)."""
-    command = "python3 $HOME/.claude/hooks/claude-rails/session_logger.py"
+    command = "python3 $HOME/.claude/hooks/claude-code-agile-hooks/session_logger.py"
     stdin = stdin_for(
         "valid", "UserPromptSubmit", None, str(sandbox["work"]), sandbox["transcript"]
     )

@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg data-generated-by="design/build-diagrams.py" role="img" aria-label="01-three-natures" width="576pt" height="1509pt"
+ viewBox="0.00 0.00 576.00 1509.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<style>:root { --diagram-ink: #1a2330; --diagram-muted: #51616c; --diagram-line: #c9d3d8; --diagram-surface: #ffffff; --diagram-surface-2: #eaf0f2; --diagram-accent: #0e7c86; --diagram-accent-bg: #d8eeef; --diagram-accent-ink: #08565d; --diagram-impl: #2b6cb0; --diagram-impl-bg: #dbe9f7; --diagram-review: #7c3aed; --diagram-review-bg: #ece3fc; --diagram-verify: #2f855a; --diagram-verify-bg: #def0e6; --diagram-logger: #5b6b78; --diagram-logger-bg: #e4e9ec; }
+@media (prefers-color-scheme: dark) { :root { --diagram-ink: #e7eef2; --diagram-muted: #9aaab4; --diagram-line: #2e3d47; --diagram-surface: #182129; --diagram-surface-2: #1f2a33; --diagram-accent: #3fc4ce; --diagram-accent-bg: #163238; --diagram-accent-ink: #8ee3e9; --diagram-impl: #7db3e8; --diagram-impl-bg: #1c2c3d; --diagram-review: #b79bf5; --diagram-review-bg: #291f3d; --diagram-verify: #7cd1a3; --diagram-verify-bg: #173226; --diagram-logger: #a6b4bd; --diagram-logger-bg: #232e36; } }</style>
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 1505)">
+<title>three_natures</title>
+<g id="clust1" class="cluster">
+<title>cluster_events</title>
+<path fill="none" stroke="var(--diagram-line)" stroke-dasharray="5,2" d="M144.46,-477C144.46,-477 245.99,-477 245.99,-477 251.99,-477 257.99,-483 257.99,-489 257.99,-489 257.99,-969 257.99,-969 257.99,-975 251.99,-981 245.99,-981 245.99,-981 144.46,-981 144.46,-981 138.46,-981 132.46,-975 132.46,-969 132.46,-969 132.46,-489 132.46,-489 132.46,-483 138.46,-477 144.46,-477"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-966.55" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="11.00" fill="var(--diagram-muted)">Claude Code 훅 이벤트</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_proc</title>
+<path fill="var(--diagram-impl-bg)" stroke="var(--diagram-impl)" d="M423.99,-1118C423.99,-1118 536.02,-1118 536.02,-1118 542.02,-1118 548.02,-1124 548.02,-1130 548.02,-1130 548.02,-1481 548.02,-1481 548.02,-1487 542.02,-1493 536.02,-1493 536.02,-1493 423.99,-1493 423.99,-1493 417.99,-1493 411.99,-1487 411.99,-1481 411.99,-1481 411.99,-1130 411.99,-1130 411.99,-1124 417.99,-1118 423.99,-1118"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1478.55" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="11.00" fill="var(--diagram-impl)">① 절차 강제 (8)</text>
+</g>
+<g id="clust4" class="cluster">
+<title>cluster_gate</title>
+<path fill="var(--diagram-review-bg)" stroke="var(--diagram-review)" d="M411.99,-8C411.99,-8 548.02,-8 548.02,-8 554.02,-8 560.02,-14 560.02,-20 560.02,-20 560.02,-543 560.02,-543 560.02,-549 554.02,-555 548.02,-555 548.02,-555 411.99,-555 411.99,-555 405.99,-555 399.99,-549 399.99,-543 399.99,-543 399.99,-20 399.99,-20 399.99,-14 405.99,-8 411.99,-8"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-540.55" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="11.00" fill="var(--diagram-review)">② 품질 · 안전 게이트 (12)</text>
+</g>
+<g id="clust5" class="cluster">
+<title>cluster_obs</title>
+<path fill="var(--diagram-logger-bg)" stroke="var(--diagram-logger)" d="M427.36,-563C427.36,-563 532.64,-563 532.64,-563 538.64,-563 544.64,-569 544.64,-575 544.64,-575 544.64,-1098 544.64,-1098 544.64,-1104 538.64,-1110 532.64,-1110 532.64,-1110 427.36,-1110 427.36,-1110 421.36,-1110 415.36,-1104 415.36,-1098 415.36,-1098 415.36,-575 415.36,-575 415.36,-569 421.36,-563 427.36,-563"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1095.55" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="11.00" fill="var(--diagram-logger)">③ 기록 · 관측 (12)</text>
+</g>
+<g id="node1" class="node">
+<title>SessionStart</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M221.86,-908C221.86,-908 168.58,-908 168.58,-908 162.58,-908 156.58,-902 156.58,-896 156.58,-896 156.58,-884 156.58,-884 156.58,-878 162.58,-872 168.58,-872 168.58,-872 221.86,-872 221.86,-872 227.86,-872 233.86,-878 233.86,-884 233.86,-884 233.86,-896 233.86,-896 233.86,-902 227.86,-908 221.86,-908"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-885.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">SessionStart</text>
+</g>
+<g id="node2" class="node">
+<title>UserPromptSubmit</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M236.86,-693C236.86,-693 153.58,-693 153.58,-693 147.58,-693 141.58,-687 141.58,-681 141.58,-681 141.58,-669 141.58,-669 141.58,-663 147.58,-657 153.58,-657 153.58,-657 236.86,-657 236.86,-657 242.86,-657 248.86,-663 248.86,-669 248.86,-669 248.86,-681 248.86,-681 248.86,-687 242.86,-693 236.86,-693"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-670.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">UserPromptSubmit</text>
+</g>
+<g id="node12" class="node">
+<title>session_start</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M505.89,-1463C505.89,-1463 454.11,-1463 454.11,-1463 448.11,-1463 442.11,-1457 442.11,-1451 442.11,-1451 442.11,-1439 442.11,-1439 442.11,-1433 448.11,-1427 454.11,-1427 454.11,-1427 505.89,-1427 505.89,-1427 511.89,-1427 517.89,-1433 517.89,-1439 517.89,-1439 517.89,-1451 517.89,-1451 517.89,-1457 511.89,-1463 505.89,-1463"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1441.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">session_start</text>
+</g>
+<g id="edge11" class="edge">
+<title>SessionStart&#45;&gt;session_start</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.22,-897.21C243,-900.46 251.62,-905.17 257.99,-912 418.63,-1084.5 233.35,-1256.28 399.99,-1423 409.33,-1432.35 422.29,-1437.81 435.01,-1440.97"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="0.9" points="434.5,-1442.83 440.28,-1442.14 435.33,-1439.07 434.5,-1442.83"/>
+</g>
+<g id="node32" class="node">
+<title>session_logger</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M509.27,-822C509.27,-822 450.74,-822 450.74,-822 444.74,-822 438.74,-816 438.74,-810 438.74,-810 438.74,-798 438.74,-798 438.74,-792 444.74,-786 450.74,-786 450.74,-786 509.27,-786 509.27,-786 515.27,-786 521.27,-792 521.27,-798 521.27,-798 521.27,-810 521.27,-810 521.27,-816 515.27,-822 509.27,-822"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-800.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">session_logger</text>
+</g>
+<g id="edge33" class="edge">
+<title>SessionStart&#45;&gt;session_logger</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.04,-877.71C274.86,-864.55 341.86,-843.22 399.99,-826 410.27,-822.95 421.35,-819.79 431.87,-816.85"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="432.23,-818.75 437.01,-815.42 431.2,-815.04 432.23,-818.75"/>
+</g>
+<g id="node33" class="node">
+<title>standup_autopilot</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M514.89,-865C514.89,-865 445.11,-865 445.11,-865 439.11,-865 433.11,-859 433.11,-853 433.11,-853 433.11,-841 433.11,-841 433.11,-835 439.11,-829 445.11,-829 445.11,-829 514.89,-829 514.89,-829 520.89,-829 526.89,-835 526.89,-841 526.89,-841 526.89,-853 526.89,-853 526.89,-859 520.89,-865 514.89,-865"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-843.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">standup_autopilot</text>
+</g>
+<g id="edge37" class="edge">
+<title>SessionStart&#45;&gt;standup_autopilot</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.36,-884.2C283.76,-876.69 370.13,-863.55 425.92,-855.07"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="426.07,-857 431.22,-854.27 425.49,-853.19 426.07,-857"/>
+</g>
+<g id="node34" class="node">
+<title>recap_archive</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M507.02,-994C507.02,-994 452.99,-994 452.99,-994 446.99,-994 440.99,-988 440.99,-982 440.99,-982 440.99,-970 440.99,-970 440.99,-964 446.99,-958 452.99,-958 452.99,-958 507.02,-958 507.02,-958 513.02,-958 519.02,-964 519.02,-970 519.02,-970 519.02,-982 519.02,-982 519.02,-988 513.02,-994 507.02,-994"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-972.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">recap_archive</text>
+</g>
+<g id="edge40" class="edge">
+<title>SessionStart&#45;&gt;recap_archive</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.04,-902.29C274.86,-915.45 341.86,-936.78 399.99,-954 411.06,-957.28 423.04,-960.69 434.25,-963.82"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="433.62,-965.64 439.44,-965.26 434.65,-961.93 433.62,-965.64"/>
+</g>
+<g id="node36" class="node">
+<title>dead_rules_audit</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M513.39,-908C513.39,-908 446.61,-908 446.61,-908 440.61,-908 434.61,-902 434.61,-896 434.61,-896 434.61,-884 434.61,-884 434.61,-878 440.61,-872 446.61,-872 446.61,-872 513.39,-872 513.39,-872 519.39,-872 525.39,-878 525.39,-884 525.39,-884 525.39,-896 525.39,-896 525.39,-902 519.39,-908 513.39,-908"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-886.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">dead_rules_audit</text>
+</g>
+<g id="edge44" class="edge">
+<title>SessionStart&#45;&gt;dead_rules_audit</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.36,-890C284.34,-890 372.16,-890 427.87,-890"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="427.64,-891.93 433.14,-890 427.64,-888.08 427.64,-891.93"/>
+</g>
+<g id="node40" class="node">
+<title>bounty_board</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M505.89,-951C505.89,-951 454.11,-951 454.11,-951 448.11,-951 442.11,-945 442.11,-939 442.11,-939 442.11,-927 442.11,-927 442.11,-921 448.11,-915 454.11,-915 454.11,-915 505.89,-915 505.89,-915 511.89,-915 517.89,-921 517.89,-927 517.89,-927 517.89,-939 517.89,-939 517.89,-945 511.89,-951 505.89,-951"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-929.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">bounty_board</text>
+</g>
+<g id="edge54" class="edge">
+<title>SessionStart&#45;&gt;bounty_board</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.36,-895.8C286.65,-903.75 380.39,-918.01 435.4,-926.37"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.84,-928.23 440.57,-927.16 435.42,-924.43 434.84,-928.23"/>
+</g>
+<g id="node41" class="node">
+<title>context_flags</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M505.89,-1037C505.89,-1037 454.11,-1037 454.11,-1037 448.11,-1037 442.11,-1031 442.11,-1025 442.11,-1025 442.11,-1013 442.11,-1013 442.11,-1007 448.11,-1001 454.11,-1001 454.11,-1001 505.89,-1001 505.89,-1001 511.89,-1001 517.89,-1007 517.89,-1013 517.89,-1013 517.89,-1025 517.89,-1025 517.89,-1031 511.89,-1037 505.89,-1037"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1015.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">context_flags</text>
+</g>
+<g id="edge56" class="edge">
+<title>SessionStart&#45;&gt;context_flags</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M234.26,-902.22C242.22,-905.14 250.47,-908.45 257.99,-912 324.51,-943.38 332.4,-967.99 399.99,-997 411.14,-1001.79 423.62,-1005.82 435.31,-1009.08"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.59,-1010.88 440.4,-1010.45 435.59,-1007.16 434.59,-1010.88"/>
+</g>
+<g id="node3" class="node">
+<title>InstructionsLoaded</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M237.24,-564C237.24,-564 153.21,-564 153.21,-564 147.21,-564 141.21,-558 141.21,-552 141.21,-552 141.21,-540 141.21,-540 141.21,-534 147.21,-528 153.21,-528 153.21,-528 237.24,-528 237.24,-528 243.24,-528 249.24,-534 249.24,-540 249.24,-540 249.24,-552 249.24,-552 249.24,-558 243.24,-564 237.24,-564"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-541.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">InstructionsLoaded</text>
+</g>
+<g id="node20" class="node">
+<title>instructions_audit</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M514.89,-396C514.89,-396 445.11,-396 445.11,-396 439.11,-396 433.11,-390 433.11,-384 433.11,-384 433.11,-372 433.11,-372 433.11,-366 439.11,-360 445.11,-360 445.11,-360 514.89,-360 514.89,-360 520.89,-360 526.89,-366 526.89,-372 526.89,-372 526.89,-384 526.89,-384 526.89,-390 520.89,-396 514.89,-396"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-374.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">instructions_audit</text>
+</g>
+<g id="edge20" class="edge">
+<title>UserPromptSubmit&#45;&gt;instructions_audit</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M249.24,-659.16C252.34,-657.32 255.29,-655.28 257.99,-653 356.54,-569.86 298.55,-479.61 399.99,-400 407.41,-394.17 416.29,-389.89 425.37,-386.74"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="425.69,-388.66 430.36,-385.17 424.53,-384.98 425.69,-388.66"/>
+</g>
+<g id="edge34" class="edge">
+<title>UserPromptSubmit&#45;&gt;session_logger</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M249.4,-693.17C252.33,-694.41 255.21,-695.69 257.99,-697 324.51,-728.38 332.4,-752.99 399.99,-782 410.06,-786.33 421.23,-790.04 431.92,-793.12"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="431.37,-794.96 437.18,-794.59 432.4,-791.26 431.37,-794.96"/>
+</g>
+<g id="node35" class="node">
+<title>dead_end_registry</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M516.39,-650C516.39,-650 443.61,-650 443.61,-650 437.61,-650 431.61,-644 431.61,-638 431.61,-638 431.61,-626 431.61,-626 431.61,-620 437.61,-614 443.61,-614 443.61,-614 516.39,-614 516.39,-614 522.39,-614 528.39,-620 528.39,-626 528.39,-626 528.39,-638 528.39,-638 528.39,-644 522.39,-650 516.39,-650"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-628.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">dead_end_registry</text>
+</g>
+<g id="edge42" class="edge">
+<title>UserPromptSubmit&#45;&gt;dead_end_registry</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M249.41,-666.91C299.48,-659.3 374.12,-647.95 424.58,-640.28"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="424.73,-642.2 429.88,-639.47 424.15,-638.39 424.73,-642.2"/>
+</g>
+<g id="node39" class="node">
+<title>pipeline_trace</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M506.64,-693C506.64,-693 453.36,-693 453.36,-693 447.36,-693 441.36,-687 441.36,-681 441.36,-681 441.36,-669 441.36,-669 441.36,-663 447.36,-657 453.36,-657 453.36,-657 506.64,-657 506.64,-657 512.64,-657 518.64,-663 518.64,-669 518.64,-669 518.64,-681 518.64,-681 518.64,-687 512.64,-693 506.64,-693"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-671.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pipeline_trace</text>
+</g>
+<g id="edge51" class="edge">
+<title>UserPromptSubmit&#45;&gt;pipeline_trace</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M249.41,-675C302.85,-675 384.27,-675 434.42,-675"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.12,-676.93 439.62,-675 434.12,-673.08 434.12,-676.93"/>
+</g>
+<g id="node4" class="node">
+<title>PreToolUse</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M219.24,-521C219.24,-521 171.21,-521 171.21,-521 165.21,-521 159.21,-515 159.21,-509 159.21,-509 159.21,-497 159.21,-497 159.21,-491 165.21,-485 171.21,-485 171.21,-485 219.24,-485 219.24,-485 225.24,-485 231.24,-491 231.24,-497 231.24,-497 231.24,-509 231.24,-509 231.24,-515 225.24,-521 219.24,-521"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-498.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">PreToolUse</text>
+</g>
+<g id="edge19" class="edge">
+<title>InstructionsLoaded&#45;&gt;instructions_audit</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="0.9" stroke-dasharray="5,2" d="M249.7,-528.41C252.55,-527.02 255.33,-525.55 257.99,-524 330.28,-481.64 326.24,-439.78 399.99,-400 408.23,-395.55 417.46,-391.94 426.62,-389.02"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="0.9" points="426.93,-390.94 431.64,-387.5 425.82,-387.25 426.93,-390.94"/>
+</g>
+<g id="node5" class="node">
+<title>PermissionRequest</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M237.99,-607C237.99,-607 152.46,-607 152.46,-607 146.46,-607 140.46,-601 140.46,-595 140.46,-595 140.46,-583 140.46,-583 140.46,-577 146.46,-571 152.46,-571 152.46,-571 237.99,-571 237.99,-571 243.99,-571 249.99,-577 249.99,-583 249.99,-583 249.99,-595 249.99,-595 249.99,-601 243.99,-607 237.99,-607"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-584.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">PermissionRequest</text>
+</g>
+<g id="node13" class="node">
+<title>require_draft_first</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M514.52,-1334C514.52,-1334 445.49,-1334 445.49,-1334 439.49,-1334 433.49,-1328 433.49,-1322 433.49,-1322 433.49,-1310 433.49,-1310 433.49,-1304 439.49,-1298 445.49,-1298 445.49,-1298 514.52,-1298 514.52,-1298 520.52,-1298 526.52,-1304 526.52,-1310 526.52,-1310 526.52,-1322 526.52,-1322 526.52,-1328 520.52,-1334 514.52,-1334"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1312.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">require_draft_first</text>
+</g>
+<g id="edge12" class="edge">
+<title>PreToolUse&#45;&gt;require_draft_first</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="1.6" d="M231.75,-508.81C241.52,-512.06 251.27,-517.11 257.99,-525 483.37,-789.57 165.4,-1037.56 399.99,-1294 406.88,-1301.54 416.11,-1306.58 425.83,-1309.93"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="1.6" points="425.19,-1311.74 431.01,-1311.48 426.29,-1308.06 425.19,-1311.74"/>
+</g>
+<g id="node14" class="node">
+<title>backlog_commit_scope</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M528.02,-1162C528.02,-1162 431.99,-1162 431.99,-1162 425.99,-1162 419.99,-1156 419.99,-1150 419.99,-1150 419.99,-1138 419.99,-1138 419.99,-1132 425.99,-1126 431.99,-1126 431.99,-1126 528.02,-1126 528.02,-1126 534.02,-1126 540.02,-1132 540.02,-1138 540.02,-1138 540.02,-1150 540.02,-1150 540.02,-1156 534.02,-1162 528.02,-1162"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1140.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">backlog_commit_scope</text>
+</g>
+<g id="edge13" class="edge">
+<title>PreToolUse&#45;&gt;backlog_commit_scope</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="1.6" d="M231.48,-509.04C241.25,-512.3 251.05,-517.3 257.99,-525 437.33,-724.12 226.03,-907.15 399.99,-1111 403.7,-1115.35 408.09,-1119.14 412.86,-1122.44"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="1.6" points="411.83,-1124.07 417.52,-1125.36 413.87,-1120.81 411.83,-1124.07"/>
+</g>
+<g id="node15" class="node">
+<title>require_active_task</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M519.02,-1248C519.02,-1248 440.99,-1248 440.99,-1248 434.99,-1248 428.99,-1242 428.99,-1236 428.99,-1236 428.99,-1224 428.99,-1224 428.99,-1218 434.99,-1212 440.99,-1212 440.99,-1212 519.02,-1212 519.02,-1212 525.02,-1212 531.02,-1218 531.02,-1224 531.02,-1224 531.02,-1236 531.02,-1236 531.02,-1242 525.02,-1248 519.02,-1248"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1226.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">require_active_task</text>
+</g>
+<g id="edge14" class="edge">
+<title>PreToolUse&#45;&gt;require_active_task</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="1.6" d="M231.64,-508.9C241.41,-512.15 251.18,-517.19 257.99,-525 461.68,-758.75 188.17,-981.59 399.99,-1208 405.8,-1214.21 413.19,-1218.72 421.13,-1221.98"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="1.6" points="420.42,-1223.78 426.25,-1223.83 421.72,-1220.15 420.42,-1223.78"/>
+</g>
+<g id="node16" class="node">
+<title>pre_commit_check</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M517.89,-1291C517.89,-1291 442.11,-1291 442.11,-1291 436.11,-1291 430.11,-1285 430.11,-1279 430.11,-1279 430.11,-1267 430.11,-1267 430.11,-1261 436.11,-1255 442.11,-1255 442.11,-1255 517.89,-1255 517.89,-1255 523.89,-1255 529.89,-1261 529.89,-1267 529.89,-1267 529.89,-1279 529.89,-1279 529.89,-1285 523.89,-1291 517.89,-1291"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1269.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pre_commit_check</text>
+</g>
+<g id="edge15" class="edge">
+<title>PreToolUse&#45;&gt;pre_commit_check</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="1.6" d="M231.7,-508.85C241.47,-512.1 251.23,-517.15 257.99,-525 472.52,-774.14 176.79,-1009.58 399.99,-1251 406.04,-1257.55 413.87,-1262.21 422.23,-1265.52"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="1.6" points="421.57,-1267.33 427.4,-1267.3 422.83,-1263.69 421.57,-1267.33"/>
+</g>
+<g id="node19" class="node">
+<title>pre_push_check</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M512.27,-1205C512.27,-1205 447.74,-1205 447.74,-1205 441.74,-1205 435.74,-1199 435.74,-1193 435.74,-1193 435.74,-1181 435.74,-1181 435.74,-1175 441.74,-1169 447.74,-1169 447.74,-1169 512.27,-1169 512.27,-1169 518.27,-1169 524.27,-1175 524.27,-1181 524.27,-1181 524.27,-1193 524.27,-1193 524.27,-1199 518.27,-1205 512.27,-1205"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1183.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pre_push_check</text>
+</g>
+<g id="edge16" class="edge">
+<title>PreToolUse&#45;&gt;pre_push_check</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="1.6" d="M231.57,-508.96C241.34,-512.21 251.13,-517.24 257.99,-525 450.87,-743.38 199.52,-953.57 399.99,-1165 407.4,-1172.82 417.33,-1177.93 427.64,-1181.27"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="1.6" points="427.04,-1183.1 432.86,-1182.73 428.08,-1179.39 427.04,-1183.1"/>
+</g>
+<g id="edge21" class="edge">
+<title>PreToolUse&#45;&gt;instructions_audit</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M227.79,-484.58C267.1,-462.22 336.79,-424.5 399.99,-400 408.1,-396.86 416.84,-393.96 425.45,-391.37"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="425.89,-393.25 430.63,-389.86 424.81,-389.55 425.89,-393.25"/>
+</g>
+<g id="node21" class="node">
+<title>protect_secrets</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M510.39,-52C510.39,-52 449.61,-52 449.61,-52 443.61,-52 437.61,-46 437.61,-40 437.61,-40 437.61,-28 437.61,-28 437.61,-22 443.61,-16 449.61,-16 449.61,-16 510.39,-16 510.39,-16 516.39,-16 522.39,-22 522.39,-28 522.39,-28 522.39,-40 522.39,-40 522.39,-46 516.39,-52 510.39,-52"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-30.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">protect_secrets</text>
+</g>
+<g id="edge22" class="edge">
+<title>PreToolUse&#45;&gt;protect_secrets</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M198.94,-484.83C210.05,-417.11 258.34,-177.09 399.99,-56 408.43,-48.78 419.06,-43.92 429.77,-40.65"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="430.03,-42.57 434.83,-39.27 429.01,-38.86 430.03,-42.57"/>
+</g>
+<g id="node22" class="node">
+<title>protect_tests</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M505.14,-95C505.14,-95 454.86,-95 454.86,-95 448.86,-95 442.86,-89 442.86,-83 442.86,-83 442.86,-71 442.86,-71 442.86,-65 448.86,-59 454.86,-59 454.86,-59 505.14,-59 505.14,-59 511.14,-59 517.14,-65 517.14,-71 517.14,-71 517.14,-83 517.14,-83 517.14,-89 511.14,-95 505.14,-95"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-73.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">protect_tests</text>
+</g>
+<g id="edge23" class="edge">
+<title>PreToolUse&#45;&gt;protect_tests</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M199.89,-484.82C213.69,-421.26 268.56,-206.94 399.99,-99 409.92,-90.84 422.67,-85.7 435.02,-82.47"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="435.35,-84.36 440.27,-81.24 434.47,-80.62 435.35,-84.36"/>
+</g>
+<g id="node23" class="node">
+<title>config_guard</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M504.39,-138C504.39,-138 455.61,-138 455.61,-138 449.61,-138 443.61,-132 443.61,-126 443.61,-126 443.61,-114 443.61,-114 443.61,-108 449.61,-102 455.61,-102 455.61,-102 504.39,-102 504.39,-102 510.39,-102 516.39,-108 516.39,-114 516.39,-114 516.39,-126 516.39,-126 516.39,-132 510.39,-138 504.39,-138"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-116.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">config_guard</text>
+</g>
+<g id="edge24" class="edge">
+<title>PreToolUse&#45;&gt;config_guard</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M201.08,-484.7C217.81,-425.42 278.72,-236.94 399.99,-142 410.2,-134 423.15,-128.91 435.59,-125.67"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="435.97,-127.56 440.89,-124.43 435.1,-123.81 435.97,-127.56"/>
+</g>
+<g id="node24" class="node">
+<title>block_dangerous_commands</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M540.02,-181C540.02,-181 419.99,-181 419.99,-181 413.99,-181 407.99,-175 407.99,-169 407.99,-169 407.99,-157 407.99,-157 407.99,-151 413.99,-145 419.99,-145 419.99,-145 540.02,-145 540.02,-145 546.02,-145 552.02,-151 552.02,-157 552.02,-157 552.02,-169 552.02,-169 552.02,-175 546.02,-181 540.02,-181"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-159.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">block_dangerous_commands</text>
+</g>
+<g id="edge25" class="edge">
+<title>PreToolUse&#45;&gt;block_dangerous_commands</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M202.58,-484.6C222.44,-429.93 288.7,-267.21 399.99,-185 400.29,-184.78 400.59,-184.56 400.89,-184.34"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="401.93,-185.97 405.53,-181.39 399.86,-182.72 401.93,-185.97"/>
+</g>
+<g id="node25" class="node">
+<title>case_insensitive_guard</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M527.64,-224C527.64,-224 432.36,-224 432.36,-224 426.36,-224 420.36,-218 420.36,-212 420.36,-212 420.36,-200 420.36,-200 420.36,-194 426.36,-188 432.36,-188 432.36,-188 527.64,-188 527.64,-188 533.64,-188 539.64,-194 539.64,-200 539.64,-200 539.64,-212 539.64,-212 539.64,-218 533.64,-224 527.64,-224"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-202.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">case_insensitive_guard</text>
+</g>
+<g id="edge26" class="edge">
+<title>PreToolUse&#45;&gt;case_insensitive_guard</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M204.45,-484.65C227.62,-435.14 298.39,-297.86 399.99,-228 403.99,-225.25 408.33,-222.84 412.85,-220.73"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="413.53,-222.53 417.84,-218.6 412.02,-218.99 413.53,-222.53"/>
+</g>
+<g id="node26" class="node">
+<title>pre_git_safety_check</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M523.14,-267C523.14,-267 436.86,-267 436.86,-267 430.86,-267 424.86,-261 424.86,-255 424.86,-255 424.86,-243 424.86,-243 424.86,-237 430.86,-231 436.86,-231 436.86,-231 523.14,-231 523.14,-231 529.14,-231 535.14,-237 535.14,-243 535.14,-243 535.14,-255 535.14,-255 535.14,-261 529.14,-267 523.14,-267"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-245.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pre_git_safety_check</text>
+</g>
+<g id="edge27" class="edge">
+<title>PreToolUse&#45;&gt;pre_git_safety_check</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M206.96,-484.73C233.7,-440.85 307.83,-328.88 399.99,-271 405.36,-267.62 411.26,-264.76 417.33,-262.33"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="417.76,-264.22 422.25,-260.5 416.43,-260.61 417.76,-264.22"/>
+</g>
+<g id="node27" class="node">
+<title>pre_push_coverage_check</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M534.77,-310C534.77,-310 425.24,-310 425.24,-310 419.24,-310 413.24,-304 413.24,-298 413.24,-298 413.24,-286 413.24,-286 413.24,-280 419.24,-274 425.24,-274 425.24,-274 534.77,-274 534.77,-274 540.77,-274 546.77,-280 546.77,-286 546.77,-286 546.77,-298 546.77,-298 546.77,-304 540.77,-310 534.77,-310"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-288.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pre_push_coverage_check</text>
+</g>
+<g id="edge28" class="edge">
+<title>PreToolUse&#45;&gt;pre_push_coverage_check</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M210.71,-484.61C241.46,-446.86 317.22,-360.26 399.99,-314 401.91,-312.93 403.89,-311.9 405.91,-310.92"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="406.48,-312.77 410.71,-308.77 404.91,-309.26 406.48,-312.77"/>
+</g>
+<g id="node28" class="node">
+<title>dedup_drift_guard</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M515.27,-353C515.27,-353 444.74,-353 444.74,-353 438.74,-353 432.74,-347 432.74,-341 432.74,-341 432.74,-329 432.74,-329 432.74,-323 438.74,-317 444.74,-317 444.74,-317 515.27,-317 515.27,-317 521.27,-317 527.27,-323 527.27,-329 527.27,-329 527.27,-341 527.27,-341 527.27,-347 521.27,-353 515.27,-353"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-331.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">dedup_drift_guard</text>
+</g>
+<g id="edge29" class="edge">
+<title>PreToolUse&#45;&gt;dedup_drift_guard</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M216.65,-484.56C251.69,-453.85 326.59,-392.15 399.99,-357 407.83,-353.24 416.44,-350.02 424.99,-347.3"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="425.44,-349.18 430.15,-345.74 424.33,-345.49 425.44,-349.18"/>
+</g>
+<g id="edge43" class="edge">
+<title>PreToolUse&#45;&gt;dead_end_registry</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M231.66,-514.27C240.4,-517.42 249.65,-521.07 257.99,-525 324.51,-556.38 332.4,-580.99 399.99,-610 407.81,-613.36 416.28,-616.35 424.68,-618.95"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="423.95,-620.75 429.77,-620.48 425.06,-617.06 423.95,-620.75"/>
+</g>
+<g id="node43" class="node">
+<title>pr_provenance_stamp</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M524.64,-607C524.64,-607 435.36,-607 435.36,-607 429.36,-607 423.36,-601 423.36,-595 423.36,-595 423.36,-583 423.36,-583 423.36,-577 429.36,-571 435.36,-571 435.36,-571 524.64,-571 524.64,-571 530.64,-571 536.64,-577 536.64,-583 536.64,-583 536.64,-595 536.64,-595 536.64,-601 530.64,-607 524.64,-607"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-585.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pr_provenance_stamp</text>
+</g>
+<g id="edge60" class="edge">
+<title>PreToolUse&#45;&gt;pr_provenance_stamp</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M231.75,-513.8C278.03,-527.88 359.71,-552.72 416.47,-569.98"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="415.79,-571.79 421.61,-571.55 416.91,-568.1 415.79,-571.79"/>
+</g>
+<g id="node6" class="node">
+<title>PostToolUse</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M221.49,-822C221.49,-822 168.96,-822 168.96,-822 162.96,-822 156.96,-816 156.96,-810 156.96,-810 156.96,-798 156.96,-798 156.96,-792 162.96,-786 168.96,-786 168.96,-786 221.49,-786 221.49,-786 227.49,-786 233.49,-792 233.49,-798 233.49,-798 233.49,-810 233.49,-810 233.49,-816 227.49,-822 221.49,-822"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-799.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">PostToolUse</text>
+</g>
+<g id="node29" class="node">
+<title>permission_auto_allow</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M526.14,-439C526.14,-439 433.86,-439 433.86,-439 427.86,-439 421.86,-433 421.86,-427 421.86,-427 421.86,-415 421.86,-415 421.86,-409 427.86,-403 433.86,-403 433.86,-403 526.14,-403 526.14,-403 532.14,-403 538.14,-409 538.14,-415 538.14,-415 538.14,-427 538.14,-427 538.14,-433 532.14,-439 526.14,-439"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-417.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">permission_auto_allow</text>
+</g>
+<g id="edge30" class="edge">
+<title>PermissionRequest&#45;&gt;permission_auto_allow</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="0.9" stroke-dasharray="5,2" d="M250.34,-571.1C252.97,-569.81 255.53,-568.44 257.99,-567 330.28,-524.64 326.24,-482.78 399.99,-443 404.85,-440.38 410.06,-438.04 415.39,-435.97"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="0.9" points="415.91,-437.83 420.41,-434.13 414.59,-434.21 415.91,-437.83"/>
+</g>
+<g id="node7" class="node">
+<title>PostToolUseFailure</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M237.99,-736C237.99,-736 152.46,-736 152.46,-736 146.46,-736 140.46,-730 140.46,-724 140.46,-724 140.46,-712 140.46,-712 140.46,-706 146.46,-700 152.46,-700 152.46,-700 237.99,-700 237.99,-700 243.99,-700 249.99,-706 249.99,-712 249.99,-712 249.99,-724 249.99,-724 249.99,-730 243.99,-736 237.99,-736"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-713.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">PostToolUseFailure</text>
+</g>
+<g id="node17" class="node">
+<title>auto_stage</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M500.64,-1420C500.64,-1420 459.36,-1420 459.36,-1420 453.36,-1420 447.36,-1414 447.36,-1408 447.36,-1408 447.36,-1396 447.36,-1396 447.36,-1390 453.36,-1384 459.36,-1384 459.36,-1384 500.64,-1384 500.64,-1384 506.64,-1384 512.64,-1390 512.64,-1396 512.64,-1396 512.64,-1408 512.64,-1408 512.64,-1414 506.64,-1420 500.64,-1420"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1398.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">auto_stage</text>
+</g>
+<g id="edge17" class="edge">
+<title>PostToolUse&#45;&gt;auto_stage</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.99,-811C242.89,-814.26 251.62,-819.02 257.99,-826 429.33,-1013.75 222.12,-1198.42 399.99,-1380 410.61,-1390.85 426.1,-1396.48 440.56,-1399.35"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="0.9" points="440.01,-1401.21 445.76,-1400.25 440.67,-1397.42 440.01,-1401.21"/>
+</g>
+<g id="edge35" class="edge">
+<title>PostToolUse&#45;&gt;session_logger</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.77,-804C284.88,-804 376.32,-804 431.95,-804"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="431.69,-805.93 437.19,-804 431.69,-802.08 431.69,-805.93"/>
+</g>
+<g id="edge45" class="edge">
+<title>PostToolUse&#45;&gt;dead_rules_audit</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.66,-816.17C274.45,-829.32 341.68,-850.73 399.99,-868 408.97,-870.66 418.56,-873.41 427.85,-876.02"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="427.09,-877.81 432.9,-877.44 428.13,-874.1 427.09,-877.81"/>
+</g>
+<g id="node37" class="node">
+<title>nerf_receipts</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M504.77,-736C504.77,-736 455.24,-736 455.24,-736 449.24,-736 443.24,-730 443.24,-724 443.24,-724 443.24,-712 443.24,-712 443.24,-706 449.24,-700 455.24,-700 455.24,-700 504.77,-700 504.77,-700 510.77,-700 516.77,-706 516.77,-712 516.77,-712 516.77,-724 516.77,-724 516.77,-730 510.77,-736 504.77,-736"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-714.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">nerf_receipts</text>
+</g>
+<g id="edge47" class="edge">
+<title>PostToolUse&#45;&gt;nerf_receipts</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.66,-791.83C274.45,-778.68 341.68,-757.27 399.99,-740 411.74,-736.52 424.52,-732.89 436.31,-729.61"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="436.64,-731.52 441.43,-728.19 435.61,-727.81 436.64,-731.52"/>
+</g>
+<g id="node38" class="node">
+<title>context_hogs</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M505.89,-779C505.89,-779 454.11,-779 454.11,-779 448.11,-779 442.11,-773 442.11,-767 442.11,-767 442.11,-755 442.11,-755 442.11,-749 448.11,-743 454.11,-743 454.11,-743 505.89,-743 505.89,-743 511.89,-743 517.89,-749 517.89,-755 517.89,-755 517.89,-767 517.89,-767 517.89,-773 511.89,-779 505.89,-779"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-757.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">context_hogs</text>
+</g>
+<g id="edge50" class="edge">
+<title>PostToolUse&#45;&gt;context_hogs</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.77,-798.29C285.89,-790.36 379.96,-776.06 435.21,-767.66"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="435.25,-769.6 440.4,-766.87 434.67,-765.79 435.25,-769.6"/>
+</g>
+<g id="edge52" class="edge">
+<title>PostToolUse&#45;&gt;pipeline_trace</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.94,-791.9C241.99,-788.95 250.37,-785.59 257.99,-782 324.51,-750.62 332.4,-726.01 399.99,-697 410.81,-692.35 422.9,-688.41 434.3,-685.2"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.8,-687.06 439.6,-683.76 433.79,-683.35 434.8,-687.06"/>
+</g>
+<g id="edge55" class="edge">
+<title>PostToolUse&#45;&gt;bounty_board</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.94,-816.1C241.99,-819.05 250.37,-822.41 257.99,-826 324.51,-857.38 332.4,-881.99 399.99,-911 411.14,-915.79 423.62,-919.82 435.31,-923.08"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.59,-924.88 440.4,-924.45 435.59,-921.16 434.59,-924.88"/>
+</g>
+<g id="node8" class="node">
+<title>Stop</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M210.22,-779C210.22,-779 180.22,-779 180.22,-779 174.22,-779 168.22,-773 168.22,-767 168.22,-767 168.22,-755 168.22,-755 168.22,-749 174.22,-743 180.22,-743 180.22,-743 210.22,-743 210.22,-743 216.22,-743 222.22,-749 222.22,-755 222.22,-755 222.22,-767 222.22,-767 222.22,-773 216.22,-779 210.22,-779"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-756.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">Stop</text>
+</g>
+<g id="edge48" class="edge">
+<title>PostToolUseFailure&#45;&gt;nerf_receipts</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M250.41,-718C304.48,-718 386.46,-718 436.15,-718"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="436.07,-719.93 441.57,-718 436.07,-716.08 436.07,-719.93"/>
+</g>
+<g id="node9" class="node">
+<title>PreCompact</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M221.49,-951C221.49,-951 168.96,-951 168.96,-951 162.96,-951 156.96,-945 156.96,-939 156.96,-939 156.96,-927 156.96,-927 156.96,-921 162.96,-915 168.96,-915 168.96,-915 221.49,-915 221.49,-915 227.49,-915 233.49,-921 233.49,-927 233.49,-927 233.49,-939 233.49,-939 233.49,-945 227.49,-951 221.49,-951"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-928.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">PreCompact</text>
+</g>
+<g id="node18" class="node">
+<title>block_stop_if_dirty</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-impl)" stroke-width="1.1" d="M517.52,-1377C517.52,-1377 442.49,-1377 442.49,-1377 436.49,-1377 430.49,-1371 430.49,-1365 430.49,-1365 430.49,-1353 430.49,-1353 430.49,-1347 436.49,-1341 442.49,-1341 442.49,-1341 517.52,-1341 517.52,-1341 523.52,-1341 529.52,-1347 529.52,-1353 529.52,-1353 529.52,-1365 529.52,-1365 529.52,-1371 523.52,-1377 517.52,-1377"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1355.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">block_stop_if_dirty</text>
+</g>
+<g id="edge18" class="edge">
+<title>Stop&#45;&gt;block_stop_if_dirty</title>
+<path fill="none" stroke="var(--diagram-impl)" stroke-width="1.6" d="M222.51,-764.56C234.87,-767.54 248.85,-772.99 257.99,-783 429.33,-970.75 222.12,-1155.42 399.99,-1337 406.23,-1343.37 414.15,-1347.94 422.55,-1351.21"/>
+<polygon fill="var(--diagram-impl)" stroke="var(--diagram-impl)" stroke-width="1.6" points="421.91,-1353.03 427.73,-1352.98 423.15,-1349.38 421.91,-1353.03"/>
+</g>
+<g id="node30" class="node">
+<title>reserved_tag_guard</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M519.39,-525C519.39,-525 440.61,-525 440.61,-525 434.61,-525 428.61,-519 428.61,-513 428.61,-513 428.61,-501 428.61,-501 428.61,-495 434.61,-489 440.61,-489 440.61,-489 519.39,-489 519.39,-489 525.39,-489 531.39,-495 531.39,-501 531.39,-501 531.39,-513 531.39,-513 531.39,-519 525.39,-525 519.39,-525"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-503.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">reserved_tag_guard</text>
+</g>
+<g id="edge31" class="edge">
+<title>Stop&#45;&gt;reserved_tag_guard</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M222.7,-755.06C234.24,-751.62 247.51,-746.46 257.99,-739 340.16,-680.53 326.29,-630.85 399.99,-562 412.58,-550.23 427.85,-539.02 441.6,-529.83"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="442.64,-531.44 446.18,-526.81 440.53,-528.23 442.64,-531.44"/>
+</g>
+<g id="edge38" class="edge">
+<title>Stop&#45;&gt;standup_autopilot</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M222.51,-769.56C261.25,-782.11 335.99,-806.05 399.99,-825 408.56,-827.54 417.67,-830.15 426.55,-832.66"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="425.84,-834.46 431.66,-834.09 426.88,-830.75 425.84,-834.46"/>
+</g>
+<g id="edge49" class="edge">
+<title>Stop&#45;&gt;nerf_receipts</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M222.57,-756.99C271.55,-749.55 377.02,-733.51 436.3,-724.49"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="436.45,-726.42 441.6,-723.69 435.87,-722.61 436.45,-726.42"/>
+</g>
+<g id="edge53" class="edge">
+<title>Stop&#45;&gt;pipeline_trace</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M222.51,-752.44C261.25,-739.89 335.99,-715.95 399.99,-697 411.17,-693.69 423.29,-690.24 434.6,-687.09"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="435.05,-688.96 439.84,-685.63 434.02,-685.25 435.05,-688.96"/>
+</g>
+<g id="edge58" class="edge">
+<title>Stop&#45;&gt;context_flags</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M222.71,-766.42C234.4,-769.77 247.76,-775.01 257.99,-783 347.91,-853.31 307.64,-929.91 399.99,-997 410.29,-1004.48 423.03,-1009.42 435.26,-1012.68"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.46,-1014.47 440.26,-1013.91 435.38,-1010.73 434.46,-1014.47"/>
+</g>
+<g id="node10" class="node">
+<title>ConfigChange</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M225.99,-650C225.99,-650 164.46,-650 164.46,-650 158.46,-650 152.46,-644 152.46,-638 152.46,-638 152.46,-626 152.46,-626 152.46,-620 158.46,-614 164.46,-614 164.46,-614 225.99,-614 225.99,-614 231.99,-614 237.99,-620 237.99,-626 237.99,-626 237.99,-638 237.99,-638 237.99,-644 231.99,-650 225.99,-650"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-627.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">ConfigChange</text>
+</g>
+<g id="edge57" class="edge">
+<title>PreCompact&#45;&gt;context_flags</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M233.66,-945.17C274.45,-958.32 341.68,-979.73 399.99,-997 411.51,-1000.41 424.02,-1003.96 435.61,-1007.19"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="434.82,-1008.97 440.63,-1008.59 435.85,-1005.26 434.82,-1008.97"/>
+</g>
+<g id="node42" class="node">
+<title>pre_compact_backup</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-logger)" stroke-width="1.1" d="M523.14,-1080C523.14,-1080 436.86,-1080 436.86,-1080 430.86,-1080 424.86,-1074 424.86,-1068 424.86,-1068 424.86,-1056 424.86,-1056 424.86,-1050 430.86,-1044 436.86,-1044 436.86,-1044 523.14,-1044 523.14,-1044 529.14,-1044 535.14,-1050 535.14,-1056 535.14,-1056 535.14,-1068 535.14,-1068 535.14,-1074 529.14,-1080 523.14,-1080"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-1058.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">pre_compact_backup</text>
+</g>
+<g id="edge59" class="edge">
+<title>PreCompact&#45;&gt;pre_compact_backup</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M226.33,-951.41C265.26,-974.61 335.73,-1014.52 399.99,-1040 405.84,-1042.32 412.04,-1044.5 418.27,-1046.51"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="417.39,-1048.25 423.22,-1048.06 418.54,-1044.58 417.39,-1048.25"/>
+</g>
+<g id="node11" class="node">
+<title>SessionEnd</title>
+<path fill="var(--diagram-accent-bg)" stroke="var(--diagram-accent)" stroke-width="1.1" d="M219.99,-865C219.99,-865 170.46,-865 170.46,-865 164.46,-865 158.46,-859 158.46,-853 158.46,-853 158.46,-841 158.46,-841 158.46,-835 164.46,-829 170.46,-829 170.46,-829 219.99,-829 219.99,-829 225.99,-829 231.99,-835 231.99,-841 231.99,-841 231.99,-853 231.99,-853 231.99,-859 225.99,-865 219.99,-865"/>
+<text xml:space="preserve" text-anchor="middle" x="195.22" y="-842.65" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.50" fill="var(--diagram-accent-ink)">SessionEnd</text>
+</g>
+<g id="node31" class="node">
+<title>config_watch</title>
+<path fill="var(--diagram-surface)" stroke="var(--diagram-review)" stroke-width="1.1" d="M505.52,-482C505.52,-482 454.49,-482 454.49,-482 448.49,-482 442.49,-476 442.49,-470 442.49,-470 442.49,-458 442.49,-458 442.49,-452 448.49,-446 454.49,-446 454.49,-446 505.52,-446 505.52,-446 511.52,-446 517.52,-452 517.52,-458 517.52,-458 517.52,-470 517.52,-470 517.52,-476 511.52,-482 505.52,-482"/>
+<text xml:space="preserve" text-anchor="middle" x="480" y="-460.12" font-family='"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif' font-size="10.00" fill="var(--diagram-ink)">config_watch</text>
+</g>
+<g id="edge32" class="edge">
+<title>ConfigChange&#45;&gt;config_watch</title>
+<path fill="none" stroke="var(--diagram-review)" stroke-width="1.6" d="M238.38,-619.39C245.13,-616.7 251.9,-613.57 257.99,-610 330.28,-567.64 326.24,-525.78 399.99,-486 410.68,-480.23 423.02,-475.87 434.72,-472.61"/>
+<polygon fill="var(--diagram-review)" stroke="var(--diagram-review)" stroke-width="1.6" points="435.12,-474.49 439.95,-471.24 434.15,-470.77 435.12,-474.49"/>
+</g>
+<g id="edge36" class="edge">
+<title>SessionEnd&#45;&gt;session_logger</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M232.32,-841.51C283.12,-833.79 375.73,-819.7 431.89,-811.16"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="432.06,-813.09 437.2,-810.36 431.48,-809.28 432.06,-813.09"/>
+</g>
+<g id="edge39" class="edge">
+<title>SessionEnd&#45;&gt;standup_autopilot</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M232.32,-847C281.4,-847 369.52,-847 426.07,-847"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="425.95,-848.93 431.45,-847 425.95,-845.08 425.95,-848.93"/>
+</g>
+<g id="edge41" class="edge">
+<title>SessionEnd&#45;&gt;recap_archive</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M232.31,-858.51C240.86,-861.6 249.85,-865.16 257.99,-869 324.51,-900.38 332.4,-924.99 399.99,-954 410.71,-958.6 422.66,-962.51 433.95,-965.7"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="433.39,-967.54 439.2,-967.13 434.4,-963.83 433.39,-967.54"/>
+</g>
+<g id="edge46" class="edge">
+<title>SessionEnd&#45;&gt;dead_rules_audit</title>
+<path fill="none" stroke="var(--diagram-logger)" stroke-width="0.9" stroke-dasharray="5,2" d="M232.32,-852.49C281.83,-860.02 371.06,-873.59 427.55,-882.18"/>
+<polygon fill="var(--diagram-logger)" stroke="var(--diagram-logger)" stroke-width="0.9" points="427.2,-884.07 432.92,-882.99 427.78,-880.26 427.2,-884.07"/>
+</g>
+</g>
+</svg>
