@@ -135,6 +135,64 @@ def test_task61_1_edit_result_is_checked(project, monkeypatch):
     assert run(monkeypatch, edit(project, "test_x.py", "구조", "새 요약")) == 0
 
 
+# --- TASK-61#2: the AC/DoD section marker comes before the Coverage one ---
+
+
+@pytest.mark.parametrize(
+    "body, problem",
+    [
+        (["# == Coverage ==", "# == AC/DoD =="], "앞에"),
+        (["# == AC/DoD ==", "def test_a(): pass"], "'# == Coverage ==' 섹션 표식이 없습니다"),
+        (["def test_a(): pass", "# == Coverage =="], "'# == AC/DoD ==' 섹션 표식이 없습니다"),
+        (["def test_a(): pass"], "'# == AC/DoD ==' 섹션 표식이 없습니다"),
+        (["# == AC/DoD ==", "# == Coverage ==", "# == AC/DoD =="], "한 번"),
+        (["# == AC/DoD ==", "# == Coverage ==", "# == Coverage =="], "한 번"),
+    ],
+)
+def test_task61_2_missing_or_misordered_sections_are_denied(
+    project, monkeypatch, capsys, body, problem
+):
+    """TASK-61#2: each section marker exactly once, AC/DoD before Coverage."""
+    content = py("# TASK-61: 섹션", *body)
+    assert run(monkeypatch, write(project, "test_x.py", content)) == 2
+    err = capsys.readouterr().err
+    assert problem in err
+    assert "<ID>: <한 줄 요약>" not in err
+
+
+@pytest.mark.parametrize(
+    "rel, lines",
+    [
+        ("a.test.ts", ["// TASK-61: 섹션", "// == AC/DoD ==", "// == Coverage =="]),
+        ("ATest.java", ["// TASK-61: 섹션", "/* == AC/DoD == */", "/* == Coverage == */"]),
+        ("a_test.cc", ["/* TASK-61: 섹션 */", "  // == AC/DoD ==", "  // == Coverage =="]),
+        ("test_a.py", ["# TASK-61: 섹션", "# == AC/DoD ==", "    # == Coverage =="]),
+    ],
+)
+def test_task61_2_section_markers_in_each_comment_syntax(project, monkeypatch, rel, lines):
+    """TASK-61#2: the markers are full-line comments in the file's syntax."""
+    assert run(monkeypatch, write(project, rel, py(*lines))) == 0
+
+
+def test_task61_2_markers_in_the_wrong_syntax_do_not_count(project, monkeypatch, capsys):
+    """TASK-61#2: `# == AC/DoD ==` is not a comment in TypeScript, and a
+    marker trailing code is not a section marker."""
+    content = py("// TASK-61: 섹션", "# == AC/DoD ==", "// == Coverage ==")
+    assert run(monkeypatch, write(project, "a.test.ts", content)) == 2
+    assert "'// == AC/DoD ==' 섹션 표식이 없습니다" in capsys.readouterr().err
+    content = py("# TASK-61: 섹션", "x = 1  # == AC/DoD ==", "# == Coverage ==")
+    assert run(monkeypatch, write(project, "test_a.py", content)) == 2
+    assert "'# == AC/DoD ==' 섹션 표식이 없습니다" in capsys.readouterr().err
+
+
+def test_task61_2_existing_adopted_file_edit_that_breaks_order_is_denied(project, monkeypatch):
+    """TASK-61#2: an Edit that leaves the sections out of order is denied."""
+    put(project, "test_x.py", py("# TASK-61: 섹션", *SECTIONS_PY))
+    assert run(monkeypatch, edit(project, "test_x.py", "# == Coverage ==\n", "")) == 2
+    payload = edit(project, "test_x.py", "def test_b(): pass", "def test_b(): assert 1")
+    assert run(monkeypatch, payload) == 0
+
+
 # == Coverage ==
 
 

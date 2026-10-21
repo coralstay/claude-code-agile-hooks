@@ -33,6 +33,10 @@ Rules (each violation denies the Edit/Write, exit 2, all problems listed):
    line skipped; the block ends at the first blank or non-comment line)
    has at least one `<ID>: <summary>` line before any section marker.
    Other comment lines in the block are allowed.
+2. Sections: exactly one `== AC/DoD ==` and exactly one `== Coverage ==`
+   marker, AC/DoD first. A marker is a full-line comment whose text is
+   exactly that string (`# == AC/DoD ==`; `// == AC/DoD ==`,
+   `/* == AC/DoD == */`, ` * == AC/DoD ==`), indentation allowed.
 
 What is checked is the file as it would be after the tool call: Write's
 `content`; for Edit the current file with `old_string` replaced by
@@ -255,6 +259,20 @@ def layout_problems(text, lang):
     if not has_header(lines, lang):
         problems.append(
             "첫 주석 블록에 '<ID>: <한 줄 요약>' 헤더가 없습니다(태스크마다 한 줄)."
+        )
+    c = "#" if lang == HASH else "//"
+    ac = section_lines(lines, lang, AC_SECTION)
+    cov = section_lines(lines, lang, COVERAGE_SECTION)
+    for name, found in ((AC_SECTION, ac), (COVERAGE_SECTION, cov)):
+        if not found:
+            problems.append(f"'{c} {name}' 섹션 표식이 없습니다.")
+        elif len(found) > 1:
+            where = ", ".join(str(i + 1) for i in found)
+            problems.append(f"'{c} {name}' 섹션 표식은 한 번만 있어야 합니다({where}번째 줄).")
+    if len(ac) == 1 and len(cov) == 1 and ac[0] > cov[0]:
+        problems.append(
+            f"'{c} {AC_SECTION}' 섹션 표식이 '{c} {COVERAGE_SECTION}' 섹션 표식보다 앞에 "
+            "있어야 합니다(AC/DoD 테스트 → 커버리지 테스트)."
         )
     return problems
 
