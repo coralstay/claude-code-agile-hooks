@@ -95,6 +95,23 @@ BASELINE_BODIES = {
         def project_config_path(cwd):
             return None
         """,
+    # TASK-61: glob helpers shared by require_test_first/require_test_layout
+    "is_glob_list": """
+        def is_glob_list(value):
+            return False
+        """,
+    "glob_regex": """
+        def glob_regex(pattern):
+            return None
+        """,
+    "glob_matches": """
+        def glob_matches(pattern, relpath):
+            return False
+        """,
+    "matches_any": """
+        def matches_any(relpath, globs):
+            return False
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -227,6 +244,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",  # TASK-56
+        "require_test_layout.py",  # TASK-61
     ]
 
 
@@ -436,6 +454,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "require_active_task.py",
         "pipeline_trace.py",
         "require_test_first.py",  # TASK-56
+        "require_test_layout.py",  # TASK-61
     ]
 
 
