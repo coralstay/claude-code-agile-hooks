@@ -1,13 +1,19 @@
 ---
-id: DRAFT-8
+id: TASK-58
 title: 구현 계획(SOAP + AC + DoD)과 Plan-Review-Go 없이 승격 · 착수를 훅으로 막는다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-12 02:24'
-updated_date: '2026-10-12 05:44'
+updated_date: '2026-10-21 05:00'
 labels:
   - hooks
 dependencies: []
+references:
+  - decision-1
+  - decision-12
+documentation:
+  - >-
+    https://github.com/coralstay/coralstay-software-factory/blob/main/design/3-아키텍처-설계서/05-설계-결정.md#adr-022-구현-계획은-soap--ac--dod-착수-전-plan-review-go
 ---
 
 ## Description
