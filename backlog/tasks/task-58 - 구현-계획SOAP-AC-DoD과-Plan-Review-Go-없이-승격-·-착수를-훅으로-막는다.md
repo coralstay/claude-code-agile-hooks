@@ -4,7 +4,7 @@ title: 구현 계획(SOAP + AC + DoD)과 Plan-Review-Go 없이 승격 · 착수�
 status: In Progress
 assignee: []
 created_date: '2026-10-12 02:24'
-updated_date: '2026-10-21 05:45'
+updated_date: '2026-10-21 08:57'
 labels:
   - hooks
 dependencies: []
@@ -12,6 +12,7 @@ references:
   - decision-1
   - decision-12
   - decision-13
+  - decision-14
 documentation:
   - >-
     https://github.com/coralstay/coralstay-software-factory/blob/main/design/3-아키텍처-설계서/05-설계-결정.md#adr-022-구현-계획은-soap--ac--dod-착수-전-plan-review-go
@@ -87,4 +88,6 @@ Implementation Plan은 아래 네 제목을 이 순서로, 철자 그대로 쓴�
 착수 시 결정(유저, 2026-10-21) — decision-13: go는 사람이 남기는 빈 서명 커밋(git commit --allow-empty -S -m "Go: <ID>"), 제목이 정확히 'Go: <ID>'. 훅은 그 커밋이 있고 git log --format=%G? 결과가 G(유효한 서명)인지만 본다 — 서명 키 주체는 가리지 않는다(최상위 TASK-17에서 서명 키 전제 삭제). 구현 계획 Plan 1단계는 이것으로 끝남.
 
 후속 결정(유저, 2026-10-21) — 미반영: (1) 용어: go · go 판정 · Plan-Review-Go를 '계획 승인'(plan approval) · '승인 게이트'(approval gate) · '계획 → 리뷰 → 계획 승인'으로 바꾸고, 커밋 제목은 'Plan-Approved: <ID>'. 훅 · 테스트 · README · CLAUDE.md.snippet · decision-13 · 최상위 design/ 전부 대상. (2) 서명: 지금은 사람과 Claude가 같은 키(github_signature)를 쓰고 allowedSignersFile이 없어 모든 커밋이 %G?=N — 이대로면 훅이 사람의 승인 커밋도 막는다. 유저 의도는 'AI가 쓴 건 AI, 사람이 쓴 건 사람'. 두 키 분리(AI 전용 키 + allowed_signers principal 구분 + 사람 키를 Claude가 못 쓰게) 방식 선택 대기. Done 전에 DoD 추가 필요(카드에 DoD 없음).
+
+decision-14(유저, 2026-10-21): 용어 go → 계획 승인, go 판정 → 승인 게이트, Plan-Review-Go → 계획 → 리뷰 → 계획 승인, 커밋 제목 'Plan-Approved: <ID>'. 서명은 두 키로 나눈다 — Claude는 AI 전용 키, 사람은 기존 키(ssh-agent에서 내려 암호 입력 필요). allowed_signers에 principal을 나눠 올리고, 승인 게이트는 %G?=G이고 %GS가 프로젝트 설정 humanSigners 목록에 있을 때만 통과. decision-13을 대체한다.
 <!-- SECTION:NOTES:END -->
