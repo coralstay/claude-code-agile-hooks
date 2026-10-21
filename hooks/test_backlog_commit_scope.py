@@ -507,3 +507,39 @@ def test_format_offenders_truncates_long_lists():
     assert "src/f9.py" in listed
     assert f"src/f{bcs.MAX_LISTED}.py" not in listed
     assert "... 외 3개" in listed
+
+
+# --- TASK-59#1: one new draft per commit ------------------------------------
+
+DRAFT_2 = "backlog/drafts/draft-2 - 다른-기능.md"
+
+
+def test_check_scope_two_new_drafts_denied():
+    """TASK-59#1: a commit that adds two new draft files is denied."""
+    msg = bcs.check_scope([("A", DRAFT, None), ("A", DRAFT_2, None)])
+    assert "드래프트 한 장" in msg
+    assert DRAFT in msg and DRAFT_2 in msg
+
+
+def test_check_scope_copied_draft_counts_as_new():
+    """TASK-59#1: a copy into backlog/drafts/ is a new draft too."""
+    entries = [("A", DRAFT, None), ("C", "backlog/drafts/draft-0 - x.md", DRAFT_2)]
+    assert "드래프트 한 장" in bcs.check_scope(entries)
+
+
+def test_two_new_drafts_in_one_commit_denied(monkeypatch, capsys, repo):
+    """TASK-59#1: end to end - two drafts staged together are denied."""
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, DRAFT_2, DRAFT_BODY.replace("DRAFT-1", "DRAFT-2"))
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    assert "드래프트 한 장" in capsys.readouterr().err
+
+
+def test_second_draft_added_in_same_command_denied(monkeypatch, repo):
+    """TASK-59#1: the same-command `git add` simulation sees the second draft."""
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, DRAFT_2, DRAFT_BODY.replace("DRAFT-1", "DRAFT-2"))
+    git(repo, "add", DRAFT)
+    command = f"git add '{DRAFT_2}' && git commit -m x"
+    assert run_main(monkeypatch, repo, command) == 2

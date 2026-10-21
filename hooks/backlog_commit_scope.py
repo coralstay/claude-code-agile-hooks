@@ -13,6 +13,8 @@ the staged index with `git diff --cached --name-status -M -z` and denies:
    than those renames/deletes and files under backlog/tasks/. Editing the
    promoted task file right after promotion (`task edit --add-ref`, `--doc`)
    and touching other task files is allowed; code/docs/config is not.
+3. TASK-59#1: draft-creation commits that add two or more new drafts - the
+   history should show each draft (draft 1장 → 커밋) on its own.
 
 Timing caveat: PreToolUse runs *before* the Bash command, so the index it
 sees is the pre-command one. To close the common cases this hook simulates,
@@ -366,6 +368,16 @@ def check_scope(entries):
     new_drafts = [
         e for e in entries if e[0] in ("A", "C") and (e[2] or e[1]).startswith(DRAFTS)
     ]
+    if len(new_drafts) >= 2:
+        # TASK-59#1: one draft per commit, so each draft has its own point
+        # in history (draft 1장 → 커밋)
+        return (
+            "[claude-code-agile-hooks] 드래프트 생성 커밋에는 새 드래프트 한 장만 담는다 — "
+            "스테이징에 새 드래프트가 여러 개 있습니다:\n"
+            + format_offenders(new_drafts)
+            + "\n한 장씩 커밋하세요. 나머지는 'git restore --staged <path>'로 내린 뒤 "
+            "다음 커밋으로 나누세요."
+        )
     if new_drafts:
         offenders = [
             e for e in entries if not all(p.startswith(DRAFTS) for p in entry_paths(e))
