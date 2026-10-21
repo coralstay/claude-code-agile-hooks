@@ -1,10 +1,10 @@
 ---
 id: TASK-59
 title: 카드 생애주기 단계마다 커밋을 훅으로 강제한다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-12 02:26'
-updated_date: '2026-10-21 09:07'
+updated_date: '2026-10-21 09:22'
 labels:
   - hooks
 dependencies: []
@@ -32,17 +32,17 @@ documentation:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 커밋 하나에 새 draft 파일이 두 개 이상 들어가면 backlog_commit_scope.py가 커밋을 deny한다
-- [ ] #2 상태 전환 커밋(→ In Progress, → Done)에는 그 태스크 파일만 들어가야 하고, 다른 변경이 섞이면 deny한다
-- [ ] #3 다음 단계 명령(draft create · draft promote · -s "In Progress" · -s Done) 실행 전에 커밋되지 않은 backlog/ 변경이 있으면 deny한다
-- [ ] #4 테스트를 쓰고 README · CLAUDE.md.snippet의 실행 절차에 단계별 커밋을 반영한다
+- [x] #1 커밋 하나에 새 draft 파일이 두 개 이상 들어가면 backlog_commit_scope.py가 커밋을 deny한다
+- [x] #2 상태 전환 커밋(→ In Progress, → Done)에는 그 태스크 파일만 들어가야 하고, 다른 변경이 섞이면 deny한다
+- [x] #3 다음 단계 명령(draft create · draft promote · -s "In Progress" · -s Done) 실행 전에 커밋되지 않은 backlog/ 변경이 있으면 deny한다
+- [x] #4 테스트를 쓰고 README · CLAUDE.md.snippet의 실행 절차에 단계별 커밋을 반영한다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 전체 테스트 통과 · 커버리지 100%(coverageCommand)
-- [ ] #2 새 훅은 settings.hooks.json · dedup REGISTRY · 등록 계약 테스트에 반영
-- [ ] #3 각 커밋에 TASK ID, push 전 Done + final summary
+- [x] #1 전체 테스트 통과 · 커버리지 100%(coverageCommand)
+- [x] #2 새 훅은 settings.hooks.json · dedup REGISTRY · 등록 계약 테스트에 반영
+- [x] #3 각 커밋에 TASK ID, push 전 Done + final summary
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -65,3 +65,17 @@ documentation:
 3. AC #3: require_stage_committed.py — 단계 명령 command position 감지, 미커밋 backlog/ 변경 시 deny — 테스트 먼저, REGISTRY · settings.hooks.json 등록.
 4. AC #4: README · CLAUDE.md.snippet 실행 절차 반영. 전체 테스트 · 커버리지 100%.
 <!-- SECTION:PLAN:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+카드 생애주기를 단계마다 커밋하도록 강제했다.
+
+- AC #1 backlog_commit_scope.py: 커밋 하나에 새 draft 파일 2개 이상이면 deny(7572811)
+- AC #2 같은 훅: 상태 전환 커밋(→ In Progress · → Done)은 그 태스크 파일만 담는다. 전환은 스테이징 blob의 frontmatter status와 HEAD의 status 비교로 판정(이름 변경 추적, 새 파일은 전환으로 봄). 다른 경로나 두 번째 상태 전환 파일이 섞이면 deny(4197d73)
+- AC #3 새 독립 훅 require_stage_committed.py: draft create · draft promote · task edit -s "In Progress"/Done이 명령 위치에 있고 git status --porcelain -- backlog/에 미커밋 변경(스테이징 · 미스테이징 · 미추적)이 있으면 deny. settings.hooks.json · REGISTRY · 등록 계약 반영(a66c49f)
+- AC #4 README(단계별 커밋 절, 훅 표) · CLAUDE.md.snippet 실행 절차 반영(ed6508f)
+
+검증: coverageCommand → 1926 passed, 4091 stmts · 1676 branches 100%.
+알려진 영향: --add-ref · --doc 등을 따로 실행해 남긴 미커밋 변경 뒤의 -s는 막힌다(한 명령으로 합치거나 먼저 커밋). 완료 시 backlog doc(decision-8)은 Done 전환과 별도 커밋이 필요하다. TASK-58과 README 훅 수 · settings · REGISTRY에서 병합 충돌 예상. 컴포넌트 design/(01-시스템-구성, 01-three-natures.dot)에 새 훅 반영은 범위 밖.
+<!-- SECTION:FINAL_SUMMARY:END -->
