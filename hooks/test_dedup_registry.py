@@ -25,6 +25,7 @@ MODULES = [
     "require_draft_first.py",
     "backlog_commit_scope.py",
     "require_test_first.py",
+    "require_coverage_on_done.py",  # TASK-62
 ]
 
 

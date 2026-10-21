@@ -95,6 +95,30 @@ BASELINE_BODIES = {
         def project_config_path(cwd):
             return None
         """,
+    "configured_coverage_command": """
+        def configured_coverage_command(cwd):
+            return None
+        """,
+    "segment_done_target": """
+        def segment_done_target(segment):
+            return None
+        """,
+    "done_targets": """
+        def done_targets(command):
+            return []
+        """,
+    "language_manifests": """
+        def language_manifests():
+            return []
+        """,
+    "detect_languages": """
+        def detect_languages(cwd):
+            return []
+        """,
+    "missing_command_payload": """
+        def missing_command_payload(languages):
+            return {}
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -227,6 +251,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",  # TASK-56
+        "require_coverage_on_done.py",  # TASK-62
     ]
 
 
@@ -256,6 +281,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -291,6 +317,35 @@ def test_registry_covers_task39_git_subcommand_helpers():
             assert gate in ddg.REGISTRY[name]
     assert ddg.REGISTRY["git_subcommand_index"] == gates
     assert ddg.REGISTRY["command_runs_git"] == gates
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task62_coverage_done_hook():
+    """TASK-62#2: the Done-time coverage gate (require_coverage_on_done.py)
+    copies the push gate's language/config helpers and require_test_first's
+    Done-move parsing; every copy must be registered."""
+    hook = "require_coverage_on_done.py"
+    for name in (
+        "is_backlog_project",
+        "project_config_path",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert hook in ddg.REGISTRY[name]
+    assert ddg.REGISTRY["segment_done_target"] == ["require_test_first.py", hook]
+    assert ddg.REGISTRY["done_targets"] == ["require_test_first.py", hook]
+    for name in (
+        "configured_coverage_command",
+        "language_manifests",
+        "detect_languages",
+        "missing_command_payload",
+    ):
+        assert ddg.REGISTRY[name] == ["pre_push_coverage_check.py", hook]
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
@@ -421,6 +476,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_commit_check.py",  # TASK-39
             "pre_push_coverage_check.py",  # TASK-39
             "require_test_first.py",  # TASK-56
+            "require_coverage_on_done.py",  # TASK-62
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -431,6 +487,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",

@@ -424,3 +424,30 @@ def test_task62_1_manifest_must_be_a_file(tmp_path):
     """TASK-62#1: 같은 이름의 디렉토리는 매니페스트가 아니다."""
     (tmp_path / "pom.xml").mkdir()
     assert ppc.detect_languages(str(tmp_path)) == []
+
+
+@pytest.mark.parametrize("config", [None, {}, {"coverageCommand": ""}])
+def test_task62_2_language_without_coverage_command_denies_push(
+    tmp_path, monkeypatch, capsys, config
+):
+    """TASK-62#2: 언어가 감지됐는데 coverageCommand가 없으면 push를 deny한다
+    (opt-in -> 필수)."""
+    (tmp_path / "pyproject.toml").write_text("")
+    (tmp_path / "package.json").write_text("{}")
+    if config is not None:
+        (tmp_path / ".claude-code-agile-hooks.json").write_text(json.dumps(config))
+    code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
+    assert code == 0
+    hso = json.loads(capsys.readouterr().out)["hookSpecificOutput"]
+    assert hso["permissionDecision"] == "deny"
+    reason = hso["permissionDecisionReason"]
+    assert "coverageCommand" in reason
+    assert "javascript" in reason and "python" in reason
+
+
+def test_task62_2_no_language_keeps_opt_in(tmp_path, monkeypatch, capsys):
+    """TASK-62#2: 감지된 언어가 없으면 지금처럼 opt-in(설정 없으면 조용히 통과)."""
+    (tmp_path / "Makefile").write_text("")
+    code = run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": PUSH_INPUT})
+    assert code == 0
+    assert capsys.readouterr().out == ""

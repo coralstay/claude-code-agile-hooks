@@ -45,6 +45,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
+TAG = "[claude-code-agile-hooks]"
 FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
 SEPARATOR_CHARS = set(";&|()\n")
 WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
@@ -196,6 +197,23 @@ def detect_languages(cwd):
     ]
 
 
+def missing_command_payload(languages):
+    """PreToolUse deny for a project whose languages need coverage but
+    whose config has no coverageCommand."""
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": (
+                f"{TAG} 감지된 언어({', '.join(languages)})는 커버리지 100%(line + "
+                "branch)가 필수인데 프로젝트 설정(.claude-code-agile-hooks.json)에 "
+                "coverageCommand가 없습니다. 언어별 설정 예와 리포트 위치는 "
+                "claude-code-agile-hooks README의 '커버리지 100%' 절을 보세요."
+            ),
+        }
+    }
+
+
 def current_branch(cwd):
     result = subprocess.run(
         ["git", "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"],
@@ -255,6 +273,11 @@ def main():
 
     command = configured_coverage_command(cwd)
     if not command:
+        languages = detect_languages(cwd)
+        if not languages:
+            sys.exit(0)
+        # TASK-62: a detected language makes the coverage gate mandatory
+        print(json.dumps(missing_command_payload(languages)))
         sys.exit(0)
 
     exit_code, output = run_shell(cwd, command)
