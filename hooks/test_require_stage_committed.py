@@ -4,6 +4,7 @@ while backlog/ has uncommitted changes."""
 
 import io
 import json
+import os
 import subprocess
 
 import pytest
@@ -218,3 +219,28 @@ def test_format_paths_truncates_long_lists():
     assert "backlog/tasks/t0.md" in listed
     assert f"backlog/tasks/t{rsc.MAX_LISTED}.md" not in listed
     assert "... 외 2개" in listed
+
+
+# --- TASK-59#4: the execution procedure documents the stage commits ---------
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def read_doc(name):
+    with open(os.path.join(REPO_ROOT, name), encoding="utf-8") as f:
+        return f.read()
+
+
+def test_readme_lists_the_hook_and_the_stage_commit_procedure():
+    """TASK-59#4: README names the hook and explains stage-by-stage commits."""
+    readme = read_doc("README.md")
+    assert "[`require_stage_committed.py`](hooks/require_stage_committed.py)" in readme
+    assert "**단계별 커밋**" in readme
+    assert "draft 1장 작성 →" in readme
+
+
+def test_claude_md_snippet_procedure_has_stage_commits():
+    """TASK-59#4: the installed CLAUDE.md block tells the agent to commit per stage."""
+    snippet = read_doc("CLAUDE.md.snippet")
+    assert "**단계마다 커밋한다**" in snippet
+    assert "드래프트 한 장마다 커밋 하나다" in snippet
