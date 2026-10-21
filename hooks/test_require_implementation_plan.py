@@ -218,3 +218,82 @@ def test_start_of_unknown_task_passes(project, monkeypatch):
     project.task(make_card(plan=None, **TASK))
     command = 'backlog task edit TASK-99 -s "In Progress"'
     assert run_main(monkeypatch, project.path, command) == 0
+
+
+# --- TASK-58#3: the plan has the four SOAP reserved headings, in order,
+# once each, each with a non-blank body ---
+
+S, O, A, P = "### Subjective", "### Objective", "### Assessment", "### Plan"
+
+
+def plan_of(*blocks):
+    return "\n".join(blocks) + "\n"
+
+
+@pytest.mark.parametrize(
+    "plan, expected",
+    [
+        (SOAP_PLAN, []),
+        # trailing whitespace on a heading line is invisible: still the heading
+        (plan_of(S + "  ", "a", O, "b", A, "c", P + "\r", "d"), []),
+        # text before the first heading is allowed
+        (plan_of("머리말", S, "a", O, "b", A, "c", P, "d"), []),
+        # sub-headings and blank lines inside a body are body
+        (plan_of(S, "", "#### 세부", "a", O, "b", A, "c", P, "d"), []),
+        (plan_of(S, "a", O, "b", A, "c"), ["빠진 제목: ### Plan"]),
+        (plan_of("본문만"), ["빠진 제목: ### Subjective, ### Objective, ### Assessment, ### Plan"]),
+        (plan_of(S, "a", O, "  ", A, "c", P, "d"), ["본문이 빈 제목: ### Objective"]),
+        (plan_of(S, "a", O, "b", A, "c", P), ["본문이 빈 제목: ### Plan"]),
+        (
+            plan_of(S, "a", O, "b", A, "c", P, "d", O, "e"),
+            ["두 번 이상 나온 제목: ### Objective"],
+        ),
+        (
+            plan_of(O, "b", S, "a", A, "c", P, "d"),
+            ["순서가 다릅니다: ### Objective → ### Subjective → ### Assessment → ### Plan"],
+        ),
+        # case / spacing / level variants are not the reserved heading
+        (
+            plan_of("### subjective", "a", "###  Objective", "b", "## Assessment", "c", "#### Plan", "d"),
+            ["빠진 제목: ### Subjective, ### Objective, ### Assessment, ### Plan"],
+        ),
+        (
+            plan_of(" ### Subjective", "a", O, "b", A, "c", P, "d"),
+            ["빠진 제목: ### Subjective"],
+        ),
+    ],
+)
+def test_soap_problems(plan, expected):
+    """TASK-58#3"""
+    assert rip.soap_problems(plan) == expected
+
+
+def test_soap_problems_reports_missing_and_empty_together():
+    """TASK-58#3"""
+    assert rip.soap_problems(plan_of(S, "", A, "c", P, "d")) == [
+        "빠진 제목: ### Objective",
+        "본문이 빈 제목: ### Subjective",
+    ]
+
+
+BAD_PLAN = plan_of(S, "a", O, "", A, "c")
+
+
+def test_promote_denied_on_bad_soap(project, monkeypatch, capsys):
+    """TASK-58#3"""
+    project.draft(make_card(plan=BAD_PLAN))
+    assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 2
+    err = capsys.readouterr().err
+    assert "빠진 제목: ### Plan" in err
+    assert "본문이 빈 제목: ### Objective" in err
+    assert "backlog draft edit DRAFT-8 --plan" in err
+
+
+def test_start_denied_on_bad_soap(project, monkeypatch, capsys):
+    """TASK-58#3"""
+    project.task(make_card(plan=BAD_PLAN, **TASK))
+    command = 'backlog task edit TASK-58 -s "In Progress"'
+    assert run_main(monkeypatch, project.path, command) == 2
+    err = capsys.readouterr().err
+    assert "빠진 제목: ### Plan" in err
+    assert "backlog task edit TASK-58 --plan" in err

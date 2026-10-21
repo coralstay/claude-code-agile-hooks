@@ -14,6 +14,13 @@ backlog MCP server or web UI, which never pass `draft promote`.
 
 Cards are read straight from the files (frontmatter `id:`), so the
 backlog CLI is not needed; `TASK-58`, `task-58` and `58` all name TASK-58.
+The plan must hold the SOAP reserved headings `### Subjective`,
+`### Objective`, `### Assessment`, `### Plan` - exactly these lines (case,
+spacing and heading level are not normalized; trailing whitespace is
+ignored), in this order, once each, each followed by a non-blank body up
+to the next reserved heading. Otherwise deny listing the missing, repeated,
+out-of-order and empty headings. Text before the first heading is allowed.
+
 An ID with no card file passes - backlog itself reports the error.
 
 Fully self-contained: no imports from any other file in this repo."""
@@ -31,6 +38,14 @@ ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 BACKLOG_EXECUTABLES = {"backlog", "backlog.md"}
 ID_RE = re.compile(r"^id:\s*['\"]?([^'\"\s]+)['\"]?\s*$", re.MULTILINE)
+SOAP_HEADINGS = ("### Subjective", "### Objective", "### Assessment", "### Plan")
+SOAP_TEMPLATE = (
+    "형식:\n"
+    "### Subjective\n<요청 · 배경>\n\n"
+    "### Objective\n<확인한 사실>\n\n"
+    "### Assessment\n<판단 · 고른 접근>\n\n"
+    "### Plan\n<구현 순서>"
+)
 PLAN_RE = re.compile(
     r"<!-- SECTION:PLAN:BEGIN -->\n?(.*?)<!-- SECTION:PLAN:END -->", re.DOTALL
 )
@@ -190,6 +205,37 @@ def plan_text(text):
     return m.group(1) if m else None
 
 
+def soap_problems(plan):
+    """What is wrong with the SOAP structure of `plan`, as message lines
+    (empty list = well formed). A heading is a line that is exactly one of
+    SOAP_HEADINGS (trailing whitespace ignored); its body runs to the next
+    such line. Text before the first heading is allowed."""
+    found = []  # (heading, body lines)
+    for line in plan.split("\n"):
+        if line.rstrip() in SOAP_HEADINGS:
+            found.append((line.rstrip(), []))
+        elif found:
+            found[-1][1].append(line)
+    names = [h for h, _ in found]
+    problems = []
+    missing = [h for h in SOAP_HEADINGS if h not in names]
+    if missing:
+        problems.append("빠진 제목: " + ", ".join(missing))
+    repeated = [h for h in SOAP_HEADINGS if names.count(h) > 1]
+    if repeated:
+        problems.append("두 번 이상 나온 제목: " + ", ".join(repeated))
+    first = list(dict.fromkeys(names))
+    if first != [h for h in SOAP_HEADINGS if h in first]:
+        problems.append("순서가 다릅니다: " + " → ".join(names))
+    empty = []
+    for heading, body in found:
+        if not "".join(body).strip() and heading not in empty:
+            empty.append(heading)
+    if empty:
+        problems.append("본문이 빈 제목: " + ", ".join(empty))
+    return problems
+
+
 def deny(message):
     print(message, file=sys.stderr)
     sys.exit(2)
@@ -207,7 +253,17 @@ def check_card(cwd, kind, token):
         deny(
             f"{TAG} {card_id}에 구현 계획(Implementation Plan)이 없어 {action} 수 "
             f"없습니다. 먼저 'backlog {edit} edit {card_id} --plan \"...\"'로 "
-            "계획을 적으세요."
+            "계획을 적으세요.\n" + SOAP_TEMPLATE
+        )
+    problems = soap_problems(plan)
+    if problems:
+        deny(
+            f"{TAG} {card_id}의 구현 계획이 SOAP 형식이 아니어서 {action} 수 "
+            "없습니다. 예약 제목 네 개를 이 순서로 한 번씩, 철자 그대로 쓰고 "
+            "각 절에 본문을 채우세요.\n"
+            + "\n".join(f"  - {p}" for p in problems)
+            + f"\n'backlog {edit} edit {card_id} --plan \"...\"'로 고치세요.\n"
+            + SOAP_TEMPLATE
         )
 
 
