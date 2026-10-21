@@ -1,10 +1,10 @@
 ---
 id: TASK-62
 title: JS · TS · Java · Python · C++ 커버리지 100%와 리포트 생성을 훅으로 강제한다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-12 02:27'
-updated_date: '2026-10-21 10:10'
+updated_date: '2026-10-21 14:05'
 labels:
   - hooks
 dependencies: []
@@ -33,17 +33,17 @@ references:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 매니페스트(package.json/tsconfig.json · pom.xml/build.gradle(.kts) · pyproject.toml/setup.cfg/pytest.ini · CMakeLists.txt)로 5개 언어를 감지한다
-- [ ] #2 감지된 언어가 있는데 coverageCommand가 설정되지 않았으면 push와 -s Done을 deny한다(이 경우 opt-in에서 필수로 바뀜)
-- [ ] #3 coverageCommand가 실패하거나(100% 미달) 실행 후 언어별 리포트 위치에 리포트 파일이 없으면 deny한다
-- [ ] #4 언어별 100% 설정 예(--cov-fail-under=100 · coverageThreshold · thresholds.100 · JaCoCo minimum 1.0 · gcovr --fail-under-*)와 리포트 위치를 README에 적는다
+- [x] #1 매니페스트(package.json/tsconfig.json · pom.xml/build.gradle(.kts) · pyproject.toml/setup.cfg/pytest.ini · CMakeLists.txt)로 5개 언어를 감지한다
+- [x] #2 감지된 언어가 있는데 coverageCommand가 설정되지 않았으면 push와 -s Done을 deny한다(이 경우 opt-in에서 필수로 바뀜)
+- [x] #3 coverageCommand가 실패하거나(100% 미달) 실행 후 언어별 리포트 위치에 리포트 파일이 없으면 deny한다
+- [x] #4 언어별 100% 설정 예(--cov-fail-under=100 · coverageThreshold · thresholds.100 · JaCoCo minimum 1.0 · gcovr --fail-under-*)와 리포트 위치를 README에 적는다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 전체 테스트 통과 · 커버리지 100%(coverageCommand)
-- [ ] #2 새 훅은 settings.hooks.json · dedup REGISTRY · 등록 계약 테스트에 반영
-- [ ] #3 각 커밋에 TASK ID, push 전 Done + final summary
+- [x] #1 전체 테스트 통과 · 커버리지 100%(coverageCommand)
+- [x] #2 새 훅은 settings.hooks.json · dedup REGISTRY · 등록 계약 테스트에 반영
+- [x] #3 각 커밋에 TASK ID, push 전 Done + final summary
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -73,3 +73,18 @@ references:
 <!-- SECTION:NOTES:BEGIN -->
 착수 시 결정(유저, 2026-10-21): 커버리지 지표는 line + branch. -s Done 게이트는 새 독립 훅으로(Claude 판단, decision-3).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+JS · TS · Java · Python · C++ 프로젝트에 커버리지 100%(line + branch)와 리포트 생성을 강제했다.
+
+- AC #1 pre_push_coverage_check.py: 프로젝트 루트 매니페스트(package.json · tsconfig.json · pom.xml · build.gradle(.kts) · pyproject.toml · setup.cfg · pytest.ini · CMakeLists.txt)로 언어 감지(4e7677a)
+- AC #2 언어가 감지됐는데 coverageCommand가 없으면 push와 -s Done을 deny. -s Done 게이트는 새 독립 훅 require_coverage_on_done.py(decision-3, REGISTRY · settings · 등록 계약 반영). 감지 언어가 없으면 기존 opt-in 그대로(0bc1a0d)
+- AC #3 명령 실패(100% 미달) 또는 이번 실행 이후 mtime의 리포트가 언어별 위치(python htmlcov/ · coverage.xml, js · ts · cpp coverage/, java target/site/jacoco/ · build/reports/jacoco/)에 없으면 deny. coverageReportDir(문자열 또는 언어별 맵)로 위치 변경(eef2e42)
+- AC #4 README 언어별 100% 설정 예 · 리포트 위치 · 공식 문서 출처(2026-10-21 확인, Jest 기본값은 소스 근거, Gradle Kotlin · Vitest 100 리터럴은 미확인으로 표시), CLAUDE.md.snippet(77c8331)
+- 이 저장소: coverageCommand에 --cov-report=term-missing --cov-report=xml 추가(push 게이트가 coverage.xml을 요구), .gitignore에 coverage.xml · htmlcov/
+
+검증: 새 coverageCommand → 1905 passed, 4156 stmts · 1690 branches 100%, coverage.xml 생성 확인.
+알려진 제한: 도구용 package.json만 있는 Python 저장소도 JS 리포트를 요구받는다(coverageReportDir 맵으로 우회). -s Done마다 coverageCommand 전체 실행(이 저장소 약 17초). 범위 밖: push 훅의 systemMessage 위치 · allow 자동 승인(기존 동작), dedup_drift_guard docstring 'The 27 hooks', CI 명령은 그대로.
+<!-- SECTION:FINAL_SUMMARY:END -->
