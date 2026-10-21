@@ -376,3 +376,51 @@ def test_legacy_config_with_existing_new_dir_logs_to_new_dir(tmp_path):
 
 def test_project_config_path_none(tmp_path):
     assert ppc.project_config_path(str(tmp_path)) is None
+
+
+# --- TASK-62: 매니페스트로 5개 언어 감지, 감지되면 coverageCommand 필수 ---
+
+
+@pytest.mark.parametrize(
+    "manifest, language",
+    [
+        ("package.json", "javascript"),
+        ("tsconfig.json", "typescript"),
+        ("pom.xml", "java"),
+        ("build.gradle", "java"),
+        ("build.gradle.kts", "java"),
+        ("pyproject.toml", "python"),
+        ("setup.cfg", "python"),
+        ("pytest.ini", "python"),
+        ("CMakeLists.txt", "cpp"),
+    ],
+)
+def test_task62_1_detects_language_by_manifest(tmp_path, manifest, language):
+    """TASK-62#1: 프로젝트 루트의 매니페스트 하나로 언어를 감지한다."""
+    (tmp_path / manifest).write_text("")
+    assert ppc.detect_languages(str(tmp_path)) == [language]
+
+
+def test_task62_1_detects_several_languages_in_fixed_order(tmp_path):
+    """TASK-62#1: 여러 매니페스트 -> 고정 순서의 언어 목록(중복 없음)."""
+    for name in ("CMakeLists.txt", "pytest.ini", "pyproject.toml", "tsconfig.json",
+                 "package.json", "pom.xml", "build.gradle"):
+        (tmp_path / name).write_text("")
+    assert ppc.detect_languages(str(tmp_path)) == [
+        "javascript", "typescript", "java", "python", "cpp",
+    ]
+
+
+def test_task62_1_no_manifest_detects_nothing(tmp_path):
+    """TASK-62#1: 매니페스트가 없거나 하위 디렉토리에만 있으면 감지하지 않는다."""
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "package.json").write_text("")
+    (tmp_path / "README.md").write_text("")
+    assert ppc.detect_languages(str(tmp_path)) == []
+    assert ppc.detect_languages("") == []
+
+
+def test_task62_1_manifest_must_be_a_file(tmp_path):
+    """TASK-62#1: 같은 이름의 디렉토리는 매니페스트가 아니다."""
+    (tmp_path / "pom.xml").mkdir()
+    assert ppc.detect_languages(str(tmp_path)) == []

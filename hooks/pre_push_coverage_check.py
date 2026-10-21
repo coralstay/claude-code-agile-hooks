@@ -168,6 +168,34 @@ def configured_coverage_command(cwd):
     return config.get("coverageCommand") or None
 
 
+# --- TASK-62: languages and their coverage reports (the data lives inside
+# the functions so a dedup REGISTRY AST comparison covers it too) ---
+
+
+def language_manifests():
+    """(language, manifest file names at the project root), in report
+    order."""
+    return [
+        ("javascript", ("package.json",)),
+        ("typescript", ("tsconfig.json",)),
+        ("java", ("pom.xml", "build.gradle", "build.gradle.kts")),
+        ("python", ("pyproject.toml", "setup.cfg", "pytest.ini")),
+        ("cpp", ("CMakeLists.txt",)),
+    ]
+
+
+def detect_languages(cwd):
+    """Languages whose manifest is a file directly in `cwd` (subdirectories
+    are not searched), in language_manifests() order."""
+    if not cwd:
+        return []
+    return [
+        language
+        for language, names in language_manifests()
+        if any(os.path.isfile(os.path.join(cwd, n)) for n in names)
+    ]
+
+
 def current_branch(cwd):
     result = subprocess.run(
         ["git", "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"],
