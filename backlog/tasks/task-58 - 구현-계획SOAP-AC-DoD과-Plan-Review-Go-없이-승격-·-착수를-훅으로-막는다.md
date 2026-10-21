@@ -1,7 +1,7 @@
 ---
 id: TASK-58
 title: 구현 계획(SOAP + AC + DoD)과 Plan-Review-Go 없이 승격 · 착수를 훅으로 막는다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-12 02:24'
 updated_date: '2026-10-21 05:01'
