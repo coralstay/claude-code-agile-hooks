@@ -133,7 +133,7 @@ def read_tasks(cwd):
     for name in names:
         if not name.endswith(".md"):
             continue
-        with open(os.path.join(tasks_dir, name), encoding="utf-8") as f:
+        with open(os.path.join(tasks_dir, name), encoding="utf-8", errors="replace") as f:
             task = parse_task(f.read())
         if task:
             tasks[task["id"]] = task
