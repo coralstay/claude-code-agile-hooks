@@ -21,6 +21,11 @@ ignored), in this order, once each, each followed by a non-blank body up
 to the next reserved heading. Otherwise deny listing the missing, repeated,
 out-of-order and empty headings. Text before the first heading is allowed.
 
+The card must also have at least one acceptance criterion and one
+Definition of Done item (`- [ ] #n` / `- [x] #n` lines inside the
+`<!-- AC:... -->` / `<!-- DOD:... -->` blocks). All problems of a card are
+reported in one deny, each with the `edit --plan/--ac/--dod` to fix it.
+
 An ID with no card file passes - backlog itself reports the error.
 
 Fully self-contained: no imports from any other file in this repo."""
@@ -46,6 +51,7 @@ SOAP_TEMPLATE = (
     "### Assessment\n<판단 · 고른 접근>\n\n"
     "### Plan\n<구현 순서>"
 )
+ITEM_RE = re.compile(r"^- \[[ xX]\] #\d+", re.MULTILINE)
 PLAN_RE = re.compile(
     r"<!-- SECTION:PLAN:BEGIN -->\n?(.*?)<!-- SECTION:PLAN:END -->", re.DOTALL
 )
@@ -205,6 +211,15 @@ def plan_text(text):
     return m.group(1) if m else None
 
 
+def has_items(text, marker):
+    """True if the card's `<!-- <marker>:BEGIN -->` block (AC or DOD) holds
+    at least one `- [ ] #n` / `- [x] #n` item."""
+    m = re.search(
+        rf"<!-- {marker}:BEGIN -->(.*?)<!-- {marker}:END -->", text, re.DOTALL
+    )
+    return bool(m and ITEM_RE.search(m.group(1)))
+
+
 def soap_problems(plan):
     """What is wrong with the SOAP structure of `plan`, as message lines
     (empty list = well formed). A heading is a line that is exactly one of
@@ -241,29 +256,52 @@ def deny(message):
     sys.exit(2)
 
 
+def card_problems(card_id, text, edit):
+    """Message blocks for everything the card lacks (empty = complete)."""
+    blocks = []
+    plan = plan_text(text)
+    if plan is None or not plan.strip():
+        blocks.append(
+            "구현 계획(Implementation Plan)이 없습니다. "
+            f"'backlog {edit} edit {card_id} --plan \"...\"'로 계획을 적으세요.\n"
+            + SOAP_TEMPLATE
+        )
+    else:
+        problems = soap_problems(plan)
+        if problems:
+            blocks.append(
+                "구현 계획이 SOAP 형식이 아닙니다. 예약 제목 네 개를 이 순서로 "
+                "한 번씩, 철자 그대로 쓰고 각 절에 본문을 채우세요.\n"
+                + "\n".join(f"  - {p}" for p in problems)
+                + f"\n'backlog {edit} edit {card_id} --plan \"...\"'로 고치세요.\n"
+                + SOAP_TEMPLATE
+            )
+    if not has_items(text, "AC"):
+        blocks.append(
+            "인수 조건(AC)이 없습니다. "
+            f"'backlog {edit} edit {card_id} --ac \"...\"'로 추가하세요."
+        )
+    if not has_items(text, "DOD"):
+        blocks.append(
+            "완료 조건(DoD)이 없습니다. "
+            f"'backlog {edit} edit {card_id} --dod \"...\"'로 추가하세요."
+        )
+    return blocks
+
+
 def check_card(cwd, kind, token):
     folder, edit = ("drafts", "draft") if kind == "promote" else ("tasks", "task")
     found = find_card(cwd, folder, token)
     if found is None:
         return
     card_id, text = found
-    action = "승격할" if kind == "promote" else "In Progress로 옮길"
-    plan = plan_text(text)
-    if plan is None or not plan.strip():
+    blocks = card_problems(card_id, text, edit)
+    if blocks:
+        action = "승격할" if kind == "promote" else "In Progress로 옮길"
         deny(
-            f"{TAG} {card_id}에 구현 계획(Implementation Plan)이 없어 {action} 수 "
-            f"없습니다. 먼저 'backlog {edit} edit {card_id} --plan \"...\"'로 "
-            "계획을 적으세요.\n" + SOAP_TEMPLATE
-        )
-    problems = soap_problems(plan)
-    if problems:
-        deny(
-            f"{TAG} {card_id}의 구현 계획이 SOAP 형식이 아니어서 {action} 수 "
-            "없습니다. 예약 제목 네 개를 이 순서로 한 번씩, 철자 그대로 쓰고 "
-            "각 절에 본문을 채우세요.\n"
-            + "\n".join(f"  - {p}" for p in problems)
-            + f"\n'backlog {edit} edit {card_id} --plan \"...\"'로 고치세요.\n"
-            + SOAP_TEMPLATE
+            f"{TAG} {card_id}을(를) {action} 수 없습니다 "
+            "(구현 계획 = SOAP + AC + DoD).\n"
+            + "\n".join(f"- {b}" for b in blocks)
         )
 
 

@@ -297,3 +297,48 @@ def test_start_denied_on_bad_soap(project, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "빠진 제목: ### Plan" in err
     assert "backlog task edit TASK-58 --plan" in err
+
+
+# --- TASK-58#4: the card needs at least one AC and one DoD item ---
+
+
+@pytest.mark.parametrize(
+    "acs, dods, says",
+    [
+        ((), ("d",), ["AC"]),
+        (("a",), (), ["DoD"]),
+        ((), (), ["AC", "DoD"]),
+    ],
+)
+def test_promote_denied_without_ac_or_dod(project, monkeypatch, capsys, acs, dods, says):
+    """TASK-58#4"""
+    project.draft(make_card(acs=acs, dods=dods))
+    assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 2
+    err = capsys.readouterr().err
+    for word in says:
+        assert f"--{'ac' if word == 'AC' else 'dod'}" in err
+    if says == ["AC"]:
+        assert "--dod" not in err
+
+
+def test_start_denied_without_dod(project, monkeypatch, capsys):
+    """TASK-58#4"""
+    project.task(make_card(dods=(), **TASK))
+    command = 'backlog task edit TASK-58 -s "In Progress"'
+    assert run_main(monkeypatch, project.path, command) == 2
+    assert "backlog task edit TASK-58 --dod" in capsys.readouterr().err
+
+
+def test_checked_items_count_and_marker_less_text_does_not(project, monkeypatch):
+    """TASK-58#4: `- [x] #1` counts; a card without AC/DoD markers has none."""
+    text = make_card().replace("- [ ] #1 첫 기능", "- [x] #1 첫 기능")
+    assert rip.has_items(text, "AC") and rip.has_items(text, "DOD")
+    assert not rip.has_items("- [ ] #1 x\n", "AC")
+
+
+def test_missing_plan_and_items_reported_together(project, monkeypatch, capsys):
+    """TASK-58#4"""
+    project.draft(make_card(plan=None, acs=()))
+    assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 2
+    err = capsys.readouterr().err
+    assert "--plan" in err and "--ac" in err
