@@ -1,7 +1,7 @@
 ---
 id: TASK-61
 title: 테스트 파일 구조(요약 → AC/DoD → 커버리지)를 훅으로 강제한다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-12 02:28'
 updated_date: '2026-10-21 09:45'
