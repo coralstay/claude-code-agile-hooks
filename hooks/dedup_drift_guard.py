@@ -44,6 +44,7 @@ REGISTRY = {
         "require_draft_first.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_test_layout.py",
     ],
     "has_command": [
         "block_stop_if_dirty.py",
@@ -68,6 +69,7 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_test_layout.py",
     ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
     "tokenize": [
@@ -133,6 +135,25 @@ REGISTRY = {
         "require_active_task.py",
         "pipeline_trace.py",
         "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    # TASK-61: require_test_layout.py가 testFirst.testGlobs를 같은 의미로 읽도록
+    # require_test_first.py의 glob 헬퍼를 그대로 복사해 쓴다
+    "is_glob_list": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "glob_regex": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "glob_matches": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "matches_any": [
+        "require_test_first.py",
+        "require_test_layout.py",
     ],
     # TASK-31: Stop payload의 background_tasks로 parallel_session을 판정하는 헬퍼
     "background_tasks_running": [
