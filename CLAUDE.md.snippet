@@ -31,11 +31,13 @@
    ### Plan
    구현 순서
    ```
-3. **검토 (Plan-Review-Go)**: 유저가 드래프트를 확인/승인해 태스크로 승격되기 전까지는 실행을
-   시작하지 않는다. 착수(In Progress) 전에 사람이 구현 계획을 리뷰하고 go를 준다. go는 사람이
-   직접 남기는 빈 서명 커밋 `git commit --allow-empty -S -m "Go: <ID>"`다 — Claude는 이 커밋을
-   만들지 않고 유저에게 리뷰와 go를 요청한다. HEAD에서 닿는 곳에 유효한 서명(`%G?` = `G`)의
-   `Go: <ID>` 커밋이 없거나 카드에 SOAP 계획 · AC · DoD가 없으면 훅이 `-s "In Progress"`를 막는다.
+3. **검토 (계획 → 리뷰 → 계획 승인)**: 유저가 드래프트를 확인/승인해 태스크로 승격되기 전까지는
+   실행을 시작하지 않는다. 착수(In Progress) 전에 사람이 구현 계획을 리뷰하고 계획 승인을 한다.
+   계획 승인은 사람이 자기 키로 직접 서명해 남기는 빈 커밋
+   `git commit --allow-empty -S -m "Plan-Approved: <ID>"`다 — Claude는 이 커밋을 만들지 않고
+   유저에게 리뷰와 계획 승인을 요청한다. 승인 게이트: HEAD에서 닿는 곳에 유효한 서명(`%G?` = `G`)이고
+   서명자(`%GS`)가 프로젝트 설정 `humanSigners`에 있는 `Plan-Approved: <ID>` 커밋이 없거나, 카드에
+   SOAP 계획 · AC · DoD가 없으면 훅이 `-s "In Progress"`를 막는다.
 4. **실행** (태스크당):
    - 시작 전 `backlog task view <ID> --plain`으로 반드시 먼저 읽는다 — 안 읽으면 훅이
      Edit/Write를 차단한다.

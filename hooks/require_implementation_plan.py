@@ -41,16 +41,26 @@ Definition of Done item (`- [ ] #n` / `- [x] #n` lines inside the
 `<!-- AC:... -->` / `<!-- DOD:... -->` blocks). All problems of a card are
 reported in one deny, each with the `edit --plan/--ac/--dod` to fix it.
 
-`-s "In Progress"` also needs Plan-Review-Go (decision-13): after a human
-reviewed the plan they record the go as an empty signed commit
-`git commit --allow-empty -S -m "Go: <ID>"`. The hook searches the commits
-reachable from HEAD (`git log HEAD`; other branches don't count, so a go
-on an unmerged branch is not seen until it is merged) for a subject that is
-exactly `Go: <ID>` with the card's own ID, and requires
-`git log --format=%G?` to be `G` (valid signature) for at least one of
-them. The signer's identity is not checked, and neither is the emptiness
-of the commit. The hook never creates a go commit. For SSH signing, `G`
-needs `gpg.ssh.allowedSignersFile` to list the key.
+`-s "In Progress"` also passes the approval gate (decision-14, which
+replaces decision-13): plan -> review -> plan approval. After a human
+reviewed the plan they record the plan approval as an empty commit signed
+with their own key: `git commit --allow-empty -S -m "Plan-Approved: <ID>"`.
+The hook searches the commits reachable from HEAD (`git log HEAD`; other
+branches don't count, so an approval on an unmerged branch is not seen
+until it is merged) for a subject that is exactly `Plan-Approved: <ID>`
+with the card's own ID, and needs at least one of them to have `%G?` = `G`
+(valid signature) and a signer principal `%GS` listed in `humanSigners`
+(a list of non-empty strings) in the project config
+(.claude-code-agile-hooks.json, legacy .claude-rails.json). Missing, empty,
+malformed or unreadable `humanSigners` denies with setup guidance: the
+human and AI keys go into `~/.ssh/allowed_signers` under separate
+principals, `gpg.ssh.allowedSignersFile` points at it, and the human
+principal is listed in `humanSigners`. The deny tells apart: no approval
+commit, signature not valid (`%G?` other than G), and a valid signature by
+a non-human signer. The emptiness of the commit is not checked, and the
+hook never creates an approval commit. Residual risk: allowed_signers and
+the project config are local files an agent could edit; protect them
+(e.g. with config_guard.py).
 
 An ID with no card file passes - backlog itself reports the error.
 
@@ -99,6 +109,38 @@ def is_backlog_project(cwd):
     return os.path.isdir(os.path.join(cwd, ".git")) and os.path.isfile(
         os.path.join(cwd, "backlog", "config.yml")
     )
+
+
+def project_config_path(cwd):
+    """TASK-54: the project config was renamed from .claude-rails.json to
+    .claude-code-agile-hooks.json. Prefer the new name and fall back to the legacy one so
+    projects can rename at their own pace; None when neither exists."""
+    for name in (".claude-code-agile-hooks.json", ".claude-rails.json"):
+        path = os.path.join(cwd, name)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def human_signers(cwd):
+    """`humanSigners` from the project config as a list of non-empty
+    strings, or None when it is missing, empty, malformed or unreadable."""
+    path = project_config_path(cwd)
+    if path is None:
+        return None
+    try:
+        with open(path) as f:
+            config = json.load(f)
+    except (OSError, ValueError):
+        return None
+    signers = config.get("humanSigners") if isinstance(config, dict) else None
+    if (
+        not isinstance(signers, list)
+        or not signers
+        or not all(isinstance(x, str) and x for x in signers)
+    ):
+        return None
+    return signers
 
 
 # --- command parsing (strip_heredoc_bodies/tokenize/split_segments/
@@ -313,43 +355,71 @@ def git_log(cwd, *args):
     return result.stdout if result.returncode == 0 else None
 
 
-def go_status(cwd, card_id):
-    """Signature status (`%G?`) of the go for `card_id`: "G" if any commit
-    reachable from HEAD with subject exactly `Go: <card_id>` has a valid
-    signature, else the status of the newest such commit, None if there is
-    none. The signer's identity is not checked (decision-13)."""
-    subject = f"Go: {card_id}"
+def approval_status(cwd, card_id, signers):
+    """(kind, detail) of the plan approval for `card_id` among the commits
+    reachable from HEAD whose subject is exactly `Plan-Approved: <card_id>`:
+    ("approved", principal) if any has `%G?` = G and a `%GS` in `signers`;
+    otherwise the newest one's problem - ("invalid", %G?) or
+    ("not_human", %GS) - or ("missing", None) when there is none."""
+    subject = f"Plan-Approved: {card_id}"
     out = git_log(cwd, "--format=%H %s", "HEAD")
     if out is None:
-        return None
-    statuses = []
+        return ("missing", None)
+    problems = []
     for line in out.splitlines():
         commit, _, rest = line.partition(" ")
         if rest != subject:
             continue
-        status = (git_log(cwd, "-1", "--format=%G?", commit) or "").strip()
-        if status == "G":
-            return "G"
-        statuses.append(status)
-    return statuses[0] if statuses else None
+        info = git_log(cwd, "-1", "--format=%G?%x00%GS", commit) or ""
+        status, _, signer = info.strip("\n").partition("\0")
+        if status != "G":
+            problems.append(("invalid", status))
+        elif signer in signers:
+            return ("approved", signer)
+        else:
+            problems.append(("not_human", signer))
+    return problems[0] if problems else ("missing", None)
 
 
-def go_problem(cwd, card_id):
-    """Message block when the go is missing or not validly signed."""
-    status = go_status(cwd, card_id)
-    if status == "G":
+def approval_problem(cwd, card_id):
+    """Message block when the approval gate does not pass, else None."""
+    command = f'  git commit --allow-empty -S -m "Plan-Approved: {card_id}"\n'
+    ask = "  Claude는 계획 승인 커밋을 만들지 않습니다 - 유저에게 리뷰와 계획 승인을 요청하세요."
+    signers = human_signers(cwd)
+    if signers is None:
+        return (
+            "승인 게이트를 확인할 수 없습니다: 프로젝트 설정(.claude-code-agile-hooks.json)에 "
+            "사람 서명자 목록 humanSigners(비어 있지 않은 문자열 배열)가 없습니다. "
+            "사람이 직접 설정해야 합니다:\n"
+            "  1. ~/.ssh/allowed_signers에 사람 키와 AI 키를 서로 다른 principal로 올린다 "
+            "(예: 'human <사람 공개키>', 'ai-claude-code <AI 공개키>').\n"
+            "  2. git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers\n"
+            '  3. 프로젝트 설정에 "humanSigners": ["human"]처럼 사람 principal을 적는다.\n'
+            "그 뒤 사람이 계획을 리뷰하고 자기 키로 계획 승인 커밋을 남깁니다:\n"
+            + command
+            + ask
+        )
+    kind, detail = approval_status(cwd, card_id, signers)
+    if kind == "approved":
         return None
-    found = (
-        "HEAD에서 닿는 커밋 중 제목이 정확히 "
-        f"'Go: {card_id}'인 커밋이 없습니다."
-        if status is None
-        else f"'Go: {card_id}' 커밋의 서명이 유효하지 않습니다(%G? = {status}, G여야 함)."
-    )
+    if kind == "missing":
+        found = (
+            "HEAD에서 닿는 커밋 중 제목이 정확히 "
+            f"'Plan-Approved: {card_id}'인 커밋이 없습니다."
+        )
+    elif kind == "invalid":
+        found = (
+            f"'Plan-Approved: {card_id}' 커밋의 서명이 유효하지 않습니다"
+            f"(%G? = {detail}, G여야 함)."
+        )
+    else:
+        found = (
+            f"'Plan-Approved: {card_id}' 커밋이 사람이 아닌 서명자의 서명입니다"
+            f"(%GS = {detail}, humanSigners: {', '.join(signers)})."
+        )
     return (
-        f"Plan-Review-Go 승인(go)이 없습니다. {found} 구현 계획을 사람이 "
-        "리뷰하고 승인했다면, 사람이 직접 서명 커밋으로 go를 남겨야 합니다:\n"
-        f'  git commit --allow-empty -S -m "Go: {card_id}"\n'
-        "  Claude는 go 커밋을 만들지 않습니다 - 유저에게 리뷰와 go를 요청하세요."
+        f"계획 승인이 없습니다. {found} 구현 계획을 사람이 리뷰하고 승인했다면, "
+        "사람이 자기 키로 직접 서명 커밋을 남겨야 합니다:\n" + command + ask
     )
 
 
@@ -394,9 +464,9 @@ def check_card(cwd, kind, token):
     card_id, text = found
     blocks = card_problems(card_id, text, edit)
     if kind == "start":
-        go = go_problem(cwd, card_id)
-        if go is not None:
-            blocks.append(go)
+        approval = approval_problem(cwd, card_id)
+        if approval is not None:
+            blocks.append(approval)
     if blocks:
         action = "승격할" if kind == "promote" else "In Progress로 옮길"
         deny(

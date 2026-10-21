@@ -82,14 +82,20 @@ def make_key(directory, name):
 
 @pytest.fixture(scope="session")
 def keys(tmp_path_factory):
-    """Two ssh signing keys; only `trusted` is in the allowed signers file."""
+    """Three ssh signing keys. The allowed signers file lists `human` and
+    `ai` under separate principals (`human`, `ai-claude-code`); `stranger`
+    is not listed at all."""
     directory = tmp_path_factory.mktemp("keys")
-    trusted = make_key(directory, "trusted")
+    human = make_key(directory, "human")
+    ai = make_key(directory, "ai")
     stranger = make_key(directory, "stranger")
     allowed = directory / "allowed_signers"
-    pub = (directory / "trusted.pub").read_text().split()
-    allowed.write_text(f"tester@example.com {pub[0]} {pub[1]}\n")
-    return {"trusted": trusted, "stranger": stranger, "allowed": allowed}
+    lines = []
+    for principal, name in (("human", "human"), ("ai-claude-code", "ai")):
+        pub = (directory / f"{name}.pub").read_text().split()
+        lines.append(f"{principal} {pub[0]} {pub[1]}\n")
+    allowed.write_text("".join(lines))
+    return {"human": human, "ai": ai, "stranger": stranger, "allowed": allowed}
 
 
 @pytest.fixture
@@ -108,7 +114,9 @@ def project(tmp_path, monkeypatch, keys):
     git(root, "config", "commit.gpgsign", "false")
     git(root, "config", "gpg.format", "ssh")
     git(root, "config", "gpg.ssh.allowedSignersFile", str(keys["allowed"]))
-    git(root, "config", "user.signingkey", str(keys["trusted"]))
+    git(root, "config", "user.signingkey", str(keys["human"]))
+    config = root / ".claude-code-agile-hooks.json"
+    config.write_text(json.dumps({"humanSigners": ["human"]}))
     (root / "backlog" / "drafts").mkdir(parents=True)
     (root / "backlog" / "tasks").mkdir(parents=True)
     (root / "backlog" / "config.yml").write_text("project_name: x\n")
@@ -124,8 +132,17 @@ def project(tmp_path, monkeypatch, keys):
         def task(self, text, name="task-58 - 제목.md"):
             (root / "backlog" / "tasks" / name).write_text(text)
 
-        def go(self, subject="Go: TASK-58", sign=True, key="trusted"):
-            """The human's go: an empty commit, signed unless sign=False."""
+        def config(self, data, name=".claude-code-agile-hooks.json"):
+            """Replace the project config; `data` None removes it."""
+            config.unlink()
+            if data is not None:
+                (root / name).write_text(
+                    data if isinstance(data, str) else json.dumps(data)
+                )
+
+        def approve(self, subject="Plan-Approved: TASK-58", sign=True, key="human"):
+            """The plan approval: an empty commit, signed with `key` unless
+            sign=False."""
             args = ["-c", f"user.signingkey={keys[key]}", "commit", "-q"]
             args += ["--allow-empty", "-S" if sign else "--no-gpg-sign", "-m", subject]
             git(root, *args)
@@ -374,76 +391,154 @@ def test_missing_plan_and_items_reported_together(project, monkeypatch, capsys):
     assert "--plan" in err and "--ac" in err
 
 
-# --- TASK-58#5: -s "In Progress" needs the human's go - an empty commit
-# with subject exactly `Go: <ID>`, reachable from HEAD, with a valid
-# signature (`git log --format=%G?` == G, decision-13) ---
+# --- TASK-58#5: -s "In Progress" needs the plan approval (decision-14) -
+# an empty commit with subject exactly `Plan-Approved: <ID>`, reachable from
+# HEAD, with a valid signature (`%G?` == G) whose signer principal (`%GS`)
+# is listed in the project config's `humanSigners` ---
 
 START = 'backlog task edit TASK-58 -s "In Progress"'
-GO_COMMAND = 'git commit --allow-empty -S -m "Go: TASK-58"'
+APPROVAL_COMMAND = 'git commit --allow-empty -S -m "Plan-Approved: TASK-58"'
 
 
-def test_start_denied_without_go(project, monkeypatch, capsys):
+def test_start_denied_without_approval(project, monkeypatch, capsys):
     """TASK-58#5"""
     project.task(make_card(**TASK))
     assert run_main(monkeypatch, project.path, START) == 2
     err = capsys.readouterr().err
-    assert GO_COMMAND in err
+    assert "'Plan-Approved: TASK-58'인 커밋이 없습니다" in err
+    assert APPROVAL_COMMAND in err
+    assert "Claude는 계획 승인 커밋을 만들지 않습니다" in err
     assert "--plan" not in err
 
 
-def test_start_allowed_with_signed_go(project, monkeypatch):
+def test_start_allowed_with_human_signed_approval(project, monkeypatch):
     """TASK-58#5"""
     project.task(make_card(**TASK))
-    project.go()
+    project.approve()
     assert run_main(monkeypatch, project.path, START) == 0
     # the card's own ID is used, however the command names the task
     assert run_main(monkeypatch, project.path, "backlog task edit 58 -s 'in progress'") == 0
 
 
-def test_start_denied_with_unsigned_go(project, monkeypatch, capsys):
+def test_start_denied_with_unsigned_approval(project, monkeypatch, capsys):
     """TASK-58#5"""
     project.task(make_card(**TASK))
-    project.go(sign=False)
+    project.approve(sign=False)
     assert run_main(monkeypatch, project.path, START) == 2
     err = capsys.readouterr().err
-    assert "%G? = N" in err
-    assert GO_COMMAND in err
+    assert "서명이 유효하지 않습니다(%G? = N" in err
+    assert APPROVAL_COMMAND in err
 
 
 def test_start_denied_when_signature_is_not_valid(project, monkeypatch, capsys):
     """TASK-58#5: signed by a key the allowed signers file doesn't know."""
     project.task(make_card(**TASK))
-    project.go(key="stranger")
+    project.approve(key="stranger")
     assert run_main(monkeypatch, project.path, START) == 2
     err = capsys.readouterr().err
-    assert "%G? = " in err and "%G? = G" not in err
+    assert "서명이 유효하지 않습니다(%G? = " in err and "%G? = G" not in err
 
 
-def test_any_valid_go_among_several_counts(project, monkeypatch):
+def test_start_denied_when_signed_by_ai_key(project, monkeypatch, capsys):
+    """TASK-58#5: a valid signature whose principal is not in humanSigners
+    (here the AI key's `ai-claude-code`) is not a human approval."""
+    project.task(make_card(**TASK))
+    project.approve(key="ai")
+    assert run_main(monkeypatch, project.path, START) == 2
+    err = capsys.readouterr().err
+    assert "사람이 아닌 서명자" in err
+    assert "%GS = ai-claude-code" in err
+    assert "humanSigners" in err
+
+
+def test_signer_listed_in_human_signers_passes(project, monkeypatch):
+    """TASK-58#5: any principal in the list counts."""
+    project.config({"humanSigners": ["someone-else", "ai-claude-code"]})
+    project.task(make_card(**TASK))
+    project.approve(key="ai")
+    assert run_main(monkeypatch, project.path, START) == 0
+
+
+def test_signer_not_listed_in_human_signers_is_denied(project, monkeypatch, capsys):
+    """TASK-58#5"""
+    project.config({"humanSigners": ["someone-else"]})
+    project.task(make_card(**TASK))
+    project.approve()
+    assert run_main(monkeypatch, project.path, START) == 2
+    assert "%GS = human" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {},
+        {"humanSigners": []},
+        {"humanSigners": None},
+        {"humanSigners": "human"},
+        {"humanSigners": ["human", 3]},
+        {"humanSigners": [""]},
+        ["human"],
+        "not json",
+        None,
+    ],
+    ids=["missing", "empty", "null", "string", "non-string", "blank", "not-object", "bad-json", "no-file"],
+)
+def test_start_denied_without_human_signers(project, monkeypatch, capsys, config):
+    """TASK-58#5: no usable humanSigners = deny with setup guidance, even
+    when a human-signed approval exists."""
+    project.config(config)
+    project.task(make_card(**TASK))
+    project.approve()
+    assert run_main(monkeypatch, project.path, START) == 2
+    err = capsys.readouterr().err
+    assert "humanSigners" in err
+    assert "~/.ssh/allowed_signers" in err
+    assert "gpg.ssh.allowedSignersFile" in err
+    assert APPROVAL_COMMAND in err
+
+
+def test_human_signers_read_from_legacy_config(project, monkeypatch):
+    """TASK-58#5: legacy .claude-rails.json is read like the other hooks."""
+    project.config({"humanSigners": ["human"]}, name=".claude-rails.json")
+    project.task(make_card(**TASK))
+    project.approve()
+    assert run_main(monkeypatch, project.path, START) == 0
+
+
+def test_any_human_approval_among_several_counts(project, monkeypatch):
     """TASK-58#5"""
     project.task(make_card(**TASK))
-    project.go(sign=False)
-    project.go()
-    project.go(sign=False)
+    project.approve(sign=False)
+    project.approve(key="ai")
+    project.approve()
+    project.approve(key="ai")
     assert run_main(monkeypatch, project.path, START) == 0
 
 
 @pytest.mark.parametrize(
     "subject",
-    ["go: TASK-58", "Go: TASK-5", "Go: TASK-580", "Go: TASK-58 승인", "Go:TASK-58", "Go: 58"],
+    [
+        "plan-approved: TASK-58",
+        "Plan-Approved: TASK-5",
+        "Plan-Approved: TASK-580",
+        "Plan-Approved: TASK-58 승인",
+        "Plan-Approved:TASK-58",
+        "Plan-Approved: 58",
+        "Go: TASK-58",
+    ],
 )
 def test_subject_must_be_exact(project, monkeypatch, subject):
     """TASK-58#5"""
     project.task(make_card(**TASK))
-    project.go(subject=subject)
+    project.approve(subject=subject)
     assert run_main(monkeypatch, project.path, START) == 2
 
 
-def test_go_on_unmerged_branch_does_not_count(project, monkeypatch):
+def test_approval_on_unmerged_branch_does_not_count(project, monkeypatch):
     """TASK-58#5: only commits reachable from HEAD are searched."""
     project.task(make_card(**TASK))
     git(project.path, "switch", "-q", "-c", "elsewhere")
-    project.go()
+    project.approve()
     git(project.path, "switch", "-q", "main")
     assert run_main(monkeypatch, project.path, START) == 2
     git(project.path, "merge", "-q", "--ff-only", "elsewhere")
@@ -454,24 +549,25 @@ def test_show_signature_config_does_not_break_parsing(project, monkeypatch):
     """TASK-58#5"""
     git(project.path, "config", "log.showSignature", "true")
     project.task(make_card(**TASK))
-    project.go()
+    project.approve()
     assert run_main(monkeypatch, project.path, START) == 0
 
 
-def test_unborn_head_has_no_go(tmp_path, monkeypatch):
-    """TASK-58#5: a repo without commits can't hold a go."""
+def test_unborn_head_has_no_approval(tmp_path, monkeypatch):
+    """TASK-58#5: a repo without commits can't hold a plan approval."""
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "none"))
     git(tmp_path, "init", "-q")
-    assert rip.go_status(str(tmp_path), "TASK-58") is None
+    assert rip.approval_status(str(tmp_path), "TASK-58", ["human"]) == ("missing", None)
 
 
-def test_promote_does_not_need_go(project, monkeypatch):
-    """TASK-58#5: go gates only the start of work."""
+def test_promote_does_not_need_approval(project, monkeypatch):
+    """TASK-58#5: the approval gate guards only the start of work."""
+    project.config(None)
     project.draft(make_card())
     assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 0
 
 
-def test_hook_never_creates_a_go(project, monkeypatch):
+def test_hook_never_creates_an_approval(project, monkeypatch):
     """TASK-58#5: a denied start leaves the history untouched."""
     project.task(make_card(**TASK))
     before = git(project.path, "rev-parse", "HEAD")
@@ -613,15 +709,24 @@ def test_copied_helpers_are_in_dedup_registry():
     """TASK-58#7"""
     import dedup_drift_guard
 
-    for name in ("is_backlog_project", "strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+    for name in (
+        "is_backlog_project",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+        "project_config_path",
+    ):
         assert "require_implementation_plan.py" in dedup_drift_guard.REGISTRY[name], name
 
 
 @pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
-def test_docs_carry_soap_template_and_go_command(name):
-    """TASK-58#7"""
+def test_docs_carry_soap_template_and_approval_command(name):
+    """TASK-58#7 TASK-58#5"""
     text = read_repo(name)
     positions = [text.index(h) for h in rip.SOAP_HEADINGS]
     assert positions == sorted(positions)
-    assert 'git commit --allow-empty -S -m "Go: <ID>"' in text
-    assert "Plan-Review-Go" in text
+    assert 'git commit --allow-empty -S -m "Plan-Approved: <ID>"' in text
+    assert "계획 → 리뷰 → 계획 승인" in text
+    assert "humanSigners" in text
+    assert "Plan-Review-Go" not in text and '"Go: <ID>"' not in text

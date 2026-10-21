@@ -227,6 +227,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58#5 (humanSigners)
     ]
 
 

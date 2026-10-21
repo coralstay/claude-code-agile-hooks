@@ -178,7 +178,8 @@ CONTRACT = {
         ],
     },
     # TASK-58#7: denies promote / In Progress without a SOAP plan, AC, DoD
-    # and go, so it is registered like the other gates (no `if`)
+    # and the plan approval (approval gate), so it is registered like the
+    # other gates (no `if`)
     "require_implementation_plan": {
         "detects": lambda c: bool(require_implementation_plan.gated_commands(c)),
         "acts_on": [

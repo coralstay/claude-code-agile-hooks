@@ -69,6 +69,7 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
     ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
     "tokenize": [

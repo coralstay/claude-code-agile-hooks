@@ -212,7 +212,7 @@ Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 �
 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
 
-**구현 계획과 Plan-Review-Go**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
+**구현 계획과 계획 승인(계획 → 리뷰 → 계획 승인)**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
 `backlog task edit <ID> -s "In Progress"`를 카드 파일을 읽어 검사합니다. 카드에는 AC와 DoD가
 하나 이상 있어야 하고, Implementation Plan(`--plan`)은 아래 SOAP 예약 제목 네 개를 이 순서로 한
 번씩, 철자 그대로 쓰고 각 절에 본문을 채워야 합니다(대소문자·띄어쓰기·제목 수준 변형은 인정하지
@@ -233,17 +233,41 @@ Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 �
 구현 순서
 ```
 
-In Progress로 옮길 때는 여기에 더해 사람의 승인(go)이 있어야 합니다 — 계획 작성(Plan) → 사람의
-리뷰(Review) → 승인(Go). go는 사람이 계획을 리뷰한 뒤 직접 남기는 빈 서명 커밋입니다.
+In Progress로 옮길 때는 여기에 더해 승인 게이트를 통과해야 합니다 — 계획 → 리뷰 → 계획 승인.
+계획 승인은 사람이 계획을 리뷰한 뒤 자기 키로 직접 서명해 남기는 빈 커밋입니다.
 
 ```bash
-git commit --allow-empty -S -m "Go: <ID>"   # 예: git commit --allow-empty -S -m "Go: TASK-58"
+git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow-empty -S -m "Plan-Approved: TASK-58"
 ```
 
-훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Go: <ID>`인 커밋을 찾고, 그중 하나라도
-`git log --format=%G?`가 `G`(유효한 서명)인지만 봅니다. 서명 키의 주체는 가리지 않고, 훅이 go
-커밋을 만들지도 않습니다. SSH 서명이면 `gpg.ssh.allowedSignersFile`에 키가 있어야 `G`가
-나옵니다. backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
+훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Plan-Approved: <ID>`인 커밋을 찾고, 그중 하나라도
+`git log --format=%G?`가 `G`(유효한 서명)이고 서명자 principal(`%GS`)이 프로젝트 설정의
+`humanSigners`에 있어야 통과시킵니다. 승인 커밋이 없을 때, 서명이 유효하지 않을 때(`%G?` ≠ `G`),
+사람이 아닌 서명자가 서명했을 때를 구분해 안내합니다. 훅은 계획 승인 커밋을 만들지 않고, Claude도
+만들지 않습니다 — 유저에게 리뷰와 계획 승인을 요청합니다.
+
+```json
+{ "humanSigners": ["human"] }
+```
+
+사람과 Claude를 서명으로 구분하려면 키를 둘로 나눕니다(사람이 직접 설정합니다).
+
+- **AI 키**: Claude Code 세션 전용 키를 따로 만들고, `~/.claude/settings.json`의 `env`로 그
+  세션에서만 서명 키를 바꿉니다:
+  `"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.signingkey", "GIT_CONFIG_VALUE_0": "<AI 키 .pub 파일의 절대 경로>"`.
+- **사람 키**: 기존 키는 ssh-agent에서 내려(`ssh-add -d`) 서명할 때마다 암호를 입력해야 하게
+  둡니다. 그래야 Claude 세션이 사람 키로 조용히 서명할 수 없습니다.
+- **allowed_signers**: `~/.ssh/allowed_signers`에 두 키를 서로 다른 principal로 올리고
+  (`human <사람 공개키>`, `ai-claude-code <AI 공개키>`),
+  `git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers`로 연결합니다.
+- **humanSigners**: 프로젝트 설정(`.claude-code-agile-hooks.json`, 옛 `.claude-rails.json`)에 사람
+  principal만 적습니다. 없거나 비어 있으면 훅은 위 설정 방법을 안내하며 In Progress를 막습니다.
+
+남은 위험: `~/.ssh/allowed_signers`와 프로젝트 설정은 로컬에서 고칠 수 있는 파일이라, 에이전트가
+AI 키를 사람 principal로 올리거나 `humanSigners`를 바꿀 수 있습니다. 이 파일들은 `config_guard.py`
+같은 훅으로 따로 보호해야 합니다(이 훅은 보호하지 않습니다).
+
+backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
 검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은
 우회는 보지 못합니다.
 
