@@ -71,8 +71,29 @@ def git(cwd, *args):
     ).stdout
 
 
+def make_key(directory, name):
+    key = directory / name
+    subprocess.run(
+        ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", name, "-f", str(key)],
+        check=True,
+    )
+    return key
+
+
+@pytest.fixture(scope="session")
+def keys(tmp_path_factory):
+    """Two ssh signing keys; only `trusted` is in the allowed signers file."""
+    directory = tmp_path_factory.mktemp("keys")
+    trusted = make_key(directory, "trusted")
+    stranger = make_key(directory, "stranger")
+    allowed = directory / "allowed_signers"
+    pub = (directory / "trusted.pub").read_text().split()
+    allowed.write_text(f"tester@example.com {pub[0]} {pub[1]}\n")
+    return {"trusted": trusted, "stranger": stranger, "allowed": allowed}
+
+
 @pytest.fixture
-def project(tmp_path, monkeypatch):
+def project(tmp_path, monkeypatch, keys):
     """A real git repo with backlog/config.yml, isolated from the user's git
     config."""
     gitconfig = tmp_path / "gitconfig"
@@ -85,6 +106,9 @@ def project(tmp_path, monkeypatch):
     git(root, "config", "user.name", "Tester")
     git(root, "config", "user.email", "tester@example.com")
     git(root, "config", "commit.gpgsign", "false")
+    git(root, "config", "gpg.format", "ssh")
+    git(root, "config", "gpg.ssh.allowedSignersFile", str(keys["allowed"]))
+    git(root, "config", "user.signingkey", str(keys["trusted"]))
     (root / "backlog" / "drafts").mkdir(parents=True)
     (root / "backlog" / "tasks").mkdir(parents=True)
     (root / "backlog" / "config.yml").write_text("project_name: x\n")
@@ -99,6 +123,12 @@ def project(tmp_path, monkeypatch):
 
         def task(self, text, name="task-58 - 제목.md"):
             (root / "backlog" / "tasks" / name).write_text(text)
+
+        def go(self, subject="Go: TASK-58", sign=True, key="trusted"):
+            """The human's go: an empty commit, signed unless sign=False."""
+            args = ["-c", f"user.signingkey={keys[key]}", "commit", "-q"]
+            args += ["--allow-empty", "-S" if sign else "--no-gpg-sign", "-m", subject]
+            git(root, *args)
 
     return Project()
 
@@ -342,3 +372,108 @@ def test_missing_plan_and_items_reported_together(project, monkeypatch, capsys):
     assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 2
     err = capsys.readouterr().err
     assert "--plan" in err and "--ac" in err
+
+
+# --- TASK-58#5: -s "In Progress" needs the human's go - an empty commit
+# with subject exactly `Go: <ID>`, reachable from HEAD, with a valid
+# signature (`git log --format=%G?` == G, decision-13) ---
+
+START = 'backlog task edit TASK-58 -s "In Progress"'
+GO_COMMAND = 'git commit --allow-empty -S -m "Go: TASK-58"'
+
+
+def test_start_denied_without_go(project, monkeypatch, capsys):
+    """TASK-58#5"""
+    project.task(make_card(**TASK))
+    assert run_main(monkeypatch, project.path, START) == 2
+    err = capsys.readouterr().err
+    assert GO_COMMAND in err
+    assert "--plan" not in err
+
+
+def test_start_allowed_with_signed_go(project, monkeypatch):
+    """TASK-58#5"""
+    project.task(make_card(**TASK))
+    project.go()
+    assert run_main(monkeypatch, project.path, START) == 0
+    # the card's own ID is used, however the command names the task
+    assert run_main(monkeypatch, project.path, "backlog task edit 58 -s 'in progress'") == 0
+
+
+def test_start_denied_with_unsigned_go(project, monkeypatch, capsys):
+    """TASK-58#5"""
+    project.task(make_card(**TASK))
+    project.go(sign=False)
+    assert run_main(monkeypatch, project.path, START) == 2
+    err = capsys.readouterr().err
+    assert "%G? = N" in err
+    assert GO_COMMAND in err
+
+
+def test_start_denied_when_signature_is_not_valid(project, monkeypatch, capsys):
+    """TASK-58#5: signed by a key the allowed signers file doesn't know."""
+    project.task(make_card(**TASK))
+    project.go(key="stranger")
+    assert run_main(monkeypatch, project.path, START) == 2
+    err = capsys.readouterr().err
+    assert "%G? = " in err and "%G? = G" not in err
+
+
+def test_any_valid_go_among_several_counts(project, monkeypatch):
+    """TASK-58#5"""
+    project.task(make_card(**TASK))
+    project.go(sign=False)
+    project.go()
+    project.go(sign=False)
+    assert run_main(monkeypatch, project.path, START) == 0
+
+
+@pytest.mark.parametrize(
+    "subject",
+    ["go: TASK-58", "Go: TASK-5", "Go: TASK-580", "Go: TASK-58 승인", "Go:TASK-58", "Go: 58"],
+)
+def test_subject_must_be_exact(project, monkeypatch, subject):
+    """TASK-58#5"""
+    project.task(make_card(**TASK))
+    project.go(subject=subject)
+    assert run_main(monkeypatch, project.path, START) == 2
+
+
+def test_go_on_unmerged_branch_does_not_count(project, monkeypatch):
+    """TASK-58#5: only commits reachable from HEAD are searched."""
+    project.task(make_card(**TASK))
+    git(project.path, "switch", "-q", "-c", "elsewhere")
+    project.go()
+    git(project.path, "switch", "-q", "main")
+    assert run_main(monkeypatch, project.path, START) == 2
+    git(project.path, "merge", "-q", "--ff-only", "elsewhere")
+    assert run_main(monkeypatch, project.path, START) == 0
+
+
+def test_show_signature_config_does_not_break_parsing(project, monkeypatch):
+    """TASK-58#5"""
+    git(project.path, "config", "log.showSignature", "true")
+    project.task(make_card(**TASK))
+    project.go()
+    assert run_main(monkeypatch, project.path, START) == 0
+
+
+def test_unborn_head_has_no_go(tmp_path, monkeypatch):
+    """TASK-58#5: a repo without commits can't hold a go."""
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "none"))
+    git(tmp_path, "init", "-q")
+    assert rip.go_status(str(tmp_path), "TASK-58") is None
+
+
+def test_promote_does_not_need_go(project, monkeypatch):
+    """TASK-58#5: go gates only the start of work."""
+    project.draft(make_card())
+    assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 0
+
+
+def test_hook_never_creates_a_go(project, monkeypatch):
+    """TASK-58#5: a denied start leaves the history untouched."""
+    project.task(make_card(**TASK))
+    before = git(project.path, "rev-parse", "HEAD")
+    assert run_main(monkeypatch, project.path, START) == 2
+    assert git(project.path, "rev-parse", "HEAD") == before

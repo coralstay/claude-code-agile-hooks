@@ -26,6 +26,17 @@ Definition of Done item (`- [ ] #n` / `- [x] #n` lines inside the
 `<!-- AC:... -->` / `<!-- DOD:... -->` blocks). All problems of a card are
 reported in one deny, each with the `edit --plan/--ac/--dod` to fix it.
 
+`-s "In Progress"` also needs Plan-Review-Go (decision-13): after a human
+reviewed the plan they record the go as an empty signed commit
+`git commit --allow-empty -S -m "Go: <ID>"`. The hook searches the commits
+reachable from HEAD (`git log HEAD`; other branches don't count, so a go
+on an unmerged branch is not seen until it is merged) for a subject that is
+exactly `Go: <ID>` with the card's own ID, and requires
+`git log --format=%G?` to be `G` (valid signature) for at least one of
+them. The signer's identity is not checked, and neither is the emptiness
+of the commit. The hook never creates a go commit. For SSH signing, `G`
+needs `gpg.ssh.allowedSignersFile` to list the key.
+
 An ID with no card file passes - backlog itself reports the error.
 
 Fully self-contained: no imports from any other file in this repo."""
@@ -34,6 +45,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 
 TAG = "[claude-code-agile-hooks]"
@@ -256,6 +268,56 @@ def deny(message):
     sys.exit(2)
 
 
+def git_log(cwd, *args):
+    """stdout of `git log` in `cwd` (signature lines off), None on failure."""
+    result = subprocess.run(
+        ["git", "-c", "log.showSignature=false", "-C", cwd, "log", *args],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def go_status(cwd, card_id):
+    """Signature status (`%G?`) of the go for `card_id`: "G" if any commit
+    reachable from HEAD with subject exactly `Go: <card_id>` has a valid
+    signature, else the status of the newest such commit, None if there is
+    none. The signer's identity is not checked (decision-13)."""
+    subject = f"Go: {card_id}"
+    out = git_log(cwd, "--format=%H %s", "HEAD")
+    if out is None:
+        return None
+    statuses = []
+    for line in out.splitlines():
+        commit, _, rest = line.partition(" ")
+        if rest != subject:
+            continue
+        status = (git_log(cwd, "-1", "--format=%G?", commit) or "").strip()
+        if status == "G":
+            return "G"
+        statuses.append(status)
+    return statuses[0] if statuses else None
+
+
+def go_problem(cwd, card_id):
+    """Message block when the go is missing or not validly signed."""
+    status = go_status(cwd, card_id)
+    if status == "G":
+        return None
+    found = (
+        "HEAD에서 닿는 커밋 중 제목이 정확히 "
+        f"'Go: {card_id}'인 커밋이 없습니다."
+        if status is None
+        else f"'Go: {card_id}' 커밋의 서명이 유효하지 않습니다(%G? = {status}, G여야 함)."
+    )
+    return (
+        f"Plan-Review-Go 승인(go)이 없습니다. {found} 구현 계획을 사람이 "
+        "리뷰하고 승인했다면, 사람이 직접 서명 커밋으로 go를 남겨야 합니다:\n"
+        f'  git commit --allow-empty -S -m "Go: {card_id}"\n'
+        "  Claude는 go 커밋을 만들지 않습니다 - 유저에게 리뷰와 go를 요청하세요."
+    )
+
+
 def card_problems(card_id, text, edit):
     """Message blocks for everything the card lacks (empty = complete)."""
     blocks = []
@@ -296,6 +358,10 @@ def check_card(cwd, kind, token):
         return
     card_id, text = found
     blocks = card_problems(card_id, text, edit)
+    if kind == "start":
+        go = go_problem(cwd, card_id)
+        if go is not None:
+            blocks.append(go)
     if blocks:
         action = "승격할" if kind == "promote" else "In Progress로 옮길"
         deny(
