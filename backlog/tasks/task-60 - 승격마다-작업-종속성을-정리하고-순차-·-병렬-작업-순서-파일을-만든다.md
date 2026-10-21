@@ -1,7 +1,7 @@
 ---
 id: TASK-60
 title: 승격마다 작업 종속성을 정리하고 순차 · 병렬 작업 순서 파일을 만든다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-12 03:07'
 updated_date: '2026-10-21 09:24'
