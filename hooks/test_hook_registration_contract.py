@@ -185,6 +185,9 @@ CONTRACT = {
             "backlog draft promote DRAFT-1",
             "cd y && backlog draft promote 1",
             "/usr/local/bin/backlog draft promote DRAFT-1",
+            'backlog task edit TASK-1 -s "In Progress"',
+            "cd y && backlog task edit 1 --status 'In Progress'",
+            "FOO=1 backlog task edit TASK-1 -s 'In Progress'",
         ],
     },
     # TASK-56: denies the Done move of the branch's task while a test marker

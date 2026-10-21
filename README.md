@@ -22,10 +22,10 @@ CLAUDE.md에 "이렇게 해주세요"라고 적어두는 약속만으로는 매�
 ## 무엇을 만들었는지 말씀드립니다
 
 Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 동작하는
-33개의 스크립트를 만들었습니다.
+34개의 스크립트를 만들었습니다.
 [Backlog.md](https://github.com/MrLesk/Backlog.md)(Git 저장소 안에 마크다운 파일로
 태스크·문서·의사결정을 관리하는 CLI 기반 프로젝트 관리 도구입니다) 워크플로 전용
-8개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
+9개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
 있습니다. 모든 훅은 개인 fork 안에서만 강하게 적용되며, 운영 레포로 올리는 PR은
 항상 사람이 직접 열도록 하였습니다.
 
@@ -44,7 +44,7 @@ Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 �
 
 Claude Code의 훅은 [공식 문서](https://code.claude.com/docs/ko/hooks)에 정의된
 특정 이벤트(생애주기 단계)에 등록되어, 그 시점에만 실행됩니다. 전체 흐름을 먼저
-그림으로 보여드린 뒤, 이 저장소에 있는 33개의 훅이 각각 어느 단계에서 동작하는지
+그림으로 보여드린 뒤, 이 저장소에 있는 34개의 훅이 각각 어느 단계에서 동작하는지
 표로 정리해 드리겠습니다.
 
 ```mermaid
@@ -96,7 +96,7 @@ flowchart TB
 
 이 저장소의 훅은 이 흐름 중 필요한 지점마다 걸려 있습니다 — 예를 들어
 `require_active_task.py`는 `PreToolUse`(Edit\|Write)에, `block_stop_if_dirty.py`는
-`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 33개 훅 전체가 정확히
+`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 34개 훅 전체가 정확히
 어느 단계에 걸려 있는지 나열한 것입니다. 훅 이름을 누르시면 실제 소스 파일로
 이동합니다.
 
@@ -123,6 +123,7 @@ flowchart TB
 | PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
+| PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 서명된 `Go: <ID>` 커밋까지 없으면 `-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
@@ -210,6 +211,41 @@ Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 �
 Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙`
 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
+
+**구현 계획과 Plan-Review-Go**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
+`backlog task edit <ID> -s "In Progress"`를 카드 파일을 읽어 검사합니다. 카드에는 AC와 DoD가
+하나 이상 있어야 하고, Implementation Plan(`--plan`)은 아래 SOAP 예약 제목 네 개를 이 순서로 한
+번씩, 철자 그대로 쓰고 각 절에 본문을 채워야 합니다(대소문자·띄어쓰기·제목 수준 변형은 인정하지
+않습니다). 제목이 없거나, 순서가 다르거나, 두 번 나오거나, 본문이 비어 있으면 무엇이 빠졌는지
+안내하며 막습니다.
+
+```markdown
+### Subjective
+요청 · 배경: 유저가 무엇을 왜 원하는가
+
+### Objective
+확인한 사실: 코드 · 측정값 · 현재 동작
+
+### Assessment
+판단: 문제가 무엇이고 어떤 접근을 고르는가
+
+### Plan
+구현 순서
+```
+
+In Progress로 옮길 때는 여기에 더해 사람의 승인(go)이 있어야 합니다 — 계획 작성(Plan) → 사람의
+리뷰(Review) → 승인(Go). go는 사람이 계획을 리뷰한 뒤 직접 남기는 빈 서명 커밋입니다.
+
+```bash
+git commit --allow-empty -S -m "Go: <ID>"   # 예: git commit --allow-empty -S -m "Go: TASK-58"
+```
+
+훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Go: <ID>`인 커밋을 찾고, 그중 하나라도
+`git log --format=%G?`가 `G`(유효한 서명)인지만 봅니다. 서명 키의 주체는 가리지 않고, 훅이 go
+커밋을 만들지도 않습니다. SSH 서명이면 `gpg.ssh.allowedSignersFile`에 키가 있어야 `G`가
+나옵니다. backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
+검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은
+우회는 보지 못합니다.
 
 ## 더 자세한 내용이 궁금하시다면
 

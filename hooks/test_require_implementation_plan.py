@@ -585,3 +585,43 @@ def test_payload_without_cwd_passes(monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         rip.main()
     assert exc_info.value.code == 0
+
+
+# --- TASK-58#7: registration, drift registry and docs ---
+
+REPO = rip.os.path.dirname(rip.os.path.dirname(rip.os.path.abspath(rip.__file__)))
+
+
+def read_repo(name):
+    with open(rip.os.path.join(REPO, name)) as f:
+        return f.read()
+
+
+def test_registered_for_pretooluse_bash_without_filter():
+    """TASK-58#7"""
+    settings = json.loads(read_repo("settings.hooks.json"))
+    hits = [
+        (group.get("matcher"), hook.get("if"))
+        for group in settings["hooks"]["PreToolUse"]
+        for hook in group["hooks"]
+        if hook["command"].endswith("/require_implementation_plan.py")
+    ]
+    assert hits == [("Bash", None)]
+
+
+def test_copied_helpers_are_in_dedup_registry():
+    """TASK-58#7"""
+    import dedup_drift_guard
+
+    for name in ("is_backlog_project", "strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+        assert "require_implementation_plan.py" in dedup_drift_guard.REGISTRY[name], name
+
+
+@pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
+def test_docs_carry_soap_template_and_go_command(name):
+    """TASK-58#7"""
+    text = read_repo(name)
+    positions = [text.index(h) for h in rip.SOAP_HEADINGS]
+    assert positions == sorted(positions)
+    assert 'git commit --allow-empty -S -m "Go: <ID>"' in text
+    assert "Plan-Review-Go" in text
