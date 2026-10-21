@@ -4,13 +4,14 @@ title: 구현 계획(SOAP + AC + DoD)과 Plan-Review-Go 없이 승격 · 착수�
 status: To Do
 assignee: []
 created_date: '2026-10-12 02:24'
-updated_date: '2026-10-21 05:00'
+updated_date: '2026-10-21 05:01'
 labels:
   - hooks
 dependencies: []
 references:
   - decision-1
   - decision-12
+  - decision-13
 documentation:
   - >-
     https://github.com/coralstay/coralstay-software-factory/blob/main/design/3-아키텍처-설계서/05-설계-결정.md#adr-022-구현-계획은-soap--ac--dod-착수-전-plan-review-go
@@ -79,3 +80,9 @@ Implementation Plan은 아래 네 제목을 이 순서로, 철자 그대로 쓴�
 5. In Progress: 태스크 파일에 3 · 4를 똑같이 적용하고, go 기록을 확인한다.
 6. AC 순서대로 RGR(테스트 먼저)로 구현한 뒤 settings.hooks.json · README · CLAUDE.md.snippet에 SOAP 템플릿을 반영한다.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+착수 시 결정(유저, 2026-10-21) — decision-13: go는 사람이 남기는 빈 서명 커밋(git commit --allow-empty -S -m "Go: <ID>"), 제목이 정확히 'Go: <ID>'. 훅은 그 커밋이 있고 git log --format=%G? 결과가 G(유효한 서명)인지만 본다 — 서명 키 주체는 가리지 않는다(최상위 TASK-17에서 서명 키 전제 삭제). 구현 계획 Plan 1단계는 이것으로 끝남.
+<!-- SECTION:NOTES:END -->
