@@ -1,10 +1,10 @@
 ---
 id: TASK-58
 title: 구현 계획(SOAP + AC + DoD)과 Plan-Review-Go 없이 승격 · 착수를 훅으로 막는다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-12 02:24'
-updated_date: '2026-10-21 08:57'
+updated_date: '2026-10-21 09:05'
 labels:
   - hooks
 dependencies: []
@@ -50,14 +50,21 @@ Implementation Plan은 아래 네 제목을 이 순서로, 철자 그대로 쓴�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 backlog draft promote <ID>는 draft에 비어 있지 않은 Implementation Plan 절이 없으면 deny하고 backlog draft edit <ID> --plan을 안내한다
-- [ ] #2 backlog task edit <ID> -s "In Progress"는 그 태스크에 구현 계획이 없으면 deny한다(MCP · 웹 UI로 만든 카드에 대한 2차 방어선)
-- [ ] #3 draft promote와 -s "In Progress"는 Implementation Plan에 SOAP 예약 제목(### Subjective · ### Objective · ### Assessment · ### Plan)이 이 순서로 한 번씩 있고 각 절 본문이 비어 있지 않은지 검사해, 어긋나면 deny하고 빠지거나 비어 있는 제목을 안내한다
-- [ ] #4 draft promote와 -s "In Progress"는 카드에 AC나 DoD가 없으면 deny한다
-- [ ] #5 backlog task edit <ID> -s "In Progress"는 그 태스크에 Plan-Review-Go 승인(go)이 기록돼 있지 않으면 deny한다(기록 방식은 미결 항목에서 정한다)
-- [ ] #6 명령 위치(command position) 파싱은 require_draft_first.py와 같은 규칙을 쓰고, 인용문 · heredoc 안의 문자열은 통과시킨다
-- [ ] #7 settings.hooks.json 등록 + 테스트, README · CLAUDE.md.snippet에 SOAP 예약 제목 템플릿과 Plan-Review-Go를 반영한다
+- [x] #1 backlog draft promote <ID>는 draft에 비어 있지 않은 Implementation Plan 절이 없으면 deny하고 backlog draft edit <ID> --plan을 안내한다
+- [x] #2 backlog task edit <ID> -s "In Progress"는 그 태스크에 구현 계획이 없으면 deny한다(MCP · 웹 UI로 만든 카드에 대한 2차 방어선)
+- [x] #3 draft promote와 -s "In Progress"는 Implementation Plan에 SOAP 예약 제목(### Subjective · ### Objective · ### Assessment · ### Plan)이 이 순서로 한 번씩 있고 각 절 본문이 비어 있지 않은지 검사해, 어긋나면 deny하고 빠지거나 비어 있는 제목을 안내한다
+- [x] #4 draft promote와 -s "In Progress"는 카드에 AC나 DoD가 없으면 deny한다
+- [x] #5 backlog task edit <ID> -s "In Progress"는 그 태스크에 Plan-Review-Go 승인(go)이 기록돼 있지 않으면 deny한다(기록 방식은 미결 항목에서 정한다)
+- [x] #6 명령 위치(command position) 파싱은 require_draft_first.py와 같은 규칙을 쓰고, 인용문 · heredoc 안의 문자열은 통과시킨다
+- [x] #7 settings.hooks.json 등록 + 테스트, README · CLAUDE.md.snippet에 SOAP 예약 제목 템플릿과 Plan-Review-Go를 반영한다
 <!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [x] #1 전체 테스트 통과 · 커버리지 100%(coverageCommand)
+- [x] #2 settings.hooks.json 등록 · dedup REGISTRY · 등록 계약 테스트 반영
+- [x] #3 push 전 커밋 정리, 각 커밋에 TASK-58
+<!-- DOD:END -->
 
 ## Implementation Plan
 
@@ -91,3 +98,19 @@ Implementation Plan은 아래 네 제목을 이 순서로, 철자 그대로 쓴�
 
 decision-14(유저, 2026-10-21): 용어 go → 계획 승인, go 판정 → 승인 게이트, Plan-Review-Go → 계획 → 리뷰 → 계획 승인, 커밋 제목 'Plan-Approved: <ID>'. 서명은 두 키로 나눈다 — Claude는 AI 전용 키, 사람은 기존 키(ssh-agent에서 내려 암호 입력 필요). allowed_signers에 principal을 나눠 올리고, 승인 게이트는 %G?=G이고 %GS가 프로젝트 설정 humanSigners 목록에 있을 때만 통과. decision-13을 대체한다.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+구현 계획(SOAP + AC + DoD)과 계획 승인 없이 draft 승격 · 착수하는 것을 막는 독립 훅 hooks/require_implementation_plan.py를 추가했다.
+
+- draft promote: Implementation Plan이 없거나 비면 deny, draft edit --plan 안내(AC #1). task edit -s "In Progress"도 같은 검사(AC #2, MCP · 웹 UI 카드의 2차 방어선)
+- SOAP 예약 제목 ### Subjective · ### Objective · ### Assessment · ### Plan — 철자 · 순서 · 중복 · 빈 본문 검사, 템플릿 안내(AC #3). AC · DoD 항목이 없으면 deny(AC #4)
+- 승인 게이트(AC #5, decision-14 — decision-13 대체): HEAD에서 닿는 커밋 중 제목이 정확히 'Plan-Approved: <ID>'이고 %G? = G, 서명자 %GS가 프로젝트 설정 humanSigners에 있어야 In Progress 허용. 승인 커밋 없음 · 서명 무효 · 사람이 아닌 서명자를 구분해 안내하고, Claude는 승인 커밋을 만들지 않는다고 명시. humanSigners가 없거나 잘못되면 설정 안내와 함께 deny
+- 명령 위치 파싱(require_draft_first.py 규칙 복사, REGISTRY 등록), 인용문 · heredoc 통과, 짝 안 맞는 따옴표는 정규식 대체 판정(AC #6)
+- settings.hooks.json 등록, 등록 계약 테스트, README · CLAUDE.md.snippet에 SOAP 템플릿 · 계획 → 리뷰 → 계획 승인 · 두 키 구성 · humanSigners · 남은 위험(로컬 파일 보호 필요) 반영(AC #7)
+- 용어: go → 계획 승인, go 판정 → 승인 게이트(유저 결정, 업계 관행 plan approval · approval gate)
+
+검증: uvx … pytest --cov → 1931 passed, TOTAL 4179 stmts · 1710 branches 100%. 실제 ssh 키 3개(human · ai-claude-code · stranger)로 서명 상태별 통합 테스트.
+유저 설정 필요: ~/.ssh/allowed_signers(human · ai-claude-code principal), gpg.ssh.allowedSignersFile, Claude Code env의 AI 서명 키, 사람 키 ssh-agent 제외, 프로젝트별 "humanSigners": ["human"]. 설정 전에는 이 훅을 설치하면 모든 In Progress 전이가 막힌다.
+<!-- SECTION:FINAL_SUMMARY:END -->
