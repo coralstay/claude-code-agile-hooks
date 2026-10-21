@@ -46,6 +46,7 @@ import pre_push_check
 import pre_push_coverage_check
 import require_draft_first
 import require_test_first
+import require_work_order
 
 SETTINGS = os.path.join(os.path.dirname(__file__), os.pardir, "settings.hooks.json")
 SEPARATOR_CHARS = set(";&|()\n")
@@ -185,6 +186,18 @@ CONTRACT = {
             "cd y && backlog task edit AO-1 --status Done",
             "/usr/local/bin/backlog task edit 1 -s Done",
             "FOO=1 backlog task edit AO-1 -s Done",
+        ],
+    },
+    # TASK-60: denies promote / In Progress while backlog/work-order.md is
+    # stale, so it is registered like the other gates (no `if`)
+    "require_work_order": {
+        "detects": require_work_order.command_starts_stage,
+        "acts_on": [
+            "backlog draft promote DRAFT-1",
+            "cd y && backlog draft promote DRAFT-1",
+            "/usr/local/bin/backlog draft promote DRAFT-1",
+            "backlog task edit AO-1 -s 'In Progress'",
+            "FOO=1 backlog task edit AO-1 --status 'In Progress'",
         ],
     },
     # filtered on purpose: the gaps below are accepted
