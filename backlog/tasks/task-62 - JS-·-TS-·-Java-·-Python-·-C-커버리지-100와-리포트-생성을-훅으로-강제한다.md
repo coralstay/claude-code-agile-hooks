@@ -1,7 +1,7 @@
 ---
 id: TASK-62
 title: JS · TS · Java · Python · C++ 커버리지 100%와 리포트 생성을 훅으로 강제한다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-12 02:27'
 updated_date: '2026-10-21 10:10'
