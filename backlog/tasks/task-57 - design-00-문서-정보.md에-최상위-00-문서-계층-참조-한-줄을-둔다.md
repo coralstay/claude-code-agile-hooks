@@ -1,10 +1,10 @@
 ---
 id: TASK-57
 title: design/00-문서-정보.md에 최상위 00 문서 계층 참조 한 줄을 둔다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-21 04:37'
-updated_date: '2026-10-21 04:37'
+updated_date: '2026-10-21 04:43'
 labels:
   - design
 dependencies: []
