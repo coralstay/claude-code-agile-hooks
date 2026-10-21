@@ -2,10 +2,14 @@
 import io
 import json
 import os
+import re
 
 import pytest
 
+import dedup_drift_guard as ddg
 import require_test_layout as rtl
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @pytest.fixture
@@ -248,6 +252,68 @@ def test_task61_3_edit_moving_a_marker_into_coverage_is_denied(project, monkeypa
     payload = edit(project, "test_x.py", "def test_a(): pass", "def test_a(): pass  # TASK-61#2")
     assert run(monkeypatch, payload) == 0
 
+
+
+# --- TASK-61#5: convention and per-language examples in the docs ---
+
+
+def read_repo(name):
+    with open(os.path.join(REPO_ROOT, name)) as f:
+        return f.read()
+
+
+def test_task61_5_readme_has_a_passing_example_per_language():
+    """TASK-61#5: README carries a Python, TS, Java and C++ example, each
+    with a marker, and every one passes the hook's own layout check."""
+    blocks = re.findall(r"```(python|ts|java|cpp)\n(.*?)```", read_repo("README.md"), re.S)
+    assert sorted({lang for lang, _ in blocks}) == ["cpp", "java", "python", "ts"]
+    for lang, body in blocks:
+        syntax = rtl.HASH if lang == "python" else rtl.SLASH
+        assert rtl.layout_problems(body, syntax) == [], lang
+        assert rtl.MARKER_RE.search(body), lang
+
+
+@pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
+def test_task61_5_convention_is_documented(name):
+    """TASK-61#5: header line, both section markers and the DoD marker."""
+    text = read_repo(name)
+    for phrase in ("<ID>: <한 줄 요약>", "== AC/DoD ==", "== Coverage ==", "<ID>#D<n>"):
+        assert phrase in text, (name, phrase)
+
+
+def test_task61_5_readme_lists_the_default_target_names():
+    """TASK-61#5: the documented defaults are the ones the hook uses."""
+    text = read_repo("README.md")
+    for pattern in ("test_*.py", "*_test.py", "*.test.*", "*.spec.*", "*Test.java", "*Tests.java", "*_test.cc", "test_*.cpp"):
+        assert pattern in text, pattern
+
+
+# --- TASK-61#D2: registration, REGISTRY and the registration contract ---
+
+
+def test_task61_d2_registered_for_every_edit_and_write():
+    """TASK-61#D2: settings.hooks.json runs the hook on PreToolUse
+    Edit|Write with no `if` filter, and its copied helpers are in the dedup
+    REGISTRY without drift."""
+    settings = json.loads(read_repo("settings.hooks.json"))
+    found = [
+        (group.get("matcher"), hook.get("if"))
+        for group in settings["hooks"]["PreToolUse"]
+        for hook in group["hooks"]
+        if hook["command"].endswith("/require_test_layout.py")
+    ]
+    assert found == [("Edit|Write", None)]
+    for name in (
+        "is_backlog_project",
+        "project_config_path",
+        "is_outside_project",
+        "is_glob_list",
+        "glob_regex",
+        "glob_matches",
+        "matches_any",
+    ):
+        assert "require_test_layout.py" in ddg.REGISTRY[name], name
+    assert ddg.find_drift(os.path.join(REPO_ROOT, "hooks")) == []
 
 
 def test_task61_1_2_3_this_file_follows_its_own_layout():
