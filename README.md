@@ -22,10 +22,10 @@ CLAUDE.md에 "이렇게 해주세요"라고 적어두는 약속만으로는 매�
 ## 무엇을 만들었는지 말씀드립니다
 
 Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 동작하는
-33개의 스크립트를 만들었습니다.
+34개의 스크립트를 만들었습니다.
 [Backlog.md](https://github.com/MrLesk/Backlog.md)(Git 저장소 안에 마크다운 파일로
 태스크·문서·의사결정을 관리하는 CLI 기반 프로젝트 관리 도구입니다) 워크플로 전용
-8개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
+9개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
 있습니다. 모든 훅은 개인 fork 안에서만 강하게 적용되며, 운영 레포로 올리는 PR은
 항상 사람이 직접 열도록 하였습니다.
 
@@ -120,7 +120,8 @@ flowchart TB
 | PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격 커밋에 다른 변경 섞이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
 | PreToolUse: Bash                    | [`pre_push_check.py`](hooks/pre_push_check.py)                     | 🔒 backlog | Done+summary 확인 후 push 허용    |
-| PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
+| PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | push 전 커버리지 확인 — 언어 감지 시 `coverageCommand` 필수, 실패·리포트 없음이면 차단 |
+| PreToolUse: Bash                    | [`require_coverage_on_done.py`](hooks/require_coverage_on_done.py) | 🔒 backlog | `backlog task edit <ID> -s Done` 전 같은 커버리지 게이트 |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
@@ -197,7 +198,10 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 
 **로컬 게이트**: 이 저장소에도 [`.claude-code-agile-hooks.json`](.claude-code-agile-hooks.json)이 있어서, 설치된
 훅이 이 저장소에서 커밋할 때마다 `testCommand`(병렬 테스트, 커버리지 없이)를, push할
-때마다 `coverageCommand`(CI와 같은 명령)를 돌립니다. 실패하면 커밋·push가 막힙니다. push
+때마다 `coverageCommand`(CI와 같은 병렬 명령에 `--cov-report=term-missing --cov-report=xml`을
+더한 것)를 돌립니다. 실패하면 커밋·push가 막힙니다. 이 저장소도 `pyproject.toml`로 Python이
+감지되므로 push · `-s Done` 때 이번 실행이 만든 `coverage.xml`이 있어야 하고(아래 커버리지 100%
+절), `coverage.xml`·`htmlcov/`는 git에서 제외됩니다. push
 때의 실행 기록은 `.claude-code-agile-hooks/coverage-log.jsonl`에 남고, 이 디렉토리는 git에서
 제외됩니다. 아직 옛 이름 `.claude-rails.json`만 쓰는 프로젝트에서는 그 설정을 그대로 읽고
 기록도 예전처럼 `.claude-rails/`에 남깁니다.
@@ -210,6 +214,55 @@ Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 �
 Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙`
 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
+
+### 커버리지 100%(line + branch)를 강제합니다
+
+`pre_push_coverage_check.py`(push 전)와 `require_coverage_on_done.py`(`backlog task edit <ID> -s
+Done` 전, backlog.md 프로젝트)가 같은 게이트를 돌립니다.
+
+1. **언어 감지**: 프로젝트 루트(하위 디렉토리는 보지 않음)의 매니페스트로 감지합니다 —
+   `package.json` → JavaScript, `tsconfig.json` → TypeScript, `pom.xml` · `build.gradle` ·
+   `build.gradle.kts` → Java, `pyproject.toml` · `setup.cfg` · `pytest.ini` → Python,
+   `CMakeLists.txt` → C++.
+2. **coverageCommand 필수**: 언어가 하나라도 감지됐는데 프로젝트 설정에 `coverageCommand`가 없으면
+   push와 `-s Done`을 막습니다. 감지된 언어가 없으면 예전처럼 opt-in입니다(설정이 없으면 아무 말도
+   하지 않고, 있으면 종료 코드만 봅니다).
+3. **실행과 판정**: `coverageCommand`를 돌려 0이 아닌 종료 코드면 막습니다. 100%(line + branch)
+   임계값은 각 도구 설정에 두고, 훅은 종료 코드로만 판정합니다(숫자를 지어내지 않습니다).
+4. **리포트 확인**: 명령이 성공해도, 감지된 언어마다 아래 위치에 **이번 실행이 쓴**(mtime이 실행
+   시작 이후, 시작 시각은 초 단위로 내림) 파일이 하나라도 있어야 통과합니다. 디렉토리면 그 아래
+   어떤 파일이든 셉니다. 실행 전부터 있던 리포트는 세지 않습니다.
+
+| 언어 | 리포트 위치(기본) | 100% 설정 예 | 근거 |
+| --- | --- | --- | --- |
+| Python (pytest-cov / coverage.py) | `htmlcov/` 또는 `coverage.xml` | `--cov --cov-branch --cov-fail-under=100 --cov-report=term-missing --cov-report=xml`, 또는 `[tool.coverage.run] branch = true` + `[tool.coverage.report] fail_under = 100` | [coverage.py 설정](https://coverage.readthedocs.io/en/latest/config.html) (`[html] directory` 기본 `htmlcov`, `[xml] output` 기본 `coverage.xml`, `branch` · `fail_under`), [pytest-cov 설정](https://pytest-cov.readthedocs.io/en/latest/config.html) |
+| JavaScript · TypeScript (Jest) | `coverage/` | `collectCoverage: true`(또는 `jest --coverage`) + `coverageThreshold: { global: { lines: 100, branches: 100 } }` | [Jest 설정](https://jestjs.io/docs/configuration) (`coverageThreshold`; `coverageDirectory`는 표에 기본값 `undefined`로 적혀 있지만 [jest-config `normalize.ts`](https://github.com/jestjs/jest/blob/main/packages/jest-config/src/normalize.ts)가 `<rootDir>/coverage`로 채움) |
+| JavaScript · TypeScript (Vitest) | `coverage/` | `coverage: { enabled: true, thresholds: { lines: 100, branches: 100 } }`(또는 `vitest run --coverage`); `thresholds: { 100: true }`는 functions · statements까지 100% | [Vitest coverage 설정](https://vitest.dev/config/coverage) (`reportsDirectory` 기본 `./coverage`) |
+| Java (JaCoCo, Maven) | `target/site/jacoco/` | `jacoco-maven-plugin`의 `prepare-agent` · `report` · `check`, check 규칙에 `LINE`과 `BRANCH` 각각 `COVEREDRATIO` `minimum` `1.0` → `mvn verify` | [report](https://www.jacoco.org/jacoco/trunk/doc/report-mojo.html) (`outputDirectory` 기본 `${project.reporting.outputDirectory}/jacoco`, [super POM](https://maven.apache.org/ref/current/maven-model-builder/super-pom.html)에서 `target/site`), [check](https://www.jacoco.org/jacoco/trunk/doc/check-mojo.html) |
+| Java (JaCoCo, Gradle) | `build/reports/jacoco/` (HTML은 `build/reports/jacoco/test/html`) | `jacocoTestCoverageVerification`의 `violationRules`에 `LINE` · `BRANCH` `COVEREDRATIO` `minimum = 1.0` → `./gradlew test jacocoTestReport jacocoTestCoverageVerification` | [Gradle JaCoCo 플러그인](https://docs.gradle.org/current/userguide/jacoco_plugin.html) |
+| C++ (gcovr) | `coverage/` (공식 기본값 없음 — 이 저장소의 규약) | `mkdir -p coverage && gcovr --fail-under-line 100 --fail-under-branch 100 --html-details coverage/index.html --xml coverage/coverage.xml` | [gcovr 명령 옵션](https://gcovr.com/en/stable/manpage.html) (`--output` 기본은 stdout, 미달 시 종료 코드 2 · 4) |
+
+C++에서 llvm-cov(`llvm-cov show -format=html -output-dir=coverage`)를 쓰셔도 리포트 위치는 같지만,
+[llvm-cov](https://llvm.org/docs/CommandGuide/llvm-cov.html)에는 임계값 미달로 실패하는 옵션이
+없으므로 100% 판정은 gcovr나 별도 스크립트의 종료 코드로 하셔야 합니다. coverage.py의
+`fail_under`는 branch를 켜면 line과 branch를 합친 총계를 보는데, 100%는 둘 다 100%일 때만
+나옵니다. Maven에서는 `report` 골이 실행되도록(예: `verify` 단계에 바인딩) 해 주세요.
+
+**리포트 위치 바꾸기**: 프로젝트 설정의 `coverageReportDir`로 바꿉니다. 경로는 프로젝트 루트
+기준이고 파일도 디렉토리도 됩니다.
+
+```json
+{ "coverageCommand": "npx vitest run --coverage", "coverageReportDir": "reports/coverage" }
+{ "coverageCommand": "make coverage", "coverageReportDir": { "python": "build/cov.xml", "cpp": "build/cov" } }
+```
+
+문자열 하나면 감지된 모든 언어에 그 경로를 쓰고, 맵이면 적힌 언어만 바꾸고 나머지는 기본 위치를
+씁니다. 형식이 틀리면(빈 문자열, 목록, 모르는 언어 키 등) 명령을 돌리지 않고 막습니다.
+
+한계: 매니페스트가 루트에 있기만 하면 감지하므로, 예를 들어 Python 프로젝트에 도구용
+`package.json`만 있어도 JavaScript 리포트(`coverage/`)를 요구합니다(`coverageReportDir` 맵으로 같은
+리포트를 가리키게 할 수 있습니다). `-s Done`마다 `coverageCommand` 전체를 한 번 돌리므로 그만큼
+시간이 듭니다. 하위 디렉토리의 모노레포 패키지는 감지하지 않습니다.
 
 ## 더 자세한 내용이 궁금하시다면
 
