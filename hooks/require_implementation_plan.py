@@ -7,6 +7,15 @@ TASK-58: no promotion or start without an implementation plan.
 (between `<!-- SECTION:PLAN:BEGIN -->` and `<!-- SECTION:PLAN:END -->`),
 else deny and point at `backlog draft edit <ID> --plan`.
 
+`backlog task edit <ID> ... -s "In Progress"` (`--status`, `--status=`,
+any case) in command position: the task card (backlog/tasks/) gets the
+same check. This is the second line of defense for cards made through the
+backlog MCP server or web UI, which never pass `draft promote`.
+
+Cards are read straight from the files (frontmatter `id:`), so the
+backlog CLI is not needed; `TASK-58`, `task-58` and `58` all name TASK-58.
+An ID with no card file passes - backlog itself reports the error.
+
 Fully self-contained: no imports from any other file in this repo."""
 
 import json
@@ -90,16 +99,47 @@ def command_head(segment):
     return i
 
 
+def start_target(rest):
+    """The task argument of `task edit <ID> ... -s "In Progress"` (`rest`
+    starts at `task`), else None."""
+    if len(rest) < 2 or rest[0] not in ("task", "tasks") or rest[1] != "edit":
+        return None
+    target = None
+    status = None
+    j = 2
+    while j < len(rest):
+        tok = rest[j]
+        if tok in ("-s", "--status"):
+            status = rest[j + 1] if j + 1 < len(rest) else None
+            j += 2
+            continue
+        if tok.startswith("--status="):
+            status = tok[len("--status=") :]
+        elif not tok.startswith("-") and target is None:
+            target = tok
+        j += 1
+    if target is None or status is None or not is_in_progress(status):
+        return None
+    return target
+
+
+def is_in_progress(status):
+    return " ".join(status.split()).lower() == "in progress"
+
+
 def segment_gate(segment):
-    """("promote", ID) for `backlog draft promote <ID>` in command position,
+    """("promote", ID) for `backlog draft promote <ID>` and ("start", ID)
+    for `backlog task edit <ID> ... -s "In Progress"` in command position,
     else None."""
     i = command_head(segment)
     if i >= len(segment) or os.path.basename(segment[i]) not in BACKLOG_EXECUTABLES:
         return None
-    words = [t for t in segment[i + 1 :] if not t.startswith("-")]
+    rest = segment[i + 1 :]
+    words = [t for t in rest if not t.startswith("-")]
     if len(words) >= 3 and words[0] in ("draft", "drafts") and words[1] == "promote":
         return ("promote", words[2])
-    return None
+    target = start_target(rest)
+    return ("start", target) if target is not None else None
 
 
 def gated_commands(command):
@@ -155,16 +195,18 @@ def deny(message):
     sys.exit(2)
 
 
-def check_promote(cwd, token):
-    found = find_card(cwd, "drafts", token)
+def check_card(cwd, kind, token):
+    folder, edit = ("drafts", "draft") if kind == "promote" else ("tasks", "task")
+    found = find_card(cwd, folder, token)
     if found is None:
         return
     card_id, text = found
+    action = "승격할" if kind == "promote" else "In Progress로 옮길"
     plan = plan_text(text)
     if plan is None or not plan.strip():
         deny(
-            f"{TAG} {card_id}에 구현 계획(Implementation Plan)이 없어 승격할 수 "
-            f"없습니다. 먼저 'backlog draft edit {card_id} --plan \"...\"'로 "
+            f"{TAG} {card_id}에 구현 계획(Implementation Plan)이 없어 {action} 수 "
+            f"없습니다. 먼저 'backlog {edit} edit {card_id} --plan \"...\"'로 "
             "계획을 적으세요."
         )
 
@@ -183,7 +225,7 @@ def main():
     if not gates or not is_backlog_project(cwd):
         sys.exit(0)
     for kind, token in gates:
-        check_promote(cwd, token)
+        check_card(cwd, kind, token)
     sys.exit(0)
 
 

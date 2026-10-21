@@ -169,3 +169,52 @@ def test_invalid_payloads_pass(monkeypatch):
     with pytest.raises(SystemExit) as exc_info:
         rip.main()
     assert exc_info.value.code == 0
+
+
+# --- TASK-58#2: -s "In Progress" needs a plan (second line of defense for
+# cards made through the MCP server / web UI, which skip draft promote) ---
+
+TASK = dict(card_id="TASK-58", status="To Do")
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'backlog task edit TASK-58 -s "In Progress"',
+        "backlog task edit task-58 --status 'In Progress'",
+        "backlog task edit 58 --status='in progress'",
+        'backlog task edit TASK-58 --plain -s "In Progress"',
+    ],
+)
+def test_start_denied_without_plan(project, monkeypatch, capsys, command):
+    """TASK-58#2: a task file written directly (MCP / web UI) has no plan."""
+    project.task(make_card(plan=None, **TASK))
+    assert run_main(monkeypatch, project.path, command) == 2
+    assert "backlog task edit TASK-58 --plan" in capsys.readouterr().err
+
+
+def test_start_denied_with_blank_plan(project, monkeypatch):
+    """TASK-58#2"""
+    project.task(make_card(plan="\n \n", **TASK))
+    command = 'backlog task edit TASK-58 -s "In Progress"'
+    assert run_main(monkeypatch, project.path, command) == 2
+
+
+def test_other_status_moves_and_edits_pass(project, monkeypatch):
+    """TASK-58#2: only the In Progress move is gated."""
+    project.task(make_card(plan=None, **TASK))
+    for command in [
+        "backlog task edit TASK-58 -s Done",
+        "backlog task edit TASK-58 --plan x",
+        "backlog task edit TASK-58 -s",
+        'backlog task edit -s "In Progress"',
+        "backlog task view TASK-58 --plain",
+    ]:
+        assert run_main(monkeypatch, project.path, command) == 0, command
+
+
+def test_start_of_unknown_task_passes(project, monkeypatch):
+    """TASK-58#2"""
+    project.task(make_card(plan=None, **TASK))
+    command = 'backlog task edit TASK-99 -s "In Progress"'
+    assert run_main(monkeypatch, project.path, command) == 0
