@@ -507,3 +507,140 @@ def test_format_offenders_truncates_long_lists():
     assert "src/f9.py" in listed
     assert f"src/f{bcs.MAX_LISTED}.py" not in listed
     assert "... 외 3개" in listed
+
+
+# --- TASK-60: work order commits ------------------------------------------------
+
+WORK_ORDER = "backlog/work-order.md"
+DEP_TASK_HEAD = "---\nid: TASK-3\ntitle: 기존\nstatus: To Do\ndependencies: []\n---\nbody\n"
+
+
+@pytest.fixture
+def repo_with_deps(repo):
+    write(repo, OTHER_TASK, DEP_TASK_HEAD)
+    write(repo, "backlog/tasks/task-4 - 다른.md", DEP_TASK_HEAD.replace("TASK-3", "TASK-4"))
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "tasks")
+    return repo
+
+
+def with_deps(text, deps):
+    lines = "".join(f"  - {d}\n" for d in deps)
+    return text.replace("dependencies: []\n", "dependencies:\n" + lines)
+
+
+def test_check_scope_work_order_alone_is_fine_task_60_3():
+    """TASK-60#3: the work order commit may hold just work-order.md."""
+    assert bcs.check_scope([("A", WORK_ORDER, None)]) is None
+    assert bcs.check_scope([("M", WORK_ORDER, None)]) is None
+
+
+def test_check_scope_work_order_with_dep_changed_tasks_is_fine_task_60_3():
+    entries = [("M", WORK_ORDER, None), ("M", OTHER_TASK, None)]
+    seen = []
+
+    def changed(old, new):
+        seen.append((old, new))
+        return True
+
+    assert bcs.check_scope(entries, changed) is None
+    assert seen == [(OTHER_TASK, OTHER_TASK)]
+
+
+def test_check_scope_work_order_with_unchanged_deps_task_is_denied_task_60_3():
+    entries = [("M", WORK_ORDER, None), ("M", OTHER_TASK, None)]
+    msg = bcs.check_scope(entries, lambda old, new: False)
+    assert "작업 순서 커밋" in msg
+    assert OTHER_TASK in msg
+    assert "작업 순서 커밋" in bcs.check_scope(entries)  # no judge: not proven
+
+
+def test_check_scope_work_order_with_code_or_new_task_is_denied_task_60_3():
+    yes = lambda old, new: True  # noqa: E731
+    for other in [
+        ("M", "src/app.py", None),
+        ("A", "backlog/tasks/task-9 - 새.md", None),
+        ("D", OTHER_TASK, None),
+        ("M", "backlog/config.yml", None),
+    ]:
+        msg = bcs.check_scope([("M", WORK_ORDER, None), other], yes)
+        assert msg and other[1] in msg, other
+
+
+def test_check_scope_work_order_with_renamed_task_uses_both_paths_task_60_3():
+    renamed = "backlog/tasks/task-3 - 새-이름.md"
+    seen = []
+    entries = [("M", WORK_ORDER, None), ("R", OTHER_TASK, renamed)]
+    assert bcs.check_scope(entries, lambda o, n: seen.append((o, n)) or True) is None
+    assert seen == [(OTHER_TASK, renamed)]
+
+
+def test_work_order_commit_with_dep_edit_passes_task_60_3(monkeypatch, repo_with_deps):
+    repo = repo_with_deps
+    write(repo, OTHER_TASK, with_deps(DEP_TASK_HEAD, ["TASK-4"]))
+    write(repo, WORK_ORDER, "order\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_work_order_commit_with_non_dep_task_edit_denied_task_60_3(
+    monkeypatch, capsys, repo_with_deps
+):
+    repo = repo_with_deps
+    write(repo, OTHER_TASK, DEP_TASK_HEAD.replace("title: 기존", "title: 바뀐 제목"))
+    write(repo, WORK_ORDER, "order\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    err = capsys.readouterr().err
+    assert OTHER_TASK in err
+    assert "backlog/work-order.md" in err
+
+
+def test_work_order_commit_with_code_denied_task_60_3(monkeypatch, capsys, repo):
+    write(repo, WORK_ORDER, "order\n")
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    assert "src/app.py" in capsys.readouterr().err
+
+
+def test_work_order_commit_simulated_same_command_add_task_60_3(
+    monkeypatch, repo_with_deps
+):
+    """TASK-60#3: the staged task content is read from the simulated index."""
+    repo = repo_with_deps
+    write(repo, OTHER_TASK, with_deps(DEP_TASK_HEAD, ["TASK-4"]))
+    write(repo, WORK_ORDER, "order\n")
+    command = "git add backlog && git commit -m 'TASK-60: 작업 순서'"
+    assert run_main(monkeypatch, repo, command) == 0
+    write(repo, "backlog/tasks/task-4 - 다른.md", "---\nid: TASK-4\ntitle: x\n---\n")
+    write(repo, OTHER_TASK, DEP_TASK_HEAD.replace("body", "body2"))
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_dependencies_changed_reads_head_and_index_task_60_3(repo_with_deps):
+    repo = repo_with_deps
+    assert not bcs.dependencies_changed(str(repo), OTHER_TASK, OTHER_TASK)
+    write(repo, OTHER_TASK, with_deps(DEP_TASK_HEAD, ["task-4"]))
+    assert not bcs.dependencies_changed(str(repo), OTHER_TASK, OTHER_TASK)  # unstaged
+    git(repo, "add", OTHER_TASK)
+    assert bcs.dependencies_changed(str(repo), OTHER_TASK, OTHER_TASK)
+    # path missing at HEAD, or not a task file: not a dependency change
+    assert not bcs.dependencies_changed(str(repo), "backlog/tasks/none.md", OTHER_TASK)
+    write(repo, "notes.md", "no frontmatter\n")
+    git(repo, "add", "notes.md")
+    git(repo, "commit", "-q", "-m", "n")
+    write(repo, "notes.md", "still none\n")
+    git(repo, "add", "notes.md")
+    assert not bcs.dependencies_changed(str(repo), "notes.md", "notes.md")
+
+
+def test_parse_task_helpers_task_60_3():
+    fm = bcs.parse_frontmatter(
+        "---\n  stray\ntitle: >-\n  a\n  b\nl: [x, 'y''s', \"z\"]\ne: []\nd:\n  - >-\n    z\n-\n---\n"
+    )
+    assert fm == {"title": "a b", "l": ["x", "y's", "z"], "e": [], "d": [">-", ""]}
+    assert bcs.parse_frontmatter("") == {}
+    assert bcs.parse_frontmatter("---\nid: X") == {"id": "X"}
+    assert bcs.parse_task("---\ntitle: x\n---\n") is None
+    assert bcs.parse_task("---\nid: t-1\ndependencies: t-0\n---\n")["deps"] == ["T-0"]

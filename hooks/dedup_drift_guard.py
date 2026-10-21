@@ -145,9 +145,18 @@ REGISTRY = {
         "context_flags.py",
     ],
     # TASK-60: require_work_order.py가 작업 순서 해시를 직접 다시 계산하도록
-    # scripts/work_order.py의 헬퍼를 그대로 복사해 쓴다(hooks/ 기준 상대 경로)
-    "parse_frontmatter": ["../scripts/work_order.py", "require_work_order.py"],
-    "parse_task": ["../scripts/work_order.py", "require_work_order.py"],
+    # scripts/work_order.py의 헬퍼를 그대로 복사해 쓴다(hooks/ 기준 상대 경로).
+    # backlog_commit_scope.py도 작업 순서 커밋의 의존 변경 판정에 앞의 둘을 쓴다
+    "parse_frontmatter": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "parse_task": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
     "natural_key": ["../scripts/work_order.py", "require_work_order.py"],
     "read_tasks": ["../scripts/work_order.py", "require_work_order.py"],
     "incomplete_tasks": ["../scripts/work_order.py", "require_work_order.py"],

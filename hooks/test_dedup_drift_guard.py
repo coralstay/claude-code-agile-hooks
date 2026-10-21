@@ -336,15 +336,15 @@ def test_registry_covers_task60_work_order_helpers():
         "command_head",
     ):
         assert "require_work_order.py" in ddg.REGISTRY[name]
-    for name in (
-        "parse_frontmatter",
-        "parse_task",
-        "natural_key",
-        "read_tasks",
-        "incomplete_tasks",
-        "input_hash",
-    ):
+    for name in ("natural_key", "read_tasks", "incomplete_tasks", "input_hash"):
         assert ddg.REGISTRY[name] == ["../scripts/work_order.py", "require_work_order.py"]
+    # TASK-60#3: the commit scope hook reads staged task dependencies too
+    for name in ("parse_frontmatter", "parse_task"):
+        assert ddg.REGISTRY[name] == [
+            "../scripts/work_order.py",
+            "require_work_order.py",
+            "backlog_commit_scope.py",
+        ]
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
