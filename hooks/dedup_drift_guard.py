@@ -63,6 +63,7 @@ REGISTRY = {
     "run_shell": [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
     ],
     # TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback
     "project_config_path": [
@@ -169,6 +170,27 @@ REGISTRY = {
         "require_coverage_on_done.py",
     ],
     "missing_command_payload": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-62#3: 커버리지 실행과 언어별 리포트(이번 실행 이후 mtime) 확인
+    "default_report_paths": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "configured_report_dir": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "report_paths": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "fresh_report": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "coverage_verdict": [
         "pre_push_coverage_check.py",
         "require_coverage_on_done.py",
     ],

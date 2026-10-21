@@ -119,6 +119,26 @@ BASELINE_BODIES = {
         def missing_command_payload(languages):
             return {}
         """,
+    "default_report_paths": """
+        def default_report_paths():
+            return {}
+        """,
+    "configured_report_dir": """
+        def configured_report_dir(cwd):
+            return None
+        """,
+    "report_paths": """
+        def report_paths(languages, override):
+            return {}
+        """,
+    "fresh_report": """
+        def fresh_report(cwd, path, since):
+            return False
+        """,
+    "coverage_verdict": """
+        def coverage_verdict(cwd, command, languages, report_dir):
+            return None
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -244,6 +264,7 @@ def test_registry_covers_newly_added_dedup_functions():
     assert ddg.REGISTRY["run_shell"] == [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert "current_branch" not in ddg.REGISTRY
     # TASK-54: 설정 파일 이름 fallback 헬퍼도 두 게이트에 복사돼 있다
@@ -344,6 +365,12 @@ def test_registry_covers_task62_coverage_done_hook():
         "language_manifests",
         "detect_languages",
         "missing_command_payload",
+        # TASK-62#3: the coverage run and report check
+        "default_report_paths",
+        "configured_report_dir",
+        "report_paths",
+        "fresh_report",
+        "coverage_verdict",
     ):
         assert ddg.REGISTRY[name] == ["pre_push_coverage_check.py", hook]
     import os

@@ -22,7 +22,17 @@ python, CMakeLists.txt -> cpp).
 
 - a language detected and no `coverageCommand` in the project config
   (.claude-code-agile-hooks.json, legacy .claude-rails.json) -> deny;
-- no language detected and no coverageCommand -> pass (opt-in, as before).
+- no language detected and no coverageCommand -> pass (opt-in, as before);
+- otherwise the coverageCommand runs (the whole suite - a Done move costs
+  one coverage run) and the move is denied when it exits non-zero (the
+  tool's own 100% line + branch threshold failed), when coverageReportDir
+  is malformed, or when a detected language has no report written by this
+  run in its report location (defaults: coverage/ for javascript,
+  typescript and cpp; target/site/jacoco/ or build/reports/jacoco/ for
+  java; htmlcov/ or coverage.xml for python; overridable with
+  `coverageReportDir`, a path string for every language or a
+  {"<language>": "<path>"} map). On a pass the measured report is shown
+  and no permission decision is made.
 
 Fully self-contained: no imports from any other file in this repo."""
 
@@ -32,6 +42,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 
 TAG = "[claude-code-agile-hooks]"
 SEPARATOR_CHARS = set(";&|()\n")
@@ -172,7 +183,7 @@ def done_targets(command):
     return [t for t in targets if t is not None]
 
 
-# --- languages and coverage reports (registered in
+# --- languages, coverage run and reports (registered in
 # dedup_drift_guard.REGISTRY, same code as pre_push_coverage_check.py) ---
 
 
@@ -217,6 +228,113 @@ def missing_command_payload(languages):
     }
 
 
+def run_shell(cwd, command):
+    result = subprocess.run(
+        command, cwd=cwd, shell=True, capture_output=True, text=True
+    )
+    output = (result.stdout or "") + (result.stderr or "")
+    return result.returncode, output
+
+
+def default_report_paths():
+    """Where each language's coverage report lands by default, relative to
+    the project root; a fresh file at any one of a language's paths (a
+    file, or any file under a directory) counts as its report. Sources:
+    README '커버리지 100%' 절."""
+    return {
+        "javascript": ("coverage",),
+        "typescript": ("coverage",),
+        "java": ("target/site/jacoco", "build/reports/jacoco"),
+        "python": ("htmlcov", "coverage.xml"),
+        "cpp": ("coverage",),
+    }
+
+
+def configured_report_dir(cwd):
+    """The raw `coverageReportDir` value of the project config, or None."""
+    config_path = project_config_path(cwd)
+    if config_path is None:
+        return None
+    with open(config_path) as f:
+        config = json.load(f)
+    return config.get("coverageReportDir")
+
+
+def report_paths(languages, override):
+    """{language: paths} for the detected languages. `override` (the
+    config's coverageReportDir): None -> defaults; a non-empty string ->
+    that one path for every language; a map of known language -> non-empty
+    string -> that path for the languages it names, defaults for the rest.
+    Anything else raises ValueError."""
+    defaults = default_report_paths()
+    if override is None:
+        return {lang: defaults[lang] for lang in languages}
+    if isinstance(override, str) and override:
+        return {lang: (override,) for lang in languages}
+    if isinstance(override, dict) and all(
+        key in defaults and isinstance(value, str) and value
+        for key, value in override.items()
+    ):
+        return {
+            lang: (override[lang],) if lang in override else defaults[lang]
+            for lang in languages
+        }
+    raise ValueError(
+        "coverageReportDir는 비어 있지 않은 경로 문자열이거나 "
+        '{"<언어>": "<경로>"} 맵이어야 합니다(언어: '
+        + ", ".join(defaults)
+        + ")."
+    )
+
+
+def fresh_report(cwd, path, since):
+    """True if `path` (relative to cwd) is a file, or a directory holding a
+    file anywhere below it, whose mtime is at or after `since`. Entries
+    that can't be stat'ed (dangling symlinks, races) are skipped."""
+    full = os.path.join(cwd, path)
+    candidates = [full] if os.path.isfile(full) else (
+        os.path.join(dirpath, name)
+        for dirpath, _, names in os.walk(full)
+        for name in names
+    )
+    for candidate in candidates:
+        try:
+            if os.path.getmtime(candidate) >= since:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def coverage_verdict(cwd, command, languages, report_dir):
+    """Run the coverage command and judge it: (exit code or None, output,
+    problem or None). Problems: a malformed coverageReportDir (the command
+    is not run), a non-zero exit (the tool's own 100% threshold failed), or
+    a detected language with no report written by this run. The run start
+    is floored to the whole second so a report written in the same second
+    still counts on file systems with 1 s mtime resolution."""
+    try:
+        paths = report_paths(languages, report_dir)
+    except ValueError as exc:
+        return None, "", str(exc)
+    since = int(time.time())
+    exit_code, output = run_shell(cwd, command)
+    if exit_code != 0:
+        return exit_code, output, f"커버리지 기준 미달 (exit {exit_code})"
+    missing = [
+        f"{lang}: {' 또는 '.join(candidates)}"
+        for lang, candidates in paths.items()
+        if not any(fresh_report(cwd, p, since) for p in candidates)
+    ]
+    if missing:
+        return exit_code, output, (
+            "coverageCommand는 성공했지만 이번 실행이 만든 커버리지 리포트가 없습니다 - "
+            + "; ".join(missing)
+            + " (위치는 coverageReportDir로 바꿀 수 있습니다)"
+        )
+    return exit_code, output, None
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -234,11 +352,34 @@ def main():
         sys.exit(0)
 
     command = configured_coverage_command(cwd)
+    languages = detect_languages(cwd)
     if not command:
-        languages = detect_languages(cwd)
         if languages:
             print(json.dumps(missing_command_payload(languages)))
         sys.exit(0)
+
+    exit_code, output, problem = coverage_verdict(
+        cwd, command, languages, configured_report_dir(cwd)
+    )
+    report = f"{TAG} 커버리지 리포트 ('{command}', exit {exit_code}):\n" + output[-4000:]
+    if problem is None:
+        # pass: show the measured report, leave the permission decision alone
+        print(json.dumps({"systemMessage": report}))
+        sys.exit(0)
+    print(
+        json.dumps(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": (
+                        f"{TAG} -s Done 전에 커버리지 게이트를 통과해야 합니다: "
+                        f"{problem}\n" + report
+                    ),
+                }
+            }
+        )
+    )
     sys.exit(0)
 
 
