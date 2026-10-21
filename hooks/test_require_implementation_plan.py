@@ -559,3 +559,29 @@ def test_card_is_judged_before_the_line_runs(project, monkeypatch):
     project.draft(make_card(plan=None))
     command = 'backlog draft edit DRAFT-8 --plan "### Subjective" && backlog draft promote DRAFT-8'
     assert run_main(monkeypatch, project.path, command) == 2
+
+
+def test_segment_of_only_assignments_is_not_gated():
+    """TASK-58#6"""
+    assert rip.gated_commands("FOO=1 BAR=2") == []
+    assert rip.gated_commands("FOO=1; backlog draft promote 8") == [("promote", "8")]
+
+
+def test_card_lookup_skips_odd_entries(project, monkeypatch):
+    """TASK-58#1: non-markdown files, unreadable entries and a missing
+    folder are skipped."""
+    drafts = project.path / "backlog" / "drafts"
+    (drafts / "a-notes.txt").write_text("---\nid: DRAFT-8\n---\n")
+    (drafts / "broken.md").mkdir()
+    project.draft(make_card(plan=None))
+    assert run_main(monkeypatch, project.path, "backlog draft promote DRAFT-8") == 2
+    assert rip.find_card(str(project.path), "nowhere", "DRAFT-8") is None
+
+
+def test_payload_without_cwd_passes(monkeypatch):
+    """TASK-58#1"""
+    payload = {"tool_name": "Bash", "tool_input": {"command": "backlog draft promote 8"}}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    with pytest.raises(SystemExit) as exc_info:
+        rip.main()
+    assert exc_info.value.code == 0

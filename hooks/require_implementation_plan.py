@@ -13,7 +13,7 @@ same check. This is the second line of defense for cards made through the
 backlog MCP server or web UI, which never pass `draft promote`.
 
 Command position follows require_draft_first.py: heredoc bodies are
-dropped, `\`-newline continuations joined, the line split into segments
+dropped, `\\`-newline continuations joined, the line split into segments
 on `;`, `&`, `|`, `(`, `)` and newlines, env assignments and wrappers
 (`env`, `sudo`, `npx`, ...) skipped, `backlog` compared by basename. So
 `echo "backlog draft promote 8"` or a commit message quoting the command is
