@@ -22,10 +22,10 @@ CLAUDE.md에 "이렇게 해주세요"라고 적어두는 약속만으로는 매�
 ## 무엇을 만들었는지 말씀드립니다
 
 Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 동작하는
-33개의 스크립트를 만들었습니다.
+34개의 스크립트를 만들었습니다.
 [Backlog.md](https://github.com/MrLesk/Backlog.md)(Git 저장소 안에 마크다운 파일로
 태스크·문서·의사결정을 관리하는 CLI 기반 프로젝트 관리 도구입니다) 워크플로 전용
-8개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
+9개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
 있습니다. 모든 훅은 개인 fork 안에서만 강하게 적용되며, 운영 레포로 올리는 PR은
 항상 사람이 직접 열도록 하였습니다.
 
@@ -44,7 +44,7 @@ Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 �
 
 Claude Code의 훅은 [공식 문서](https://code.claude.com/docs/ko/hooks)에 정의된
 특정 이벤트(생애주기 단계)에 등록되어, 그 시점에만 실행됩니다. 전체 흐름을 먼저
-그림으로 보여드린 뒤, 이 저장소에 있는 33개의 훅이 각각 어느 단계에서 동작하는지
+그림으로 보여드린 뒤, 이 저장소에 있는 34개의 훅이 각각 어느 단계에서 동작하는지
 표로 정리해 드리겠습니다.
 
 ```mermaid
@@ -96,7 +96,7 @@ flowchart TB
 
 이 저장소의 훅은 이 흐름 중 필요한 지점마다 걸려 있습니다 — 예를 들어
 `require_active_task.py`는 `PreToolUse`(Edit\|Write)에, `block_stop_if_dirty.py`는
-`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 33개 훅 전체가 정확히
+`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 34개 훅 전체가 정확히
 어느 단계에 걸려 있는지 나열한 것입니다. 훅 이름을 누르시면 실제 소스 파일로
 이동합니다.
 
@@ -117,12 +117,13 @@ flowchart TB
 | PreToolUse: Edit\|Write             | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 죽은 접근 재시도 경고             |
 | PreToolUse: Edit\|Write             | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 다음 AC의 `<ID>#<n>`·관련 규칙 `<ID>#B<k>` 테스트 표식 없으면 소스 편집 차단 |
 | PreToolUse: Bash                    | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
-| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격 커밋에 다른 변경 섞이면 차단 |
+| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격/작업 순서 커밋에 다른 변경 섞이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
 | PreToolUse: Bash                    | [`pre_push_check.py`](hooks/pre_push_check.py)                     | 🔒 backlog | Done+summary 확인 후 push 허용    |
 | PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
+| PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
@@ -210,6 +211,20 @@ Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 �
 Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙`
 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
+
+**작업 순서(백로깅 절차)**: 승격할 때마다 **승격 → `--dep` 정리 → 작업 순서 생성 → 커밋** 순서로
+진행합니다. `backlog draft promote <ID>`와 그 승격 커밋 뒤에 `backlog task edit <ID> --dep <ID>`로
+의존을 정리하고, 프로젝트 루트에서 `python3 ~/.claude/hooks/claude-code-agile-hooks/work_order.py`
+(이 저장소에서는 [`scripts/work_order.py`](scripts/work_order.py), `install.sh`가 훅 옆에 복사합니다)를
+실행해 `backlog/work-order.md`를 만든 다음, 그 파일과 의존을 고친 태스크 파일만 별도 커밋으로
+남깁니다. 스크립트는 태스크 파일 frontmatter의 `dependencies`를 읽어 미완료(Done이 아닌) 태스크를
+단계별 표로 씁니다 — 같은 단계는 병렬, 단계 사이는 순차입니다. Done 태스크나 `backlog/tasks/`에 없는
+태스크에 대한 의존은 충족된 것으로 보고(없는 ID는 파일에 따로 적습니다), 순환 의존이 있으면 순환을
+보여 주고 파일을 쓰지 않습니다. 파일 첫 줄에는 미완료 태스크 ID 집합과 의존으로 만든 해시가 있어서,
+`require_work_order.py`가 다음 `backlog draft promote`나 `backlog task edit <ID> -s "In Progress"`
+전에 이 해시가 현재 태스크와 맞지 않으면(파일이 없을 때 포함) 막고 위 명령을 안내합니다. 승격 자체는
+승격 전 상태로 판정하므로 교착이 없고, 미완료 태스크가 하나도 없는 새 프로젝트는 파일 없이도
+통과합니다. 작업 순서 커밋에 다른 변경이 섞이면 `backlog_commit_scope.py`가 막습니다.
 
 ## 더 자세한 내용이 궁금하시다면
 
