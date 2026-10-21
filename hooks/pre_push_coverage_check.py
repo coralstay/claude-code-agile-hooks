@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse (matcher: Bash, no `if` filter)
-Optional coverage gate: if the project's .claude-code-agile-hooks.json (or the legacy
+Coverage gate (opt-in, and mandatory for detected languages since TASK-62 -
+see below): if the project's .claude-code-agile-hooks.json (or the legacy
 .claude-rails.json, see project_config_path()) configures a
 `coverageCommand` (e.g. "python3 -m pytest --cov=. --cov-fail-under=100"),
 run it before every push and show the real, measured report - every time,

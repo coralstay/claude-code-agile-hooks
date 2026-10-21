@@ -215,3 +215,29 @@ def test_task62_3_helper_edges(tmp_path):
     (tmp_path / "coverage" / "index.html").write_text("x")
     assert rcd.fresh_report(str(tmp_path), "coverage", 0) is True
     assert rcd.fresh_report(str(tmp_path), "coverage", 10**12) is False  # stale
+
+
+def test_task62_4_readme_documents_coverage_gate():
+    """TASK-62#4: README에 언어별 100% 설정 예 · 리포트 위치 · 새 훅이 있다."""
+    import os
+
+    readme = os.path.join(os.path.dirname(__file__), os.pardir, "README.md")
+    with open(readme) as f:
+        text = f.read()
+    for needle in (
+        "--cov-fail-under=100",
+        "coverageThreshold",
+        "thresholds: { 100: true }",
+        "minimum",
+        "--fail-under-line 100 --fail-under-branch 100",
+        "htmlcov/",
+        "coverage.xml",
+        "target/site/jacoco/",
+        "build/reports/jacoco/",
+        "coverageReportDir",
+        "require_coverage_on_done.py",
+    ):
+        assert needle in text, needle
+    for language, paths in rcd.default_report_paths().items():
+        for path in paths:
+            assert path in text, (language, path)
