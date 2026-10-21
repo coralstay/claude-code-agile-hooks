@@ -1,7 +1,7 @@
 ---
 id: TASK-59
 title: 카드 생애주기 단계마다 커밋을 훅으로 강제한다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-12 02:26'
 updated_date: '2026-10-21 09:07'
