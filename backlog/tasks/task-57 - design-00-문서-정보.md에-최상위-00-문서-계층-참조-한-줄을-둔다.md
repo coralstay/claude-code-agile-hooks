@@ -1,7 +1,7 @@
 ---
 id: TASK-57
 title: design/00-문서-정보.md에 최상위 00 문서 계층 참조 한 줄을 둔다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-21 04:37'
 updated_date: '2026-10-21 04:43'
@@ -18,13 +18,13 @@ dependencies: []
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 design/00-문서-정보.md 편집 규칙에 최상위 00 '문서 계층' 절을 가리키는 한 줄과 링크 정의가 있다
+- [x] #1 design/00-문서-정보.md 편집 규칙에 최상위 00 '문서 계층' 절을 가리키는 한 줄과 링크 정의가 있다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 커밋 본문에 coralstay-software-factory TASK-16을 참조로 적는다
-- [ ] #2 push는 하지 않는다
+- [x] #1 커밋 본문에 coralstay-software-factory TASK-16을 참조로 적는다
+- [x] #2 push는 하지 않는다
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -46,3 +46,9 @@ dependencies: []
 2. 승격 커밋, 이어 design/00-문서-정보.md 한 줄 커밋(본문에 coralstay-software-factory TASK-16 참조).
 3. 링크 정의가 최상위 절 제목과 맞는지 확인한다.
 <!-- SECTION:PLAN:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+design/00-문서-정보.md 편집 규칙에 최상위 00 '문서 계층' 절을 가리키는 한 줄과 링크 정의([hierarchy])를 넣었다(d8e372e). 최상위 변경이 이 문서의 장에 닿으면 이 저장소의 카드로 커밋하고 커밋 본문에 최상위 태스크 ID를 참조로 적는다. 앵커는 최상위 TASK-16이 main에 머지된 뒤 살아난다. 커밋 본문에 Refs: coralstay-software-factory TASK-16. push하지 않음.
+<!-- SECTION:FINAL_SUMMARY:END -->
