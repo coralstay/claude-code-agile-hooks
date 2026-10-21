@@ -477,3 +477,85 @@ def test_hook_never_creates_a_go(project, monkeypatch):
     before = git(project.path, "rev-parse", "HEAD")
     assert run_main(monkeypatch, project.path, START) == 2
     assert git(project.path, "rev-parse", "HEAD") == before
+
+
+# --- TASK-58#6: command position parsing follows require_draft_first.py;
+# text inside quotes and heredoc bodies passes ---
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("backlog draft promote DRAFT-8", [("promote", "DRAFT-8")]),
+        ("backlog drafts promote 8", [("promote", "8")]),
+        ("/opt/homebrew/bin/backlog draft promote 8", [("promote", "8")]),
+        ("npx backlog.md draft promote 8", [("promote", "8")]),
+        ("cd repo && backlog draft promote 8", [("promote", "8")]),
+        ("git status;backlog draft promote 8", [("promote", "8")]),
+        ("FOO=1 sudo -E backlog draft promote 8", [("promote", "8")]),
+        ("(backlog draft promote 8)", [("promote", "8")]),
+        ("echo a\nbacklog draft promote 8", [("promote", "8")]),
+        ("backlog task edit 1 \\\n  -s 'In Progress'", [("start", "1")]),
+        ("backlog tasks edit 1 -s In\\ Progress", [("start", "1")]),
+        ('env backlog task edit 1 --status "In  Progress"', [("start", "1")]),
+        (
+            "backlog draft promote 8 && backlog task edit TASK-1 -s 'In Progress'",
+            [("promote", "8"), ("start", "TASK-1")],
+        ),
+        ('echo "backlog draft promote 8"', []),
+        ("echo backlog draft promote 8", []),
+        ("grep -rn 'backlog draft promote' .", []),
+        ('git commit -m "backlog task edit 1 -s \'In Progress\'"', []),
+        ('backlog draft create x -d "그 뒤 backlog draft promote 8"', []),
+        ("cat <<'EOF' > notes.md\nbacklog draft promote 8\nEOF", []),
+        ('cat <<EOF\nbacklog task edit 1 -s "In Progress"\nEOF\necho done', []),
+        ("backlog draft view 8", []),
+        ("backlog task edit 1 -s 'In Progress later'", []),
+        ("", []),
+    ],
+)
+def test_gated_commands(command, expected):
+    """TASK-58#6"""
+    assert rip.gated_commands(command) == expected
+
+
+def test_heredoc_body_skipped_but_command_after_it_still_gated():
+    """TASK-58#6"""
+    command = "cat <<EOF > a.md\nbacklog draft promote 1\nEOF\nbacklog draft promote 8"
+    assert rip.gated_commands(command) == [("promote", "8")]
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ('backlog draft promote DRAFT-8 "x', [("promote", "DRAFT-8")]),
+        ("backlog task edit 1 -s 'In Progress", [("start", "1")]),
+        ('cd x && backlog task edit TASK-1 --status="in progress', [("start", "TASK-1")]),
+        ('echo "x backlog draft promote 8', []),
+        ("backlog task edit 1 -s Done 'x", []),
+    ],
+)
+def test_unbalanced_quotes_fall_back_to_text_match(command, expected):
+    """TASK-58#6: a line shlex can't split is matched by text (gate)."""
+    assert rip.gated_commands(command) == expected
+
+
+def test_quoted_mention_passes_main(project, monkeypatch):
+    """TASK-58#6"""
+    project.draft(make_card(plan=None))
+    command = 'git commit -m "backlog draft promote DRAFT-8 막는 훅"'
+    assert run_main(monkeypatch, project.path, command) == 0
+
+
+def test_unbalanced_quote_promote_still_denied(project, monkeypatch):
+    """TASK-58#6"""
+    project.draft(make_card(plan=None))
+    assert run_main(monkeypatch, project.path, 'backlog draft promote DRAFT-8 "x') == 2
+
+
+def test_card_is_judged_before_the_line_runs(project, monkeypatch):
+    """TASK-58#6: the plan written earlier on the same line isn't on disk
+    yet, so the promote is still denied."""
+    project.draft(make_card(plan=None))
+    command = 'backlog draft edit DRAFT-8 --plan "### Subjective" && backlog draft promote DRAFT-8'
+    assert run_main(monkeypatch, project.path, command) == 2

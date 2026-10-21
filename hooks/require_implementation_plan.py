@@ -12,6 +12,21 @@ any case) in command position: the task card (backlog/tasks/) gets the
 same check. This is the second line of defense for cards made through the
 backlog MCP server or web UI, which never pass `draft promote`.
 
+Command position follows require_draft_first.py: heredoc bodies are
+dropped, `\`-newline continuations joined, the line split into segments
+on `;`, `&`, `|`, `(`, `)` and newlines, env assignments and wrappers
+(`env`, `sudo`, `npx`, ...) skipped, `backlog` compared by basename. So
+`echo "backlog draft promote 8"` or a commit message quoting the command is
+not gated. Unbalanced quotes: a text match at the start of a line or after
+a separator stands in (gate). Known gaps (decision-1): indirection such as
+`bash -c`, `eval`, scripts, and the backlog MCP server / web UI are not
+seen; the `-s "In Progress"` check on the task card covers cards that
+skipped `draft promote`, but a status change made through MCP or the web UI
+itself is not seen. Each command is judged on the card as it is on disk
+before the line runs, so `edit --plan ... && draft promote` in one line is
+denied - run the edit first. In `task edit`, the first word that isn't an
+option is taken as the task ID (as in require_test_first.py).
+
 Cards are read straight from the files (frontmatter `id:`), so the
 backlog CLI is not needed; `TASK-58`, `task-58` and `58` all name TASK-58.
 The plan must hold the SOAP reserved headings `### Subjective`,
@@ -54,6 +69,15 @@ WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
 ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 BACKLOG_EXECUTABLES = {"backlog", "backlog.md"}
+FALLBACK_HEAD = r"(?:^|[;&|(])\s*(?:\S*/)?backlog(?:\.md)?\s+"
+PROMOTE_FALLBACK_RE = re.compile(
+    FALLBACK_HEAD + r"drafts?\s+promote\s+([^\s'\"]+)", re.MULTILINE
+)
+START_FALLBACK_RE = re.compile(
+    FALLBACK_HEAD + r"tasks?\s+edit\s+([^\s'\"-][^\s'\"]*)[^\n;&|]*?"
+    r"\s(?:-s|--status)(?:=|\s+)['\"]?in\s+progress\b",
+    re.MULTILINE | re.IGNORECASE,
+)
 ID_RE = re.compile(r"^id:\s*['\"]?([^'\"\s]+)['\"]?\s*$", re.MULTILINE)
 SOAP_HEADINGS = ("### Subjective", "### Objective", "### Assessment", "### Plan")
 SOAP_TEMPLATE = (
@@ -175,12 +199,23 @@ def segment_gate(segment):
     return ("start", target) if target is not None else None
 
 
+def fallback_gates(text):
+    """Text match for a line shlex can't split (unbalanced quotes): a
+    gated command at the start of a line or after a separator still gates."""
+    found = [(m.start(), "promote", m.group(1)) for m in PROMOTE_FALLBACK_RE.finditer(text)]
+    found += [(m.start(), "start", m.group(1)) for m in START_FALLBACK_RE.finditer(text)]
+    return [(kind, token) for _, kind, token in sorted(found)]
+
+
 def gated_commands(command):
     """(kind, ID) for every gated backlog command in command position."""
     if not command:
         return []
     stripped = strip_heredoc_bodies(command).replace("\\\n", "")
-    tokens = tokenize(stripped)
+    try:
+        tokens = tokenize(stripped)
+    except ValueError:
+        return fallback_gates(stripped)
     gates = [segment_gate(s) for s in split_segments(tokens)]
     return [g for g in gates if g is not None]
 
