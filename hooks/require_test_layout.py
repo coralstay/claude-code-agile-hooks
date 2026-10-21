@@ -37,6 +37,10 @@ Rules (each violation denies the Edit/Write, exit 2, all problems listed):
    marker, AC/DoD first. A marker is a full-line comment whose text is
    exactly that string (`# == AC/DoD ==`; `// == AC/DoD ==`,
    `/* == AC/DoD == */`, ` * == AC/DoD ==`), indentation allowed.
+3. Markers: AC `<ID>#<n>`, rule `<ID>#B<k>` and DoD `<ID>#D<n>` (any task
+   ID shaped `<letter><letters/digits/_>-<digits>`, anywhere on a line,
+   code or comment) appear only strictly between the two section markers.
+   Checked once rule 2 holds.
 
 What is checked is the file as it would be after the tool call: Write's
 `content`; for Edit the current file with `old_string` replaced by
@@ -83,6 +87,7 @@ DEFAULT_TEST_NAME_RE = re.compile(
     r"|[^/]*_test\.(?:cc|cpp|cxx)|test_[^/]*\.cpp)\Z"
 )
 TASK_LINE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\d+:\s+\S")
+MARKER_RE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z][A-Za-z0-9_]*-\d+#[BD]?\d+")
 AC_SECTION = "== AC/DoD =="
 COVERAGE_SECTION = "== Coverage =="
 
@@ -274,6 +279,19 @@ def layout_problems(text, lang):
             f"'{c} {AC_SECTION}' 섹션 표식이 '{c} {COVERAGE_SECTION}' 섹션 표식보다 앞에 "
             "있어야 합니다(AC/DoD 테스트 → 커버리지 테스트)."
         )
+    if len(ac) == 1 and len(cov) == 1 and ac[0] < cov[0]:
+        stray = [
+            f"{i + 1}번째 줄: {m}"
+            for i, line in enumerate(lines)
+            if not ac[0] < i < cov[0]
+            for m in MARKER_RE.findall(line)
+        ]
+        if stray:
+            problems.append(
+                f"AC · 규칙 · DoD 표식(<ID>#<n> · <ID>#B<k> · <ID>#D<n>)은 '{c} {AC_SECTION}'와 "
+                f"'{c} {COVERAGE_SECTION}' 사이에만 둘 수 있습니다:\n"
+                + "\n".join(f"      {s}" for s in stray)
+            )
     return problems
 
 

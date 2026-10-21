@@ -193,7 +193,77 @@ def test_task61_2_existing_adopted_file_edit_that_breaks_order_is_denied(project
     assert run(monkeypatch, payload) == 0
 
 
+# --- TASK-61#3: AC/rule/DoD markers only inside the AC/DoD section ---
+
+
+@pytest.mark.parametrize(
+    "lines, marker",
+    [
+        (["# TASK-61: 요약 TASK-61#1", "# == AC/DoD ==", "# == Coverage =="], "TASK-61#1"),
+        (["# TASK-61: 요약", "X = 'TASK-61#B2'", "# == AC/DoD ==", "# == Coverage =="], "TASK-61#B2"),
+        (["# TASK-61: 요약", "# == AC/DoD ==", "# == Coverage ==", "def test_e(): pass  # TASK-61#D3"], "TASK-61#D3"),
+        (["# TASK-61: 요약", "# == AC/DoD ==", "# == Coverage ==", "# AO-7#12"], "AO-7#12"),
+    ],
+)
+def test_task61_3_marker_outside_the_ac_dod_section_is_denied(
+    project, monkeypatch, capsys, lines, marker
+):
+    """TASK-61#3: `<ID>#<n>`, `<ID>#B<k>` and `<ID>#D<n>` outside the
+    section deny, naming the marker and its line."""
+    assert run(monkeypatch, write(project, "test_x.py", py(*lines))) == 2
+    err = capsys.readouterr().err
+    line_no = next(i for i, line in enumerate(lines, start=1) if marker in line)
+    assert f"{line_no}번째 줄: {marker}" in err
+
+
+def test_task61_3_markers_inside_the_section_are_allowed(project, monkeypatch):
+    """TASK-61#3: markers of every kind (and of several tasks) inside the
+    section pass; text that only looks similar outside it passes too."""
+    content = py(
+        "# TASK-56: 테스트 먼저",
+        "# TASK-61: 구조",
+        "# issue #12, TASK-61: 요약, TASK-61#x",
+        "# == AC/DoD ==",
+        "def test_a():  # TASK-61#1 TASK-61#B2 TASK-61#D3 TASK-56#4",
+        "    pass",
+        "# == Coverage ==",
+        "def test_e(): pass  # see TASK-61 and #4",
+    )
+    assert run(monkeypatch, write(project, "test_x.py", content)) == 0
+
+
+def test_task61_3_c_family_markers(project, monkeypatch):
+    """TASK-61#3: the same rule in JS/TS/Java/C++ files."""
+    inside = py("// TASK-61: 구조", "// == AC/DoD ==", '@DisplayName("TASK-61#1")', "// == Coverage ==")
+    assert run(monkeypatch, write(project, "ATest.java", inside)) == 0
+    outside = py("// TASK-61: 구조", "// == AC/DoD ==", "// == Coverage ==", 'it("TASK-61#2", () => {});')
+    assert run(monkeypatch, write(project, "a.spec.ts", outside)) == 2
+
+
+def test_task61_3_edit_moving_a_marker_into_coverage_is_denied(project, monkeypatch):
+    """TASK-61#3: judged on the Edit result too."""
+    put(project, "test_x.py", py("# TASK-61: 구조", *SECTIONS_PY))
+    payload = edit(project, "test_x.py", "def test_b(): pass", "def test_b(): pass  # TASK-61#2")
+    assert run(monkeypatch, payload) == 2
+    payload = edit(project, "test_x.py", "def test_a(): pass", "def test_a(): pass  # TASK-61#2")
+    assert run(monkeypatch, payload) == 0
+
+
+
+def test_task61_1_2_3_this_file_follows_its_own_layout():
+    """TASK-61#1 TASK-61#2 TASK-61#3: self-application - this test file is
+    a new test file in this backlog project, so it must pass the hook."""
+    with open(__file__) as f:
+        assert rtl.layout_problems(f.read(), rtl.HASH) == []
+
+
 # == Coverage ==
+
+
+def test_marker_check_waits_for_valid_sections(project, monkeypatch, capsys):
+    content = py("# TASK-61: 구조", "# == Coverage ==", "# == AC/DoD ==", "x = 1")
+    assert run(monkeypatch, write(project, "test_x.py", content)) == 2
+    assert "번째 줄:" not in capsys.readouterr().err
 
 
 def test_header_after_section_marker_does_not_count(project, monkeypatch):
