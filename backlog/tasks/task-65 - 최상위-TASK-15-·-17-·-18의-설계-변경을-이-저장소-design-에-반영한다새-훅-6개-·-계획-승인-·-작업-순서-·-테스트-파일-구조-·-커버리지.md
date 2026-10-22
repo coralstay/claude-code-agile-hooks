@@ -1,15 +1,17 @@
 ---
-id: DRAFT-14
+id: TASK-65
 title: >-
   최상위 TASK-15 · 17 · 18의 설계 변경을 이 저장소 design/에 반영한다(새 훅 6개 · 계획 승인 · 작업 순서 · 테스트
   파일 구조 · 커버리지)
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-22 05:52'
-updated_date: '2026-10-22 05:52'
+updated_date: '2026-10-22 06:16'
 labels:
   - design
 dependencies: []
+references:
+  - decision-15
 ---
 
 ## Description
@@ -49,3 +51,9 @@ dependencies: []
 2. 장마다 반영, 파일 하나에 커밋 하나(Refs 줄).
 3. 다이어그램 재렌더, 링크 검사.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+착수 조건(유저, 2026-10-22): TASK-58 ~ 63(PR #54 ~ #59) 머지 후. Refs: coralstay-software-factory TASK-15 · TASK-17 · TASK-18
+<!-- SECTION:NOTES:END -->
