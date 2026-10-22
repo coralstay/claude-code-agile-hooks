@@ -1,10 +1,10 @@
 ---
-id: DRAFT-13
+id: TASK-63
 title: 최상위 설계 문서를 고치면 컴포넌트 설계 문서 전파를 훅으로 강제한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-12 06:16'
-updated_date: '2026-10-12 06:16'
+updated_date: '2026-10-22 04:57'
 labels:
   - hooks
 dependencies: []
@@ -33,15 +33,16 @@ dependencies: []
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 최상위 design/을 가진 저장소에서 design/을 바꾸는 커밋은, 장 대응표로 찾은 영향받는 컴포넌트마다 같은 태스크 ID의 대응 변경이 있거나 커밋에 '영향 없음' 트레일러와 사유가 있지 않으면 deny하고 빠진 컴포넌트를 안내한다
-- [ ] #2 장 대응표는 하드코딩하지 않고 최상위 design/00-문서-정보.md에서 읽는다
-- [ ] #3 훅은 최상위 design/을 가진 저장소에서만 작동하고, 그 밖의 저장소에서는 통과시킨다
-- [ ] #4 테스트를 먼저 쓰고, settings.hooks.json에 등록하고, README · CLAUDE.md.snippet에 전파 규칙과 트레일러 형식을 반영한다
+- [ ] #1 장 대응표는 하드코딩하지 않고 최상위 design/00-문서-정보.md에서 읽는다
+- [ ] #2 훅은 최상위 design/을 가진 저장소에서만 작동하고, 그 밖의 저장소에서는 통과시킨다
+- [ ] #3 테스트를 먼저 쓰고, settings.hooks.json에 등록하고, README · CLAUDE.md.snippet에 전파 규칙과 트레일러 형식을 반영한다
+- [ ] #4 최상위 태스크를 -s Done으로 옮길 때, 그 태스크 브랜치에서 design/을 바꾼 커밋들의 장을 장 대응표로 컴포넌트에 대응시키고, 컴포넌트마다 로컬 components/<이름> 저장소(모든 브랜치)에 'Refs: coralstay-software-factory <최상위 태스크 ID>' 커밋이 있거나 최상위 커밋에 'Propagation-None: <컴포넌트>: <사유>' 트레일러가 있지 않으면 deny하고 빠진 컴포넌트를 안내한다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
 - [ ] #1 테스트가 통과한 로그를 final summary에 남긴다
+- [ ] #2 새 훅은 settings.hooks.json · dedup REGISTRY · 등록 계약 테스트에 반영, 커버리지 100%
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -66,4 +67,6 @@ dependencies: []
 4. 훅 파일을 만든다: 최상위 저장소 판별 → 스테이징된 design/ 변경 장 추출 → 대응표로 컴포넌트 찾기 → 대응 변경 또는 트레일러 확인.
 5. PreToolUse(Bash)에 settings.hooks.json으로 등록하고, 공유 함수를 복사했으면 dedup_drift_guard REGISTRY에 등록한다.
 6. README · CLAUDE.md.snippet에 전파 규칙과 트레일러 형식을 반영한다.
+
+착수 시 결정(유저, 2026-10-21): 확인 방식 = 로컬 components/* 저장소의 모든 브랜치, 영향 없음 트레일러 = 'Propagation-None: <컴포넌트>: <사유>'(컴포넌트마다 한 줄), 차단 시점 = 최상위 태스크 -s Done. 대응 변경은 '같은 태스크 ID'가 아니라 컴포넌트 카드 커밋 본문의 'Refs: coralstay-software-factory <ID>'로 본다(최상위 TASK-16 결정). 장 대응표는 최상위 TASK-16이 00 문서 정보 '문서 계층 > 장 대응표'에 넣었다(파싱 규칙은 표 위에 적혀 있다).
 <!-- SECTION:PLAN:END -->
