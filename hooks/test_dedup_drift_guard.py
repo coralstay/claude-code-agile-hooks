@@ -95,6 +95,18 @@ BASELINE_BODIES = {
         def project_config_path(cwd):
             return None
         """,
+    "segment_done_target": """
+        def segment_done_target(segment):
+            return None
+        """,
+    "done_targets": """
+        def done_targets(command):
+            return []
+        """,
+    "same_task": """
+        def same_task(token, task_id):
+            return False
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -256,6 +268,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_design_propagation.py",  # TASK-63
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -421,6 +434,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_commit_check.py",  # TASK-39
             "pre_push_coverage_check.py",  # TASK-39
             "require_test_first.py",  # TASK-56
+            "require_design_propagation.py",  # TASK-63
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -431,6 +445,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_design_propagation.py",  # TASK-63
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
@@ -624,3 +639,15 @@ def test_registry_covers_task56_require_test_first_helpers():
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
     assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task63_done_detection_copies():
+    """TASK-63#D2: require_design_propagation.py copies require_test_first.py's
+    command-position Done detection, and REGISTRY keeps the copies equal."""
+    for name in ("segment_done_target", "done_targets", "same_task"):
+        assert ddg.REGISTRY[name] == [
+            "require_test_first.py",
+            "require_design_propagation.py",
+        ]
+    for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+        assert "require_design_propagation.py" in ddg.REGISTRY[name]
