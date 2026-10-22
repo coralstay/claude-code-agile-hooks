@@ -735,3 +735,39 @@ def test_same_task():
     assert rdp.same_task("16", "task-16")
     assert not rdp.same_task("1", "task-16")
     assert not rdp.same_task("TASK-1", "TASK-16")
+
+
+# --- AC #2: only a repo with the top-level design/ (and its 장 대응표) ---
+
+
+def test_outside_a_git_repo_passes(tmp_path, monkeypatch):
+    """TASK-63#2"""
+    assert run_hook(monkeypatch, tmp_path) == 0
+    assert run_hook(monkeypatch, "") == 0
+
+
+def test_repo_without_design_doc_passes(tmp_path, monkeypatch):
+    """TASK-63#2: no design/00-문서-정보.md -> not the top-level repo."""
+    files = {k: v for k, v in FILES.items() if k != "design/00-문서-정보.md"}
+    repo = Repo(tmp_path / "other", files)
+    repo.checkout("-b", "task/task-16")
+    repo.replace(ARCH, "b1", "b2")
+    repo.commit("TASK-16: §2 수정")
+    assert run_hook(monkeypatch, repo.path) == 0
+
+
+def test_component_repo_without_chapter_map_passes(tmp_path, monkeypatch):
+    """TASK-63#2: a component's own design/00 has no 장 대응표."""
+    files = dict(FILES, **{"design/00-문서-정보.md": "# 0. 문서 정보\n\n## 문서 계층\n\n상위 문서를 따른다.\n"})
+    repo = Repo(tmp_path / "component", files)
+    repo.checkout("-b", "task/task-16")
+    repo.replace(ARCH, "b1", "b2")
+    repo.commit("TASK-16: §2 수정")
+    assert run_hook(monkeypatch, repo.path) == 0
+
+
+def test_same_change_in_the_top_level_repo_is_checked(top, monkeypatch):
+    """TASK-63#2: contrast - with the 장 대응표 the same change is gated."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    assert run_hook(monkeypatch, top.path) == 2
