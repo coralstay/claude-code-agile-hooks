@@ -1,16 +1,18 @@
 ---
-id: DRAFT-15
+id: TASK-66
 title: >-
   require_design_propagation: 태스크 변경을 브랜치 범위가 아니라 커밋 메시지의 태스크 ID로 고른다(쌓인 브랜치 ·
   브랜치 없음 대응)
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-22 05:52'
-updated_date: '2026-10-22 05:52'
+updated_date: '2026-10-22 06:16'
 labels:
   - hooks
   - bug
 dependencies: []
+references:
+  - decision-15
 ---
 
 ## Description
@@ -51,3 +53,9 @@ TASK-63 훅을 최상위 저장소에 읽기 전용으로 돌려 본 결과(2026
 1. AC #1 → #2 → #3 순서로 테스트 먼저(쌓인 브랜치 · 브랜치 없음 · ID 없는 커밋 픽스처).
 2. README · docstring, 전체 테스트 · 커버리지 100%.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+착수 조건(유저, 2026-10-22): TASK-63(PR #59) 머지 후
+<!-- SECTION:NOTES:END -->
