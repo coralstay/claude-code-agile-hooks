@@ -1,13 +1,16 @@
 ---
-id: DRAFT-14
+id: TASK-64
 title: 앞으로 할 일(draft · To Do)이 생길 때마다 의존 정리 · 작업 순서 재계산 · 커밋을 강제한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-22 05:34'
-updated_date: '2026-10-22 05:34'
+updated_date: '2026-10-22 05:35'
 labels:
   - hooks
 dependencies: []
+references:
+  - decision-3
+  - decision-12
 ---
 
 ## Description
@@ -52,3 +55,9 @@ TASK-60의 work_order.py · require_work_order.py · backlog_commit_scope.py를 
 3. AC #1 · #2 · #3 순서로 테스트 먼저 구현.
 4. README · CLAUDE.md.snippet, 전체 테스트 · 커버리지 100%.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+착수 조건(유저, 2026-10-22): TASK-59(PR #55) · TASK-60(PR #56)이 main에 머지된 뒤 착수한다. 이 카드는 main 기준 브랜치에서 승격돼 그 태스크 파일이 아직 없어 --dep를 걸지 못했다 — 착수 시 --dep TASK-59,TASK-60을 건다.
+<!-- SECTION:NOTES:END -->
