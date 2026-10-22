@@ -44,6 +44,7 @@ import pre_commit_check
 import pre_git_safety_check
 import pre_push_check
 import pre_push_coverage_check
+import require_design_propagation
 import require_draft_first
 import require_test_first
 
@@ -185,6 +186,17 @@ CONTRACT = {
             "cd y && backlog task edit AO-1 --status Done",
             "/usr/local/bin/backlog task edit 1 -s Done",
             "FOO=1 backlog task edit AO-1 -s Done",
+        ],
+    },
+    # TASK-63: denies the top-level task's Done move while a design/ change
+    # isn't propagated, so it is registered like the other gates (no `if`)
+    "require_design_propagation": {
+        "detects": lambda c: bool(require_design_propagation.done_targets(c)),
+        "acts_on": [
+            "backlog task edit TASK-16 -s Done",
+            "cd y && backlog task edit TASK-16 --status Done",
+            "/usr/local/bin/backlog task edit 16 -s Done",
+            "FOO=1 backlog task edit TASK-16 -s Done",
         ],
     },
     # filtered on purpose: the gaps below are accepted

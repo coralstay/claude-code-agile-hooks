@@ -95,6 +95,10 @@
           },
           {
             "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_design_propagation.py"
+          },
+          {
+            "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dedup_drift_guard.py",
             "if": "Bash(git *)"
           },
