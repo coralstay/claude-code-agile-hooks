@@ -18,6 +18,46 @@ the top-level `design/00-문서-정보.md`, section `## 문서 계층` >
   counts for every row of that chapter.
 - a cell lists the component's chapters joined by ` · `; `—` means none.
 
+Applies only in a git repo whose root has `design/00-문서-정보.md` with
+that heading pair (a component repo's own 00 doc has none): otherwise the
+hook passes. A heading pair whose table breaks the rules denies the Done
+move with the bad line - a broken map must not turn the check off.
+
+Trigger: `backlog task edit <ID> -s Done` (`--status Done`, `--status=Done`,
+any case) in command position, parsed like require_test_first.py (whose
+helpers are copied here and kept equal by dedup_drift_guard.REGISTRY).
+
+Range: the local `task/<ID>` branch of the target (`TASK-16`, `task-16`,
+`16`), the current branch first; none -> pass. Its own commits are those
+not reachable from any base ref that exists among origin/HEAD's target,
+main, master, origin/main and origin/master (so neither a stale local nor
+a stale remote main drags merged work in); no base -> pass. Only committed
+changes count: the workflow commits each stage before Done, so the
+working tree and index are not read. Merge commits are skipped.
+
+Mapping: for each design/ file of a non-merge commit that names a chapter
+of the table, every removed line is placed by the parent's `## ` headings
+and every added line by the commit's (fenced code ignored); files outside
+the table (diagrams, build scripts) are ignored.
+
+Evidence per affected component C (a non-empty cell in a touched row):
+- `components/C` (relative to the repo root, its own `.git`) has, on any
+  ref (`git log --all`), a commit whose message has a line
+  `Refs: coralstay-software-factory <...ID...>` - the ID matched case-
+  insensitively and word-bounded (TASK-1 is not TASK-16 nor TASK-1.1), or
+- a commit of the range carries the git trailer
+  `Propagation-None: C: <non-empty reason>` (last paragraph of the
+  message, as `git interpret-trailers` reads it). History is not
+  rewritten, so it is added as a new commit, e.g.
+  `git commit --allow-empty -m "..." -m "Propagation-None: C: 사유"`.
+A missing components/C repo counts as no propagation (and says so).
+Otherwise deny, listing each missing component with the top-level
+chapters that hit it, its component chapters and both ways out.
+
+Known limits (decision-1): command strings only - `bash -c`, scripts and
+the backlog MCP server / web UI are not seen; the session cwd decides the
+repo, so `cd elsewhere && backlog ...` is judged in the session's repo.
+
 Fully self-contained: no imports from any other file in this repo."""
 
 import json

@@ -771,3 +771,37 @@ def test_same_change_in_the_top_level_repo_is_checked(top, monkeypatch):
     top.replace(ARCH, "b1", "b2")
     top.commit("TASK-16: §2 수정")
     assert run_hook(monkeypatch, top.path) == 2
+
+
+# --- AC #3: registered, and the docs carry the rule and the trailer format ---
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def read_repo_file(name):
+    with open(os.path.join(REPO_ROOT, name)) as f:
+        return f.read()
+
+
+def test_registered_on_pretooluse_bash_without_filter():
+    """TASK-63#3 TASK-63#D2"""
+    settings = json.loads(read_repo_file("settings.hooks.json"))
+    hooks = [
+        hook
+        for group in settings["hooks"]["PreToolUse"]
+        if group.get("matcher") == "Bash"
+        for hook in group["hooks"]
+        if hook["command"].endswith("/require_design_propagation.py")
+    ]
+    assert len(hooks) == 1
+    assert "if" not in hooks[0]
+
+
+@pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
+def test_docs_carry_the_rule_and_trailer_format(name):
+    """TASK-63#3"""
+    text = read_repo_file(name)
+    assert "require_design_propagation.py" in text
+    assert "Propagation-None: <컴포넌트>: <사유>" in text
+    assert "Refs: coralstay-software-factory <ID>" in text
+    assert "장 대응표" in text
