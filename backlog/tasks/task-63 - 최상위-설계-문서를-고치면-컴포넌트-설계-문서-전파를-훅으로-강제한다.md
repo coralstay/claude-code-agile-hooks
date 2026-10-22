@@ -8,6 +8,11 @@ updated_date: '2026-10-22 04:57'
 labels:
   - hooks
 dependencies: []
+references:
+  - decision-15
+  - decision-1
+  - decision-3
+  - decision-12
 ---
 
 ## Description
