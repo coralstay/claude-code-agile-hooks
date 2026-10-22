@@ -1,7 +1,7 @@
 ---
 id: TASK-63
 title: 최상위 설계 문서를 고치면 컴포넌트 설계 문서 전파를 훅으로 강제한다
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-10-12 06:16'
 updated_date: '2026-10-22 04:57'
