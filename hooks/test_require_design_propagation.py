@@ -210,3 +210,528 @@ def test_header_only_table_raises():
 def test_chapter_path_rules(chapter, path, expected):
     """TASK-63#1: 00 / N.MM / 부록 <이름> name files as the doc's rules say."""
     assert rdp.chapter_matches(chapter, path) is expected
+
+
+# --- temp git repos: a top-level repo and its components/<name> repos ---
+
+GIT_ISOLATION = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_OBJECT_DIRECTORY")
+COMPONENTS_DOC = (
+    "# 3.03 컴포넌트 명세\n\n머리말.\n\n"
+    "## §1 오케스트레이터\n\na1\n\n"
+    "## §2 훅\n\nb1\n\n"
+    "## §3 커밋 도구\n\nc1\nc2\n\n"
+    "## §4 backlog\n\nd1\n\n"
+    "```\n## §2 펜스 안\n```\nf1\n\n"
+    "## 원천\n\ne1\n"
+)
+REQUIREMENTS_DOC = (
+    "# 2.03 기능 요구사항\n\n머리말.\n\n"
+    "## ORC 오케스트레이터\n\no1\n\n"
+    "## RAIL 훅\n\nr1\n\n"
+    "## TRL 트레일러\n\nt1\n\n"
+    "## BL backlog\n\nl1\n"
+)
+FILES = {
+    "design/00-문서-정보.md": DOC,
+    "design/3-아키텍처-설계서/03-컴포넌트-명세.md": COMPONENTS_DOC,
+    "design/2-요구사항-명세서/03-기능-요구사항.md": REQUIREMENTS_DOC,
+    "design/부록-용어집.md": "# 부록 용어집\n\n- 용어\n",
+    "design/diagrams/a.dot": "digraph { a -> b }\n",
+}
+ARCH = "design/3-아키텍처-설계서/03-컴포넌트-명세.md"
+REQ = "design/2-요구사항-명세서/03-기능-요구사항.md"
+DONE = "backlog task edit TASK-16 -s Done"
+
+
+def git(cwd, *args):
+    result = subprocess.run(
+        [
+            "git",
+            "-c", "user.name=t",
+            "-c", "user.email=t@example.com",
+            "-c", "commit.gpgsign=false",
+            "-c", "tag.gpgsign=false",
+            "-c", "core.hooksPath=/dev/null",
+            "-C", str(cwd),
+            *args,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout
+
+
+class Repo:
+    def __init__(self, path, files=None, branch="main"):
+        self.path = path
+        path.mkdir(parents=True, exist_ok=True)
+        git(path, "init", "-q", "-b", branch)
+        for rel, text in (files or {}).items():
+            self.write(rel, text)
+        self.commit("init", allow_empty=True)
+
+    def write(self, rel, text):
+        target = self.path / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text)
+
+    def read(self, rel):
+        return (self.path / rel).read_text()
+
+    def replace(self, rel, old, new):
+        text = self.read(rel)
+        assert old in text
+        self.write(rel, text.replace(old, new, 1))
+
+    def commit(self, *messages, allow_empty=False):
+        git(self.path, "add", "-A")
+        args = ["commit", "-q"]
+        if allow_empty:
+            args.append("--allow-empty")
+        for m in messages:
+            args += ["-m", m]
+        git(self.path, *args)
+        return git(self.path, "rev-parse", "HEAD").strip()
+
+    def checkout(self, *args):
+        git(self.path, "checkout", "-q", *args)
+
+
+@pytest.fixture(autouse=True)
+def isolated_git(monkeypatch):
+    for name in GIT_ISOLATION:
+        monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture
+def top(tmp_path):
+    """Top-level repo on task/task-16, branched from main after the design
+    docs were committed."""
+    repo = Repo(tmp_path / "top", dict(FILES, **{".gitignore": "components/\n"}))
+    repo.checkout("-b", "task/task-16")
+    return repo
+
+
+def component(top, name, *messages, branch=None):
+    repo = Repo(top.path / "components" / name, {"design/00.md": "x\n"})
+    if branch:
+        repo.checkout("-b", branch)
+    if messages:
+        repo.commit(*messages, allow_empty=True)
+    return repo
+
+
+def all_components(top, task="TASK-16"):
+    for name in COMPONENTS:
+        component(top, name, f"X-1: 전파", f"Refs: coralstay-software-factory {task}")
+
+
+def run_hook(monkeypatch, cwd, command=DONE, tool="Bash"):
+    payload = {"cwd": str(cwd), "tool_name": tool, "tool_input": {"command": command}}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    with pytest.raises(SystemExit) as exc_info:
+        rdp.main()
+    return exc_info.value.code
+
+
+def denied(monkeypatch, capsys, cwd, command=DONE):
+    code = run_hook(monkeypatch, cwd, command)
+    err = capsys.readouterr().err
+    assert code == 2, err
+    return err
+
+
+def missing_in(err):
+    """Component names listed as missing in a deny message."""
+    return sorted(
+        name for name in COMPONENTS if f"  - {name} " in err or f"  - {name}\n" in err
+    )
+
+
+# --- AC #4: Done of the top-level task needs propagation per component ---
+
+
+def test_section_change_denies_only_the_mapped_component(top, monkeypatch, capsys):
+    """TASK-63#4: 3.03 §2 -> claude-code-agile-hooks only; the message names
+    the chapter, the missing repo and both ways out."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    err = denied(monkeypatch, capsys, top.path)
+    assert err.startswith("[claude-code-agile-hooks]")
+    assert missing_in(err) == ["claude-code-agile-hooks"]
+    assert "3.03 §2" in err
+    assert "components/claude-code-agile-hooks 저장소가 없습니다" in err
+    assert "Refs: coralstay-software-factory TASK-16" in err
+    assert "Propagation-None: claude-code-agile-hooks: <사유>" in err
+    assert "--allow-empty" in err
+
+
+def test_refs_commit_on_any_component_branch_passes(top, monkeypatch):
+    """TASK-63#4: a 'Refs: coralstay-software-factory <ID>' commit on any
+    branch of components/<name> counts."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    repo = component(
+        top,
+        "claude-code-agile-hooks",
+        "TASK-70: 3.03 반영",
+        "Refs: coralstay-software-factory TASK-16",
+        branch="task/TASK-70",
+    )
+    repo.checkout("main")
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+@pytest.mark.parametrize(
+    "refs, ok",
+    [
+        ("Refs: coralstay-software-factory task-16", True),
+        ("refs: Coralstay-Software-Factory TASK-16.", True),
+        ("Refs: coralstay-software-factory TASK-15, TASK-16", True),
+        ("Refs: coralstay-software-factory TASK-1", False),
+        ("Refs: coralstay-software-factory TASK-160", False),
+        ("Refs: coralstay-software-factory TASK-16.1", False),
+        ("Refs: coralstay-software-factory XTASK-16", False),
+        ("Refs: other-repo TASK-16", False),
+        ("본문에 coralstay-software-factory TASK-16을 적었을 뿐", False),
+    ],
+)
+def test_refs_line_matching(top, monkeypatch, refs, ok):
+    """TASK-63#4: the ID matches case-insensitively and word-bounded."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    component(top, "claude-code-agile-hooks", "X-1: 반영", refs)
+    assert (run_hook(monkeypatch, top.path) == 0) is ok
+
+
+def test_propagation_none_trailer_passes(top, monkeypatch):
+    """TASK-63#4: an empty commit with the trailer is enough."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    top.commit(
+        "TASK-16: 전파 영향 없음 기록",
+        "Propagation-None: claude-code-agile-hooks: 문구만 고쳤다",
+        allow_empty=True,
+    )
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+@pytest.mark.parametrize(
+    "trailer",
+    [
+        "Propagation-None: claude-code-agile-hooks:",
+        "Propagation-None: claude-code-agile-hooks",
+        "Propagation-None: agent-orchestrator: 영향 없음",
+    ],
+)
+def test_trailer_needs_the_component_and_a_reason(top, monkeypatch, capsys, trailer):
+    """TASK-63#4"""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    top.commit("TASK-16: 기록", trailer, allow_empty=True)
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == [
+        "claude-code-agile-hooks"
+    ]
+
+
+def test_trailer_must_be_a_trailer_not_body_text(top, monkeypatch, capsys):
+    """TASK-63#4: git's trailer parser decides - a line in the middle of the
+    body is not a trailer."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit(
+        "TASK-16: §2 수정",
+        "Propagation-None: claude-code-agile-hooks: 이유\n본문이 이어진다",
+        "마지막 문단",
+    )
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == [
+        "claude-code-agile-hooks"
+    ]
+
+
+def test_chapter_head_change_counts_for_every_row(top, monkeypatch, capsys):
+    """TASK-63#4: outside every listed section -> all rows of the chapter."""
+    top.replace(ARCH, "머리말.", "머리말 고침.")
+    top.commit("TASK-16: 머리 수정")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == COMPONENTS
+
+
+def test_unlisted_section_counts_for_every_row(top, monkeypatch, capsys):
+    """TASK-63#4: `## 원천` is outside the §n rows."""
+    top.replace(ARCH, "e1", "e2")
+    top.commit("TASK-16: 원천 수정")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == COMPONENTS
+
+
+def test_heading_inside_fence_is_not_a_section(top, monkeypatch, capsys):
+    """TASK-63#4: f1 sits after a fenced '## §2' but inside §4."""
+    top.replace(ARCH, "f1", "f2")
+    top.commit("TASK-16: §4 수정")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == [
+        "agent-orchestrator",
+        "claude-code-agile-hooks",
+    ]
+
+
+@pytest.mark.parametrize(
+    "old, new, expected",
+    [
+        ("r1", "r2", ["claude-code-agile-hooks"]),
+        ("t1", "t2", ["coding-agent-git-commit-tool"]),
+        ("l1", "l2", ["agent-orchestrator", "claude-code-agile-hooks"]),
+        ("o1", "o2", ["agent-orchestrator"]),
+    ],
+)
+def test_area_prefix_sections(top, monkeypatch, capsys, old, new, expected):
+    """TASK-63#4: 2.03 sections map by area prefix."""
+    top.replace(REQ, old, new)
+    top.commit("TASK-16: 2.03 수정")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == expected
+
+
+def test_deletion_maps_through_the_old_file(top, monkeypatch, capsys):
+    """TASK-63#4: removed lines are placed by the parent's headings."""
+    top.replace(ARCH, "c1\nc2\n", "")
+    top.commit("TASK-16: §3 줄 삭제")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == [
+        "coding-agent-git-commit-tool"
+    ]
+
+
+def test_deleted_file_counts_every_row_of_its_sections(top, monkeypatch, capsys):
+    """TASK-63#4"""
+    os.remove(top.path / "design/부록-용어집.md")
+    top.commit("TASK-16: 용어집 삭제")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == COMPONENTS
+
+
+def test_whole_chapter_row_and_new_file(top, monkeypatch, capsys):
+    """TASK-63#4: a 전체 row; a new chapter file is mapped too."""
+    top.write("design/5-구현-결과-보고서/01-개요.md", "# 5.01\n\n## §1 x\n\ny\n")
+    top.commit("TASK-16: 5.01 추가")
+    err = denied(monkeypatch, capsys, top.path)
+    assert missing_in(err) == COMPONENTS
+    assert "5.01" in err
+
+
+def test_all_components_propagated_passes(top, monkeypatch):
+    """TASK-63#4"""
+    top.replace(ARCH, "머리말.", "머리말 고침.")
+    top.commit("TASK-16: 머리 수정")
+    all_components(top)
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+def test_mixed_refs_and_trailer(top, monkeypatch, capsys):
+    """TASK-63#4: each component is satisfied on its own."""
+    top.replace(ARCH, "머리말.", "머리말 고침.")
+    top.commit(
+        "TASK-16: 머리 수정",
+        "Propagation-None: coding-agent-git-commit-tool: 해당 없음",
+    )
+    component(top, "agent-orchestrator", "AO-1: 반영", "Refs: coralstay-software-factory TASK-16")
+    err = denied(monkeypatch, capsys, top.path)
+    assert missing_in(err) == ["claude-code-agile-hooks"]
+
+
+def test_component_dir_that_is_not_a_repo_is_missing(top, monkeypatch, capsys):
+    """TASK-63#4: components/<name> must be its own git repo (else git would
+    read the top-level repo)."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정", "Refs: coralstay-software-factory TASK-16")
+    (top.path / "components" / "claude-code-agile-hooks").mkdir(parents=True)
+    err = denied(monkeypatch, capsys, top.path)
+    assert "components/claude-code-agile-hooks 저장소가 없습니다" in err
+
+
+def test_unmapped_design_files_are_ignored(top, monkeypatch):
+    """TASK-63#4: diagrams and other files outside the map don't trigger."""
+    top.write("design/diagrams/a.dot", "digraph { a -> c }\n")
+    top.write("design/9-없는-문서/01-x.md", "# x\n")
+    top.commit("TASK-16: 다이어그램")
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+def test_no_design_change_passes(top, monkeypatch):
+    """TASK-63#4"""
+    top.write("src/a.py", "x = 1\n")
+    top.commit("TASK-16: 코드")
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+def test_commits_already_on_main_are_not_counted(top, monkeypatch):
+    """TASK-63#4: only commits on the task branch since the base count."""
+    top.checkout("main")
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-15: §2 수정")
+    top.checkout("task/task-16")
+    git(top.path, "merge", "-q", "--no-edit", "main")
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+def test_uncommitted_design_changes_are_not_counted(top, monkeypatch):
+    """TASK-63#4: committed changes only (stage commits come first)."""
+    top.replace(ARCH, "b1", "b2")
+    git(top.path, "add", "-A")
+    top.replace(ARCH, "c1", "c9")
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+def test_origin_head_is_a_base(top, monkeypatch):
+    """TASK-63#4: with no local main/master, the remote default branch is
+    the base."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    main_sha = git(top.path, "rev-parse", "main").strip()
+    git(top.path, "update-ref", "refs/remotes/origin/trunk", main_sha)
+    git(top.path, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
+    git(top.path, "branch", "-q", "-D", "main")
+    assert rdp.base_refs(str(top.path)) == ["refs/remotes/origin/trunk"]
+    assert run_hook(monkeypatch, top.path) == 2
+
+
+def test_master_is_a_base(tmp_path, monkeypatch, capsys):
+    """TASK-63#4"""
+    repo = Repo(tmp_path / "top", FILES, branch="master")
+    repo.checkout("-b", "task/task-16")
+    repo.replace(ARCH, "b1", "b2")
+    repo.commit("TASK-16: §2 수정")
+    assert missing_in(denied(monkeypatch, capsys, repo.path)) == [
+        "claude-code-agile-hooks"
+    ]
+
+
+def test_no_base_branch_passes(tmp_path, monkeypatch):
+    """TASK-63#4: no main/master/origin HEAD -> the range is unknown, pass."""
+    repo = Repo(tmp_path / "top", FILES, branch="task/task-16")
+    repo.replace(ARCH, "b1", "b2")
+    repo.commit("TASK-16: §2 수정")
+    assert run_hook(monkeypatch, repo.path) == 0
+
+
+def test_numeric_and_lowercase_targets(top, monkeypatch):
+    """TASK-63#4: `16`, `task-16` and `TASK-16` name the branch's task."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    for target in ("16", "task-16", "TASK-16"):
+        assert run_hook(monkeypatch, top.path, f"backlog task edit {target} -s Done") == 2
+
+
+def test_done_from_another_branch_finds_the_task_branch(top, monkeypatch, capsys):
+    """TASK-63#4: on main, the local task/<ID> branch is checked."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    top.checkout("main")
+    assert missing_in(denied(monkeypatch, capsys, top.path)) == [
+        "claude-code-agile-hooks"
+    ]
+
+
+def test_done_of_a_task_without_branch_passes(top, monkeypatch):
+    """TASK-63#4: no task/<ID> branch -> nothing to check."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    assert run_hook(monkeypatch, top.path, "backlog task edit TASK-99 -s Done") == 0
+
+
+def test_merge_commits_are_skipped(top, monkeypatch):
+    """TASK-63#4: a merge of a side branch is not diffed itself."""
+    top.checkout("-b", "side")
+    top.write("notes.txt", "n\n")
+    top.commit("side")
+    top.checkout("task/task-16")
+    top.write("other.txt", "o\n")
+    top.commit("TASK-16: other")
+    git(top.path, "merge", "-q", "--no-ff", "--no-edit", "side")
+    git(top.path, "branch", "-q", "-D", "side")
+    assert run_hook(monkeypatch, top.path) == 0
+
+
+def test_malformed_table_denies_the_done_move(top, monkeypatch, capsys):
+    """TASK-63#4: a broken map is reported, not skipped."""
+    top.replace("design/00-문서-정보.md", "| 1.02 | 전체 |", "| 1.02 | 절반 |")
+    top.commit("TASK-16: 표 깨짐")
+    err = denied(monkeypatch, capsys, top.path)
+    assert "장 대응표" in err
+    assert "범위" in err
+
+
+def test_subdirectory_cwd_uses_the_repo_root(top, monkeypatch, capsys):
+    """TASK-63#4"""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    assert missing_in(denied(monkeypatch, capsys, top.path / "design")) == [
+        "claude-code-agile-hooks"
+    ]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "backlog task edit TASK-16 -s 'In Progress'",
+        "echo backlog task edit TASK-16 -s Done",
+        "git commit -m 'backlog task edit TASK-16 -s Done'",
+        "ls",
+    ],
+)
+def test_other_commands_pass(top, monkeypatch, command):
+    """TASK-63#4: only a command-position Done move triggers."""
+    top.replace(ARCH, "b1", "b2")
+    top.commit("TASK-16: §2 수정")
+    assert run_hook(monkeypatch, top.path, command) == 0
+
+
+def test_other_tools_and_bad_input_pass(top, monkeypatch):
+    """TASK-63#4"""
+    assert run_hook(monkeypatch, top.path, tool="Edit") == 0
+    monkeypatch.setattr("sys.stdin", io.StringIO("not json"))
+    with pytest.raises(SystemExit) as exc_info:
+        rdp.main()
+    assert exc_info.value.code == 0
+    payload = {"cwd": str(top.path), "tool_name": "Bash", "tool_input": "x"}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    with pytest.raises(SystemExit) as exc_info:
+        rdp.main()
+    assert exc_info.value.code == 0
+
+
+def test_origin_head_pointing_at_main_is_listed_once(top):
+    """TASK-63#4"""
+    main_sha = git(top.path, "rev-parse", "main").strip()
+    git(top.path, "update-ref", "refs/remotes/origin/main", main_sha)
+    git(top.path, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+    assert rdp.base_refs(str(top.path)) == ["refs/remotes/origin/main", "refs/heads/main"]
+
+
+# --- copied Done detection (REGISTRY keeps it identical to require_test_first) ---
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("backlog task edit TASK-16 -s Done", ["TASK-16"]),
+        ("backlog task edit TASK-16 --status=done", ["TASK-16"]),
+        ("sudo -E backlog tasks edit 16 --status DONE", ["16"]),
+        ("X=1 backlog task edit TASK-16 --plain -s Done", ["TASK-16"]),
+        ("backlog task edit TASK-16 -s", []),
+        ("backlog task edit -s Done", []),
+        ("backlog task view TASK-16", []),
+        ("backlog", []),
+        ("sudo -E", []),
+        ("", []),
+        ("cat <<EOF\nbacklog task edit TASK-16 -s Done\nEOF\nls", []),
+        ("cat <<EOF\nx\nEOF\nbacklog task edit TASK-16 -s Done", ["TASK-16"]),
+        ("backlog task edit TASK-16 -s Done 'unbalanced", ["TASK-16"]),
+    ],
+)
+def test_done_targets(command, expected):
+    """TASK-63#4: only a command-position Done move is a trigger."""
+    assert rdp.done_targets(command) == expected
+
+
+def test_same_task():
+    """TASK-63#4"""
+    assert rdp.same_task("task-16", "TASK-16")
+    assert rdp.same_task("16", "task-16")
+    assert not rdp.same_task("1", "task-16")
+    assert not rdp.same_task("TASK-1", "TASK-16")
