@@ -14,7 +14,30 @@
    `backlog task edit <ID> --add-ref decision-N`으로, 관련 문서/외부링크는 `--doc <path|url>`으로
    반드시 연결한다(승격 커밋에 함께 담아도 된다) — 이렇게 해야 나중에 `task view` 한 번으로
    필요한 컨텍스트가 전부 로딩된다.
-3. **검토**: 유저가 드래프트를 확인/승인해 태스크로 승격되기 전까지는 실행을 시작하지 않는다.
+   승격 전에 카드에 AC · DoD와 SOAP 구현 계획(`backlog draft edit <ID> --plan`)이 있어야 한다 —
+   없으면 훅이 `draft promote`를 막는다. 구현 계획은 아래 예약 제목 네 개를 이 순서로 한 번씩,
+   철자 그대로 쓰고 각 절에 본문을 채운다:
+
+   ```markdown
+   ### Subjective
+   요청 · 배경: 유저가 무엇을 왜 원하는가
+
+   ### Objective
+   확인한 사실: 코드 · 측정값 · 현재 동작
+
+   ### Assessment
+   판단: 문제가 무엇이고 어떤 접근을 고르는가
+
+   ### Plan
+   구현 순서
+   ```
+3. **검토 (계획 → 리뷰 → 계획 승인)**: 유저가 드래프트를 확인/승인해 태스크로 승격되기 전까지는
+   실행을 시작하지 않는다. 착수(In Progress) 전에 사람이 구현 계획을 리뷰하고 계획 승인을 한다.
+   계획 승인은 사람이 자기 키로 직접 서명해 남기는 빈 커밋
+   `git commit --allow-empty -S -m "Plan-Approved: <ID>"`다 — Claude는 이 커밋을 만들지 않고
+   유저에게 리뷰와 계획 승인을 요청한다. 승인 게이트: HEAD에서 닿는 곳에 유효한 서명(`%G?` = `G`)이고
+   서명자(`%GS`)가 프로젝트 설정 `humanSigners`에 있는 `Plan-Approved: <ID>` 커밋이 없거나, 카드에
+   SOAP 계획 · AC · DoD가 없으면 훅이 `-s "In Progress"`를 막는다.
 4. **실행** (태스크당):
    - 시작 전 `backlog task view <ID> --plain`으로 반드시 먼저 읽는다 — 안 읽으면 훅이
      Edit/Write를 차단한다.
