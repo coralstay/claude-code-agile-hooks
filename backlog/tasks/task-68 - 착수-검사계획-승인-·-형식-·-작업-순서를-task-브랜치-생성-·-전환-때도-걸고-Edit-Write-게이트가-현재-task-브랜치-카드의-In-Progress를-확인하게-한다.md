@@ -1,9 +1,9 @@
 ---
-id: DRAFT-9
+id: TASK-68
 title: >-
   착수 검사(계획 승인 · 형식 · 작업 순서)를 task 브랜치 생성 · 전환 때도 걸고, Edit/Write 게이트가 현재 task 브랜치
   카드의 In Progress를 확인하게 한다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-29T12:20:00Z'
 updated_date: '2026-10-29T23:35:00Z'
