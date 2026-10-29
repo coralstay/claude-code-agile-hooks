@@ -6,7 +6,7 @@ title: >-
 status: Draft
 assignee: []
 created_date: '2026-10-29T12:17:00Z'
-updated_date: '2026-10-29T12:18:00Z'
+updated_date: '2026-10-29T23:36:00Z'
 labels:
   - hooks
 dependencies: []
@@ -41,6 +41,7 @@ dependencies: []
 - [ ] #6 대상 저장소 해석 함수(command_target_dir)를 dedup REGISTRY 공유 함수로 등록해 H2 · H4가 같은 함수를 쓴다
 - [ ] #7 회수 뒤 install.sh로 재설치하면 설치본과 저장소 hooks/*.py의 diff가 없고, 설치본의 고아 test_project_root.py도 저장소 것과 같다 (수동)
 - [ ] #8 유저가 ~/.claude/settings.json의 pre_commit_check 항목에 timeout 1800을 넣는다 — config_guard 대상이라 유저 조치 (수동)
+- [ ] #9 대상 저장소 해석(command_target_dir)을 backlog_commit_scope와 backlog 명령을 검사하는 훅들(require_implementation_plan · require_work_order · require_stage_committed · require_draft_first 등 cd <dir> && backlog … 를 보는 훅)에도 적용한다 — 세션 위치가 아니라 명령의 대상 저장소의 스테이징 · 카드 · 설정으로 판정하는 테스트가 훅마다 있다 (유저 결정 2026-10-30)
 <!-- AC:END -->
 
 ## Definition of Done
