@@ -181,6 +181,10 @@ BASELINE_BODIES = {
         def coverage_verdict(cwd, command, languages, report_dir):
             return None
         """,
+    "same_task": """
+        def same_task(token, task_id):
+            return False
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -353,6 +357,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "require_stage_committed.py",  # TASK-59
         "require_work_order.py",  # TASK-60
         "require_coverage_on_done.py",  # TASK-62
+        "require_design_propagation.py",  # TASK-63
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -454,8 +459,9 @@ def test_registry_covers_task62_coverage_done_hook():
         "command_head",
     ):
         assert hook in ddg.REGISTRY[name]
-    assert ddg.REGISTRY["segment_done_target"] == ["require_test_first.py", hook]
-    assert ddg.REGISTRY["done_targets"] == ["require_test_first.py", hook]
+    for name in ("segment_done_target", "done_targets"):
+        assert ddg.REGISTRY[name][0] == "require_test_first.py"
+        assert hook in ddg.REGISTRY[name]
     for name in (
         "configured_coverage_command",
         "language_manifests",
@@ -603,6 +609,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "require_stage_committed.py",  # TASK-59
             "require_work_order.py",  # TASK-60
             "require_coverage_on_done.py",  # TASK-62
+            "require_design_propagation.py",  # TASK-63
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -617,6 +624,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "require_stage_committed.py",  # TASK-59
         "require_work_order.py",  # TASK-60
         "require_coverage_on_done.py",  # TASK-62
+        "require_design_propagation.py",  # TASK-63
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
@@ -829,3 +837,17 @@ def test_registry_covers_task59_stage_commit_hook():
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
     assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task63_done_detection_copies():
+    """TASK-63#D2: require_design_propagation.py copies require_test_first.py's
+    command-position Done detection, and REGISTRY keeps the copies equal."""
+    for name in ("segment_done_target", "done_targets"):
+        assert ddg.REGISTRY[name][0] == "require_test_first.py"
+        assert "require_design_propagation.py" in ddg.REGISTRY[name]
+    assert ddg.REGISTRY["same_task"] == [
+        "require_test_first.py",
+        "require_design_propagation.py",
+    ]
+    for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+        assert "require_design_propagation.py" in ddg.REGISTRY[name]

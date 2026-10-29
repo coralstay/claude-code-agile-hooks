@@ -129,6 +129,7 @@ flowchart TB
 | PreToolUse: Bash                    | [`require_stage_committed.py`](hooks/require_stage_committed.py)   | 🔒 backlog | 커밋 안 된 `backlog/` 변경이 있으면 다음 단계 명령(draft create·promote·`-s "In Progress"`·`-s Done`) 차단 |
 | PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙·DoD 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
+| PreToolUse: Bash                    | [`require_design_propagation.py`](hooks/require_design_propagation.py) | 최상위 design/ | 장 대응표로 찾은 컴포넌트에 전파 커밋·`Propagation-None` 트레일러 없으면 `-s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
 | PreToolUse: Bash(gh pr create*)     | [`pr_provenance_stamp.py`](hooks/pr_provenance_stamp.py)           | 범용       | PR 본문에 provenance 삽입         |
@@ -429,6 +430,27 @@ C++에서 llvm-cov(`llvm-cov show -format=html -output-dir=coverage`)를 쓰셔�
 `package.json`만 있어도 JavaScript 리포트(`coverage/`)를 요구합니다(`coverageReportDir` 맵으로 같은
 리포트를 가리키게 할 수 있습니다). `-s Done`마다 `coverageCommand` 전체를 한 번 돌리므로 그만큼
 시간이 듭니다. 하위 디렉토리의 모노레포 패키지는 감지하지 않습니다.
+
+**설계 문서 전파(최상위 저장소)**: `require_design_propagation.py`는 최상위
+`design/00-문서-정보.md`에 `## 문서 계층` > `### 장 대응표`가 있는 저장소에서만 작동합니다(그 밖의
+저장소는 통과). 표는 훅에 박혀 있지 않고 매번 그 문서에서 읽으며, 표 위에 적힌 형식 규칙(장 표기 ·
+`범위` = `전체` · `§n` · 영역 접두어, 칸은 ` · `로 나누고 없으면 `—`)을 따릅니다. 최상위 태스크를
+`backlog task edit <ID> -s Done`으로 옮길 때 그 태스크 브랜치(`task/<ID>`)의 커밋 중 base(origin/HEAD
+· main · master · origin/main · origin/master 중 있는 것)에 없는 커밋만 모아, design/을 고친 diff
+줄을 `## ` 절에 대응시켜 장 대응표의 행을 찾습니다. 나열된 절 밖(장 머리 · `## 원천` 등)을 고치면 그
+장의 모든 행에 해당하고, 표에 없는 파일(다이어그램 등)은 보지 않습니다. 영향받는 컴포넌트마다 다음
+중 하나가 있어야 통과합니다.
+
+- `components/<이름>` 저장소의 어느 브랜치에든 커밋 본문에 `Refs: coralstay-software-factory <ID>`
+  줄이 있는 커밋(ID는 대소문자 무시, `TASK-1`은 `TASK-16`과 다름)
+- 이 태스크 브랜치의 커밋 트레일러(메시지 마지막 문단) `Propagation-None: <컴포넌트>: <사유>`
+  (컴포넌트마다 한 줄, 사유 필수). 히스토리는 고치지 않으므로 새 커밋으로 더합니다. 예:
+  `git commit --allow-empty -m "TASK-16: 전파 영향 없음 기록" -m "Propagation-None: agent-orchestrator: 문구만 고침"`
+
+커밋된 변경만 봅니다(단계별 커밋이 먼저라서 Done 시점의 미커밋 변경은 대상이 아닙니다). 표가 형식에
+어긋나면 Done을 막고 틀린 줄을 알려 줍니다. 명령 문자열만 보므로(decision-1) `bash -c`나 backlog MCP ·
+웹 UI로 옮긴 Done은 보지 못하고, 세션 cwd 기준이라 `cd 다른저장소 && backlog ...`도 세션 저장소로
+판정합니다.
 
 ## 더 자세한 내용이 궁금하시다면
 
