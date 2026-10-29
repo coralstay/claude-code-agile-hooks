@@ -44,6 +44,7 @@ REGISTRY = {
         "require_draft_first.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
         "require_stage_committed.py",
     ],
     "has_command": [
@@ -70,6 +71,7 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
     ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
     "tokenize": [
@@ -82,6 +84,7 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
         "require_stage_committed.py",
     ],
     "split_segments": [
@@ -94,6 +97,7 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
         "require_stage_committed.py",
     ],
     # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
@@ -107,6 +111,7 @@ REGISTRY = {
         "pre_push_coverage_check.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
         "require_stage_committed.py",
     ],
     # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
@@ -123,6 +128,7 @@ REGISTRY = {
         "pre_push_coverage_check.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
         "require_stage_committed.py",
     ],
     "git_subcommand_index": [

@@ -228,6 +228,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58#5 (humanSigners)
     ]
 
 
@@ -257,6 +258,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58
         "require_stage_committed.py",  # TASK-59
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
@@ -423,6 +425,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_commit_check.py",  # TASK-39
             "pre_push_coverage_check.py",  # TASK-39
             "require_test_first.py",  # TASK-56
+            "require_implementation_plan.py",  # TASK-58
             "require_stage_committed.py",  # TASK-59
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
@@ -434,6 +437,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58
         "require_stage_committed.py",  # TASK-59
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
