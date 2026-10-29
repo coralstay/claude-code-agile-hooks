@@ -4,7 +4,7 @@ title: task 브랜치의 커밋 메시지에 그 태스크 ID가 없으면 git c
 status: Draft
 assignee: []
 created_date: '2026-10-29T12:23:00Z'
-updated_date: '2026-10-29T12:23:00Z'
+updated_date: '2026-10-29T12:24:00Z'
 labels:
   - hooks
 dependencies:
@@ -29,7 +29,7 @@ ID 매처는 TASK-63의 `has_refs_commit`이 쓰는 단어 경계 정규식(requ
 - B6 (AC #3) 메시지 없이 `--amend`(또는 `--amend --no-edit`)를 쓰면 기존 HEAD 메시지로, `-C` · `--fixup` · `--squash`는 그 대상 커밋 메시지로 판정한다
 - B7 (AC #4) 에디터 경로(메시지 옵션 없음 · `-c` · `-e` · `-t`만 있음)는 거부한다
 - B8 (AC #4) 메시지를 정적으로 알 수 없으면(파이프로 넣는 `-F -`, 변수 · heredoc이 아닌 명령 치환) 거부한다
-- B9 (AC #5) 대상 저장소의 현재 브랜치가 task/<ID>가 아니면 이 검사를 하지 않는다
+- B9 (AC #6) 대상 저장소의 현재 브랜치가 task/<ID>가 아니면 이 검사를 하지 않는다
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
