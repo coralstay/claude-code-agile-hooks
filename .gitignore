@@ -3,6 +3,9 @@ __pycache__/
 .pytest_cache/
 .coverage
 .coverage.*
+# TASK-62: push · -s Done 게이트가 확인하는 커버리지 리포트(coverageCommand의 --cov-report=xml)
+coverage.xml
+htmlcov/
 .DS_Store
 # pre_push_coverage_check.py가 남기는 로컬 커버리지 실행 기록 (TASK-43)
 # TASK-54: 새 이름 .claude-code-agile-hooks/, 옛 설정만 쓰던 시절의 .claude-rails/ 둘 다

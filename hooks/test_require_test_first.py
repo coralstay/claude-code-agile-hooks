@@ -14,9 +14,12 @@ CONFIG = {
 }
 
 
-def make_card(acs, rules=None, task_id="AO-27", status="◒ In Progress", desc=None):
+def make_card(
+    acs, rules=None, task_id="AO-27", status="◒ In Progress", desc=None, dod=None
+):
     """`acs`: list of (checked, text); `rules`: list of raw lines under the
-    `## 비즈니스 규칙` heading (None = no heading)."""
+    `## 비즈니스 규칙` heading (None = no heading); `dod`: list of
+    (checked, text) Definition of Done items (TASK-61)."""
     description = desc if desc is not None else "설명 본문"
     if rules is not None:
         description += "\n\n## 비즈니스 규칙\n" + "\n".join(rules)
@@ -24,6 +27,10 @@ def make_card(acs, rules=None, task_id="AO-27", status="◒ In Progress", desc=N
         f"- [{'x' if checked else ' '}] #{i} {text}"
         for i, (checked, text) in enumerate(acs, start=1)
     ] or ["No acceptance criteria defined"]
+    dod_lines = [
+        f"- [{'x' if checked else ' '}] #{i} {text}"
+        for i, (checked, text) in enumerate(dod or [], start=1)
+    ] or ["No Definition of Done items defined"]
     return "\n".join(
         [
             f"File: /x/backlog/tasks/{task_id.lower()} - t.md",
@@ -44,7 +51,7 @@ def make_card(acs, rules=None, task_id="AO-27", status="◒ In Progress", desc=N
             "",
             "Definition of Done:",
             "-" * 50,
-            "No Definition of Done items defined",
+            *dod_lines,
         ]
     )
 
@@ -365,6 +372,58 @@ def test_same_task_matches_id_forms():
     assert rtf.same_task("27", "AO-27")
     assert not rtf.same_task("2", "AO-27")
     assert not rtf.same_task("AO-270", "AO-27")
+
+
+# --- TASK-61#4: the Done gate needs a `<ID>#D<n>` marker per DoD item ---
+
+
+DOD_CARD = make_card(
+    [(True, "a")],
+    rules=["- B1 (AC #1) 규칙"],
+    dod=[(True, "전체 테스트 통과"), (False, "REGISTRY 반영")],
+)
+
+
+def test_task61_4_done_denied_when_dod_marker_missing(project, monkeypatch, capsys):
+    """TASK-61#4: every DoD item, checked or not, needs its D marker."""
+    project.card = DOD_CARD
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#B1 AO-27#D1")
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 2
+    err = capsys.readouterr().err
+    assert "AO-27#D2" in err and "(DoD #2) REGISTRY 반영" in err
+    assert "AO-27#D1 " not in err
+    assert "DoD" in err.split("\n")[0]
+
+
+def test_task61_4_done_allowed_with_every_dod_marker(project, monkeypatch):
+    """TASK-61#4: all AC, rule and DoD markers present -> Done allowed."""
+    project.card = DOD_CARD
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#B1 AO-27#D1 AO-27#D2")
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 0
+
+
+def test_task61_4_dod_marker_does_not_match_a_longer_number(project, monkeypatch):
+    """TASK-61#4: `AO-27#D1` is not satisfied by `AO-27#D12`."""
+    project.card = make_card([(True, "a")], dod=[(False, "d")])
+    project.write("src/test/java/a/T.java", "AO-27#1 AO-27#D12")
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 2
+
+
+def test_task61_4_dod_does_not_gate_source_edits(project, monkeypatch):
+    """TASK-61#4: DoD items belong to no AC, so only the Done gate asks for
+    them; a card without DoD items asks for none."""
+    project.card = make_card([(False, "a")], dod=[(False, "d")])
+    project.write("src/test/java/a/T.java", "AO-27#1")
+    assert run_main(monkeypatch, edit(project, SOURCE)) == 0
+    project.card = make_card([(True, "a")])
+    assert run_main(monkeypatch, bash(project, "backlog task edit AO-27 -s Done")) == 0
+
+
+def test_task61_4_parse_card_reads_dod_items():
+    """TASK-61#4: `- [ ] #n` / `- [x] #n` lines under Definition of Done."""
+    card = rtf.parse_card(DOD_CARD)
+    assert card["dod"] == [(1, True, "전체 테스트 통과"), (2, False, "REGISTRY 반영")]
+    assert rtf.parse_card(make_card([(True, "a")]))["dod"] == []
 
 
 # --- AC #3: no rules section, malformed rules, all ACs checked, non-targets ---

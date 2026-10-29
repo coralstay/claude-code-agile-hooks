@@ -22,10 +22,10 @@ CLAUDE.md에 "이렇게 해주세요"라고 적어두는 약속만으로는 매�
 ## 무엇을 만들었는지 말씀드립니다
 
 Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 동작하는
-33개의 스크립트를 만들었습니다.
+34개의 스크립트를 만들었습니다.
 [Backlog.md](https://github.com/MrLesk/Backlog.md)(Git 저장소 안에 마크다운 파일로
 태스크·문서·의사결정을 관리하는 CLI 기반 프로젝트 관리 도구입니다) 워크플로 전용
-8개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
+9개와, 프로젝트 종류와 무관하게 항상 켜져 있는 범용 안전/관측 훅 25개로 이루어져
 있습니다. 모든 훅은 개인 fork 안에서만 강하게 적용되며, 운영 레포로 올리는 PR은
 항상 사람이 직접 열도록 하였습니다.
 
@@ -44,7 +44,7 @@ Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 �
 
 Claude Code의 훅은 [공식 문서](https://code.claude.com/docs/ko/hooks)에 정의된
 특정 이벤트(생애주기 단계)에 등록되어, 그 시점에만 실행됩니다. 전체 흐름을 먼저
-그림으로 보여드린 뒤, 이 저장소에 있는 33개의 훅이 각각 어느 단계에서 동작하는지
+그림으로 보여드린 뒤, 이 저장소에 있는 34개의 훅이 각각 어느 단계에서 동작하는지
 표로 정리해 드리겠습니다.
 
 ```mermaid
@@ -96,7 +96,7 @@ flowchart TB
 
 이 저장소의 훅은 이 흐름 중 필요한 지점마다 걸려 있습니다 — 예를 들어
 `require_active_task.py`는 `PreToolUse`(Edit\|Write)에, `block_stop_if_dirty.py`는
-`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 33개 훅 전체가 정확히
+`Stop`에 걸려서 각각 해당 시점의 행동을 검증합니다. 아래 표는 34개 훅 전체가 정확히
 어느 단계에 걸려 있는지 나열한 것입니다. 훅 이름을 누르시면 실제 소스 파일로
 이동합니다.
 
@@ -116,14 +116,19 @@ flowchart TB
 | PreToolUse: Edit\|Write             | [`require_active_task.py`](hooks/require_active_task.py)           | 🔒 backlog | In Progress 태스크 없으면 차단 (프로젝트 밖 경로는 제외) |
 | PreToolUse: Edit\|Write             | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 죽은 접근 재시도 경고             |
 | PreToolUse: Edit\|Write             | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 다음 AC의 `<ID>#<n>`·관련 규칙 `<ID>#B<k>` 테스트 표식 없으면 소스 편집 차단 |
+| PreToolUse: Edit\|Write             | [`require_test_layout.py`](hooks/require_test_layout.py)           | 🔒 backlog | 테스트 파일 구조(헤더 → AC/DoD → Coverage) 어기면 차단, 기존 파일은 안내만 |
 | PreToolUse: Bash                    | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
-| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격 커밋에 다른 변경 섞이면 차단 |
+| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격·상태 전환·작업 순서 커밋에 다른 변경 섞이거나 새 드래프트가 2장 이상이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
 | PreToolUse: Bash                    | [`pre_push_check.py`](hooks/pre_push_check.py)                     | 🔒 backlog | Done+summary 확인 후 push 허용    |
-| PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
+| PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | push 전 커버리지 확인 — 언어 감지 시 `coverageCommand` 필수, 실패·리포트 없음이면 차단 |
+| PreToolUse: Bash                    | [`require_coverage_on_done.py`](hooks/require_coverage_on_done.py) | 🔒 backlog | `backlog task edit <ID> -s Done` 전 같은 커버리지 게이트 |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
-| PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
+| PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 사람 서명자(`humanSigners`)가 서명한 `Plan-Approved: <ID>` 커밋(계획 승인)까지 없으면 `-s "In Progress"` 차단 |
+| PreToolUse: Bash                    | [`require_stage_committed.py`](hooks/require_stage_committed.py)   | 🔒 backlog | 커밋 안 된 `backlog/` 변경이 있으면 다음 단계 명령(draft create·promote·`-s "In Progress"`·`-s Done`) 차단 |
+| PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
+| PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙·DoD 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`require_design_propagation.py`](hooks/require_design_propagation.py) | 최상위 design/ | 장 대응표로 찾은 컴포넌트에 전파 커밋·`Propagation-None` 트레일러 없으면 `-s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
@@ -198,7 +203,10 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 
 **로컬 게이트**: 이 저장소에도 [`.claude-code-agile-hooks.json`](.claude-code-agile-hooks.json)이 있어서, 설치된
 훅이 이 저장소에서 커밋할 때마다 `testCommand`(병렬 테스트, 커버리지 없이)를, push할
-때마다 `coverageCommand`(CI와 같은 명령)를 돌립니다. 실패하면 커밋·push가 막힙니다. push
+때마다 `coverageCommand`(CI와 같은 병렬 명령에 `--cov-report=term-missing --cov-report=xml`을
+더한 것)를 돌립니다. 실패하면 커밋·push가 막힙니다. 이 저장소도 `pyproject.toml`로 Python이
+감지되므로 push · `-s Done` 때 이번 실행이 만든 `coverage.xml`이 있어야 하고(아래 커버리지 100%
+절), `coverage.xml`·`htmlcov/`는 git에서 제외됩니다. push
 때의 실행 기록은 `.claude-code-agile-hooks/coverage-log.jsonl`에 남고, 이 디렉토리는 git에서
 제외됩니다. 아직 옛 이름 `.claude-rails.json`만 쓰는 프로젝트에서는 그 설정을 그대로 읽고
 기록도 예전처럼 `.claude-rails/`에 남깁니다.
@@ -208,9 +216,220 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 `require_test_first.py`가 AC 하나씩 TDD를 강제합니다. `task/<ID>` 브랜치에서 그 태스크가 In
 Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 표식 `<ID>#<n>`과 그 AC에 묶인
 비즈니스 규칙 표식 `<ID>#B<k>`가 테스트 파일 어딘가에 있어야 하고, `backlog task edit <ID> -s
-Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙`
-절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
-실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
+Done` 전에는 모든 AC·규칙 표식과 Definition of Done 항목마다 `<ID>#D<n>` 표식이 있어야 합니다.
+비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙` 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다.
+표식 문자열만 보므로 테스트가 실제로 먼저 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도
+보지 못합니다.
+
+**테스트 파일 구조**: backlog.md 프로젝트에서는 `require_test_layout.py`가 JS · TS · Java ·
+Python · C++ 테스트 파일의 순서를 고정합니다.
+
+1. 맨 위 첫 주석 블록: 태스크마다 한 줄 `<ID>: <한 줄 요약>`.
+2. `== AC/DoD ==` 섹션 표식 아래: 카드의 AC/DoD로 쓴 테스트. AC `<ID>#<n>` · 규칙 `<ID>#B<k>` ·
+   DoD `<ID>#D<n>` 표식은 이 섹션 안에만 둡니다.
+3. `== Coverage ==` 섹션 표식 아래: 커버리지 100%를 채우기 위한 테스트.
+
+주석 기호는 Python `#`, JS/TS/Java/C++ `//`이고, 헤더는 맨 앞 `/* ... */` 블록 하나로 써도 됩니다.
+섹션 표식은 그 문자열만 있는 한 줄 주석입니다. 대상은 `testFirst.testGlobs`가 있으면 그 파일(이
+5개 언어 확장자만), 없으면 이름 기본값입니다 — Python `test_*.py` · `*_test.py`, JS/TS
+`*.test.*` · `*.spec.*`(js · jsx · ts · tsx · mjs · cjs), Java `*Test.java` · `*Tests.java`, C++
+`*_test.cc` · `*_test.cpp` · `*_test.cxx` · `test_*.cpp`. 새로 만드는 테스트 파일과 이미 헤더나
+섹션 표식이 있는 파일만 검사하고(Edit는 바꾼 뒤 내용으로 판단), 둘 다 없는 기존 파일은 통과시키며
+규약 안내만 보여 줍니다. 언어별 예시는 다음과 같습니다.
+
+```python
+# TASK-12: 토큰 예산 라우터
+import pytest
+
+# == AC/DoD ==
+def test_picks_cheapest_model():  # TASK-12#1
+    ...
+
+def test_rejects_negative_budget():  # TASK-12#B1
+    ...
+
+# == Coverage ==
+def test_empty_config_uses_default():
+    ...
+```
+
+```ts
+// TASK-12: 토큰 예산 라우터
+import { route } from "./router";
+
+// == AC/DoD ==
+test("TASK-12#1 picks the cheapest model", () => {});
+test("TASK-12#D1 logs the chosen policy", () => {});
+
+// == Coverage ==
+test("empty config uses the default", () => {});
+```
+
+```java
+/*
+ * TASK-12: 토큰 예산 라우터
+ * TASK-15: 라우터 로그
+ */
+package router;
+
+class RouterTest {
+    // == AC/DoD ==
+    @Test @DisplayName("TASK-12#1 고른다") void picks() {}
+    @Test @DisplayName("TASK-15#B2 기록한다") void logs() {}
+
+    // == Coverage ==
+    @Test void emptyConfig() {}
+}
+```
+
+```cpp
+// TASK-12: 토큰 예산 라우터
+#include <gtest/gtest.h>
+
+// == AC/DoD ==
+TEST(Router, PicksCheapest) {}  // TASK-12#1
+
+// == Coverage ==
+TEST(Router, EmptyConfig) {}
+```
+
+**구현 계획과 계획 승인(계획 → 리뷰 → 계획 승인)**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
+`backlog task edit <ID> -s "In Progress"`를 카드 파일을 읽어 검사합니다. 카드에는 AC와 DoD가
+하나 이상 있어야 하고, Implementation Plan(`--plan`)은 아래 SOAP 예약 제목 네 개를 이 순서로 한
+번씩, 철자 그대로 쓰고 각 절에 본문을 채워야 합니다(대소문자·띄어쓰기·제목 수준 변형은 인정하지
+않습니다). 제목이 없거나, 순서가 다르거나, 두 번 나오거나, 본문이 비어 있으면 무엇이 빠졌는지
+안내하며 막습니다.
+
+```markdown
+### Subjective
+요청 · 배경: 유저가 무엇을 왜 원하는가
+
+### Objective
+확인한 사실: 코드 · 측정값 · 현재 동작
+
+### Assessment
+판단: 문제가 무엇이고 어떤 접근을 고르는가
+
+### Plan
+구현 순서
+```
+
+In Progress로 옮길 때는 여기에 더해 승인 게이트를 통과해야 합니다 — 계획 → 리뷰 → 계획 승인.
+계획 승인은 사람이 계획을 리뷰한 뒤 자기 키로 직접 서명해 남기는 빈 커밋입니다.
+
+```bash
+git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow-empty -S -m "Plan-Approved: TASK-58"
+```
+
+훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Plan-Approved: <ID>`인 커밋을 찾고, 그중 하나라도
+`git log --format=%G?`가 `G`(유효한 서명)이고 서명자 principal(`%GS`)이 프로젝트 설정의
+`humanSigners`에 있어야 통과시킵니다. 승인 커밋이 없을 때, 서명이 유효하지 않을 때(`%G?` ≠ `G`),
+사람이 아닌 서명자가 서명했을 때를 구분해 안내합니다. 훅은 계획 승인 커밋을 만들지 않고, Claude도
+만들지 않습니다 — 유저에게 리뷰와 계획 승인을 요청합니다.
+
+```json
+{ "humanSigners": ["human"] }
+```
+
+사람과 Claude를 서명으로 구분하려면 키를 둘로 나눕니다(사람이 직접 설정합니다).
+
+- **AI 키**: Claude Code 세션 전용 키를 따로 만들고, `~/.claude/settings.json`의 `env`로 그
+  세션에서만 서명 키를 바꿉니다:
+  `"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.signingkey", "GIT_CONFIG_VALUE_0": "<AI 키 .pub 파일의 절대 경로>"`.
+- **사람 키**: 기존 키는 ssh-agent에서 내려(`ssh-add -d`) 서명할 때마다 암호를 입력해야 하게
+  둡니다. 그래야 Claude 세션이 사람 키로 조용히 서명할 수 없습니다.
+- **allowed_signers**: `~/.ssh/allowed_signers`에 두 키를 서로 다른 principal로 올리고
+  (`human <사람 공개키>`, `ai-claude-code <AI 공개키>`),
+  `git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers`로 연결합니다.
+- **humanSigners**: 프로젝트 설정(`.claude-code-agile-hooks.json`, 옛 `.claude-rails.json`)에 사람
+  principal만 적습니다. 없거나 비어 있으면 훅은 위 설정 방법을 안내하며 In Progress를 막습니다.
+
+남은 위험: `~/.ssh/allowed_signers`와 프로젝트 설정은 로컬에서 고칠 수 있는 파일이라, 에이전트가
+AI 키를 사람 principal로 올리거나 `humanSigners`를 바꿀 수 있습니다. 이 파일들은 `config_guard.py`
+같은 훅으로 따로 보호해야 합니다(이 훅은 보호하지 않습니다).
+
+backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
+검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은
+우회는 보지 못합니다.
+
+**단계별 커밋**: backlog.md 프로젝트에서는 카드 생애주기의 단계마다 커밋합니다 — draft 1장 작성 →
+커밋 → 승격 → 커밋 → `-s "In Progress"` → 커밋 → 작업(AC마다 커밋) → `-s Done` → 커밋. 두 훅이
+나눠 강제합니다.
+
+- `backlog_commit_scope.py`(커밋 쪽): 새 드래프트 파일(`backlog/drafts/`)이 2장 이상 든 커밋을
+  막습니다. 또 스테이징된 `backlog/tasks/` 파일의 frontmatter `status:`가 HEAD와 달라져 `In
+  Progress`나 `Done`이 되면 상태 전환 커밋으로 보고, 그 태스크 파일 하나 말고 다른 변경이 섞이면
+  막습니다(HEAD에 없던 파일은 이전 상태가 없는 것으로 봅니다).
+- `require_stage_committed.py`(명령 쪽): 명령 위치의 `backlog draft create`·`backlog draft
+  promote`·`backlog task edit <ID> -s "In Progress"`/`-s Done` 앞에서 `git status --porcelain --
+  backlog/`에 커밋 안 된 변경이 있으면 먼저 커밋하라고 막습니다. `backlog/` 밖의 작업 파일은 보지
+  않습니다. 명령 자신이 만드는 변경은 검사 뒤에 생기므로 `backlog task edit <ID> --check-ac 1
+  --final-summary "..." -s Done`처럼 한 명령으로 끝내면 통과합니다. 반대로 `--add-ref`·`--doc`·
+  `--check-ac` 등을 따로 실행해 두고 커밋하지 않은 채 `-s "In Progress"`/`-s Done`을 하면
+  막힙니다 — 그 편집을 먼저 커밋하세요.
+
+**작업 순서(백로깅 절차)**: 승격할 때마다 **승격 → `--dep` 정리 → 작업 순서 생성 → 커밋** 순서로
+진행합니다. `backlog draft promote <ID>`와 그 승격 커밋 뒤에 `backlog task edit <ID> --dep <ID>`로
+의존을 정리하고, 프로젝트 루트에서 `python3 ~/.claude/hooks/claude-code-agile-hooks/work_order.py`
+(이 저장소에서는 [`scripts/work_order.py`](scripts/work_order.py), `install.sh`가 훅 옆에 복사합니다)를
+실행해 `backlog/work-order.md`를 만든 다음, 그 파일과 의존을 고친 태스크 파일만 별도 커밋으로
+남깁니다. 스크립트는 태스크 파일 frontmatter의 `dependencies`를 읽어 미완료(Done이 아닌) 태스크를
+단계별 표로 씁니다 — 같은 단계는 병렬, 단계 사이는 순차입니다. Done 태스크나 `backlog/tasks/`에 없는
+태스크에 대한 의존은 충족된 것으로 보고(없는 ID는 파일에 따로 적습니다), 순환 의존이 있으면 순환을
+보여 주고 파일을 쓰지 않습니다. 파일 첫 줄에는 미완료 태스크 ID 집합과 의존으로 만든 해시가 있어서,
+`require_work_order.py`가 다음 `backlog draft promote`나 `backlog task edit <ID> -s "In Progress"`
+전에 이 해시가 현재 태스크와 맞지 않으면(파일이 없을 때 포함) 막고 위 명령을 안내합니다. 승격 자체는
+승격 전 상태로 판정하므로 교착이 없고, 미완료 태스크가 하나도 없는 새 프로젝트는 파일 없이도
+통과합니다. 작업 순서 커밋에 다른 변경이 섞이면 `backlog_commit_scope.py`가 막습니다.
+
+### 커버리지 100%(line + branch)를 강제합니다
+
+`pre_push_coverage_check.py`(push 전)와 `require_coverage_on_done.py`(`backlog task edit <ID> -s
+Done` 전, backlog.md 프로젝트)가 같은 게이트를 돌립니다.
+
+1. **언어 감지**: 프로젝트 루트(하위 디렉토리는 보지 않음)의 매니페스트로 감지합니다 —
+   `package.json` → JavaScript, `tsconfig.json` → TypeScript, `pom.xml` · `build.gradle` ·
+   `build.gradle.kts` → Java, `pyproject.toml` · `setup.cfg` · `pytest.ini` → Python,
+   `CMakeLists.txt` → C++.
+2. **coverageCommand 필수**: 언어가 하나라도 감지됐는데 프로젝트 설정에 `coverageCommand`가 없으면
+   push와 `-s Done`을 막습니다. 감지된 언어가 없으면 예전처럼 opt-in입니다(설정이 없으면 아무 말도
+   하지 않고, 있으면 종료 코드만 봅니다).
+3. **실행과 판정**: `coverageCommand`를 돌려 0이 아닌 종료 코드면 막습니다. 100%(line + branch)
+   임계값은 각 도구 설정에 두고, 훅은 종료 코드로만 판정합니다(숫자를 지어내지 않습니다).
+4. **리포트 확인**: 명령이 성공해도, 감지된 언어마다 아래 위치에 **이번 실행이 쓴**(mtime이 실행
+   시작 이후, 시작 시각은 초 단위로 내림) 파일이 하나라도 있어야 통과합니다. 디렉토리면 그 아래
+   어떤 파일이든 셉니다. 실행 전부터 있던 리포트는 세지 않습니다.
+
+| 언어 | 리포트 위치(기본) | 100% 설정 예 | 근거 |
+| --- | --- | --- | --- |
+| Python (pytest-cov / coverage.py) | `htmlcov/` 또는 `coverage.xml` | `--cov --cov-branch --cov-fail-under=100 --cov-report=term-missing --cov-report=xml`, 또는 `[tool.coverage.run] branch = true` + `[tool.coverage.report] fail_under = 100` | [coverage.py 설정](https://coverage.readthedocs.io/en/latest/config.html) (`[html] directory` 기본 `htmlcov`, `[xml] output` 기본 `coverage.xml`, `branch` · `fail_under`), [pytest-cov 설정](https://pytest-cov.readthedocs.io/en/latest/config.html) |
+| JavaScript · TypeScript (Jest) | `coverage/` | `collectCoverage: true`(또는 `jest --coverage`) + `coverageThreshold: { global: { lines: 100, branches: 100 } }` | [Jest 설정](https://jestjs.io/docs/configuration) (`coverageThreshold`; `coverageDirectory`는 표에 기본값 `undefined`로 적혀 있지만 [jest-config `normalize.ts`](https://github.com/jestjs/jest/blob/main/packages/jest-config/src/normalize.ts)가 `<rootDir>/coverage`로 채움) |
+| JavaScript · TypeScript (Vitest) | `coverage/` | `coverage: { enabled: true, thresholds: { lines: 100, branches: 100 } }`(또는 `vitest run --coverage`); `thresholds: { 100: true }`는 functions · statements까지 100% | [Vitest coverage 설정](https://vitest.dev/config/coverage) (`reportsDirectory` 기본 `./coverage`) |
+| Java (JaCoCo, Maven) | `target/site/jacoco/` | `jacoco-maven-plugin`의 `prepare-agent` · `report` · `check`, check 규칙에 `LINE`과 `BRANCH` 각각 `COVEREDRATIO` `minimum` `1.0` → `mvn verify` | [report](https://www.jacoco.org/jacoco/trunk/doc/report-mojo.html) (`outputDirectory` 기본 `${project.reporting.outputDirectory}/jacoco`, [super POM](https://maven.apache.org/ref/current/maven-model-builder/super-pom.html)에서 `target/site`), [check](https://www.jacoco.org/jacoco/trunk/doc/check-mojo.html) |
+| Java (JaCoCo, Gradle) | `build/reports/jacoco/` (HTML은 `build/reports/jacoco/test/html`) | `jacocoTestCoverageVerification`의 `violationRules`에 `LINE` · `BRANCH` `COVEREDRATIO` `minimum = 1.0` → `./gradlew test jacocoTestReport jacocoTestCoverageVerification` | [Gradle JaCoCo 플러그인](https://docs.gradle.org/current/userguide/jacoco_plugin.html) |
+| C++ (gcovr) | `coverage/` (공식 기본값 없음 — 이 저장소의 규약) | `mkdir -p coverage && gcovr --fail-under-line 100 --fail-under-branch 100 --html-details coverage/index.html --xml coverage/coverage.xml` | [gcovr 명령 옵션](https://gcovr.com/en/stable/manpage.html) (`--output` 기본은 stdout, 미달 시 종료 코드 2 · 4) |
+
+C++에서 llvm-cov(`llvm-cov show -format=html -output-dir=coverage`)를 쓰셔도 리포트 위치는 같지만,
+[llvm-cov](https://llvm.org/docs/CommandGuide/llvm-cov.html)에는 임계값 미달로 실패하는 옵션이
+없으므로 100% 판정은 gcovr나 별도 스크립트의 종료 코드로 하셔야 합니다. coverage.py의
+`fail_under`는 branch를 켜면 line과 branch를 합친 총계를 보는데, 100%는 둘 다 100%일 때만
+나옵니다. Maven에서는 `report` 골이 실행되도록(예: `verify` 단계에 바인딩) 해 주세요.
+
+**리포트 위치 바꾸기**: 프로젝트 설정의 `coverageReportDir`로 바꿉니다. 경로는 프로젝트 루트
+기준이고 파일도 디렉토리도 됩니다.
+
+```json
+{ "coverageCommand": "npx vitest run --coverage", "coverageReportDir": "reports/coverage" }
+{ "coverageCommand": "make coverage", "coverageReportDir": { "python": "build/cov.xml", "cpp": "build/cov" } }
+```
+
+문자열 하나면 감지된 모든 언어에 그 경로를 쓰고, 맵이면 적힌 언어만 바꾸고 나머지는 기본 위치를
+씁니다. 형식이 틀리면(빈 문자열, 목록, 모르는 언어 키 등) 명령을 돌리지 않고 막습니다.
+
+한계: 매니페스트가 루트에 있기만 하면 감지하므로, 예를 들어 Python 프로젝트에 도구용
+`package.json`만 있어도 JavaScript 리포트(`coverage/`)를 요구합니다(`coverageReportDir` 맵으로 같은
+리포트를 가리키게 할 수 있습니다). `-s Done`마다 `coverageCommand` 전체를 한 번 돌리므로 그만큼
+시간이 듭니다. 하위 디렉토리의 모노레포 패키지는 감지하지 않습니다.
 
 **설계 문서 전파(최상위 저장소)**: `require_design_propagation.py`는 최상위
 `design/00-문서-정보.md`에 `## 문서 계층` > `### 장 대응표`가 있는 저장소에서만 작동합니다(그 밖의
