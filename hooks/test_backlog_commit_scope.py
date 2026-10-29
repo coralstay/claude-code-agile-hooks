@@ -509,6 +509,187 @@ def test_format_offenders_truncates_long_lists():
     assert "... 외 3개" in listed
 
 
+# --- TASK-59#1: one new draft per commit ------------------------------------
+
+DRAFT_2 = "backlog/drafts/draft-2 - 다른-기능.md"
+
+
+def test_check_scope_two_new_drafts_denied():
+    """TASK-59#1: a commit that adds two new draft files is denied."""
+    msg = bcs.check_scope([("A", DRAFT, None), ("A", DRAFT_2, None)])
+    assert "드래프트 한 장" in msg
+    assert DRAFT in msg and DRAFT_2 in msg
+
+
+def test_check_scope_copied_draft_counts_as_new():
+    """TASK-59#1: a copy into backlog/drafts/ is a new draft too."""
+    entries = [("A", DRAFT, None), ("C", "backlog/drafts/draft-0 - x.md", DRAFT_2)]
+    assert "드래프트 한 장" in bcs.check_scope(entries)
+
+
+def test_two_new_drafts_in_one_commit_denied(monkeypatch, capsys, repo):
+    """TASK-59#1: end to end - two drafts staged together are denied."""
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, DRAFT_2, DRAFT_BODY.replace("DRAFT-1", "DRAFT-2"))
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    assert "드래프트 한 장" in capsys.readouterr().err
+
+
+def test_second_draft_added_in_same_command_denied(monkeypatch, repo):
+    """TASK-59#1: the same-command `git add` simulation sees the second draft."""
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, DRAFT_2, DRAFT_BODY.replace("DRAFT-1", "DRAFT-2"))
+    git(repo, "add", DRAFT)
+    command = f"git add '{DRAFT_2}' && git commit -m x"
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+# --- TASK-59#2: status-transition commits carry only that task file ---------
+
+TASK_BODY = "---\nid: TASK-3\ntitle: 기존\nstatus: {}\nlabels: []\n---\n\n본문\n"
+
+
+def set_status(repo, status, rel=OTHER_TASK):
+    write(repo, rel, TASK_BODY.format(status))
+
+
+@pytest.fixture
+def repo_todo(repo):
+    set_status(repo, "To Do")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "todo")
+    return repo
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (TASK_BODY.format("In Progress"), "In Progress"),
+        ("---\nid: X\nstatus: 'Done'\n---\n", "Done"),
+        ('---\nstatus: "In Progress"  \n---\n', "In Progress"),
+        ("---\nid: X\n---\nstatus: Done\n", None),  # body, not frontmatter
+        ("status: Done\n", None),  # no frontmatter at all
+        ("---\nid: X\nstatus: Done\n", None),  # unterminated frontmatter
+        (None, None),
+    ],
+)
+def test_frontmatter_status(text, expected):
+    """TASK-59#2: the transition is read from the `status:` frontmatter key."""
+    assert bcs.frontmatter_status(text) == expected
+
+
+def test_check_scope_transition_alone_is_fine():
+    """TASK-59#2: a transition commit holding only its task file passes."""
+    assert bcs.check_scope([("M", OTHER_TASK, None)], [OTHER_TASK]) is None
+
+
+def test_check_scope_transition_with_renamed_task_file_is_fine():
+    """TASK-59#2: the task file's own rename (title change) is part of it."""
+    entries = [("R", OTHER_TASK, TASK)]
+    assert bcs.check_scope(entries, [TASK]) is None
+
+
+def test_check_scope_transition_mixed_is_denied():
+    """TASK-59#2: anything else next to the transitioning task file is denied."""
+    entries = [("M", OTHER_TASK, None), ("M", "src/app.py", None)]
+    msg = bcs.check_scope(entries, [OTHER_TASK])
+    assert "상태 전환 커밋" in msg
+    assert "src/app.py" in msg
+
+
+def test_check_scope_two_transitions_denied():
+    """TASK-59#2: two task files changing status at once are denied too."""
+    entries = [("M", OTHER_TASK, None), ("M", TASK, None)]
+    msg = bcs.check_scope(entries, [OTHER_TASK, TASK])
+    assert "상태 전환 커밋" in msg
+    assert TASK in msg and OTHER_TASK in msg
+
+
+@pytest.mark.parametrize("status", ["In Progress", "Done"])
+def test_transition_commit_alone_passes(monkeypatch, repo_todo, status):
+    """TASK-59#2: `-s "In Progress"` / `-s Done` committed on its own passes."""
+    set_status(repo_todo, status)
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+@pytest.mark.parametrize("status", ["In Progress", "Done"])
+def test_transition_commit_mixed_with_code_denied(
+    monkeypatch, capsys, repo_todo, status
+):
+    """TASK-59#2: the transition plus code in one commit is denied."""
+    set_status(repo_todo, status)
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 2
+    err = capsys.readouterr().err
+    assert "상태 전환 커밋" in err
+    assert "src/app.py" in err
+
+
+def test_transition_mixed_via_same_command_add_denied(monkeypatch, repo_todo):
+    """TASK-59#2: the simulated index is read for the staged status too."""
+    set_status(repo_todo, "Done")
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", OTHER_TASK)
+    assert run_main(monkeypatch, repo_todo, "git commit -am done") == 2
+
+
+def test_staged_status_is_judged_not_the_worktree(monkeypatch, repo_todo):
+    """TASK-59#2: a Done edit left unstaged is not a transition."""
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "src/app.py")
+    set_status(repo_todo, "Done")  # worktree only
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+@pytest.mark.parametrize("status", ["To Do", "Done"])
+def test_non_transition_task_edit_with_code_passes(monkeypatch, repo_todo, status):
+    """TASK-59#2: To Do -> To Do edits and Done -> Done edits are no transition."""
+    if status == "Done":
+        set_status(repo_todo, "Done")
+        git(repo_todo, "commit", "-qam", "done")
+    path = repo_todo / OTHER_TASK
+    path.write_text(path.read_text() + "더 적음\n")
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+def test_new_task_file_added_as_done_counts_as_transition(monkeypatch, repo):
+    """TASK-59#2: no HEAD version means the status changed (None -> Done)."""
+    set_status(repo, "Done", rel=TASK)
+    write(repo, "src/app.py", "print(9)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+
+
+def test_deleted_task_file_is_no_transition(monkeypatch, repo_todo):
+    """TASK-59#2: a staged deletion has no new status to read."""
+    git(repo_todo, "rm", "-q", OTHER_TASK)
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+def test_status_transitions_reads_head_of_the_old_path(repo_todo):
+    """TASK-59#2: for a renamed task file the HEAD side is the old path."""
+    set_status(repo_todo, "Done")
+    git(repo_todo, "commit", "-qam", "done")
+    (repo_todo / OTHER_TASK).unlink()
+    set_status(repo_todo, "Done", rel=TASK)  # Done -> Done, only renamed
+    git(repo_todo, "add", "-A")
+    entries = bcs.staged_entries(str(repo_todo))
+    assert entries == [("R", OTHER_TASK, TASK)]
+    assert bcs.status_transitions(str(repo_todo), entries) == []
+
+
+def test_read_blob_none_for_missing_object(repo):
+    """TASK-59#2: unreadable blobs (no HEAD yet, bad path) give None."""
+    assert bcs.read_blob(str(repo), "HEAD:nope.md") is None
+
+
 # --- TASK-60: work order commits ------------------------------------------------
 
 WORK_ORDER = "backlog/work-order.md"
@@ -543,13 +724,13 @@ def test_check_scope_work_order_with_dep_changed_tasks_is_fine_task_60_3():
         seen.append((old, new))
         return True
 
-    assert bcs.check_scope(entries, changed) is None
+    assert bcs.check_scope(entries, deps_changed=changed) is None
     assert seen == [(OTHER_TASK, OTHER_TASK)]
 
 
 def test_check_scope_work_order_with_unchanged_deps_task_is_denied_task_60_3():
     entries = [("M", WORK_ORDER, None), ("M", OTHER_TASK, None)]
-    msg = bcs.check_scope(entries, lambda old, new: False)
+    msg = bcs.check_scope(entries, deps_changed=lambda old, new: False)
     assert "작업 순서 커밋" in msg
     assert OTHER_TASK in msg
     assert "작업 순서 커밋" in bcs.check_scope(entries)  # no judge: not proven
@@ -563,7 +744,7 @@ def test_check_scope_work_order_with_code_or_new_task_is_denied_task_60_3():
         ("D", OTHER_TASK, None),
         ("M", "backlog/config.yml", None),
     ]:
-        msg = bcs.check_scope([("M", WORK_ORDER, None), other], yes)
+        msg = bcs.check_scope([("M", WORK_ORDER, None), other], deps_changed=yes)
         assert msg and other[1] in msg, other
 
 
@@ -571,7 +752,7 @@ def test_check_scope_work_order_with_renamed_task_uses_both_paths_task_60_3():
     renamed = "backlog/tasks/task-3 - 새-이름.md"
     seen = []
     entries = [("M", WORK_ORDER, None), ("R", OTHER_TASK, renamed)]
-    assert bcs.check_scope(entries, lambda o, n: seen.append((o, n)) or True) is None
+    assert bcs.check_scope(entries, deps_changed=lambda o, n: seen.append((o, n)) or True) is None
     assert seen == [(OTHER_TASK, renamed)]
 
 
