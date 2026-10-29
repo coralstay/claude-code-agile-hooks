@@ -46,6 +46,7 @@ import pre_push_check
 import pre_push_coverage_check
 import require_draft_first
 import require_implementation_plan
+import require_stage_committed
 import require_test_first
 
 SETTINGS = os.path.join(os.path.dirname(__file__), os.pardir, "settings.hooks.json")
@@ -189,6 +190,18 @@ CONTRACT = {
             'backlog task edit TASK-1 -s "In Progress"',
             "cd y && backlog task edit 1 --status 'In Progress'",
             "FOO=1 backlog task edit TASK-1 -s 'In Progress'",
+        ],
+    },
+    # TASK-59: denies a lifecycle stage command while backlog/ has
+    # uncommitted changes, so it is registered like the other gates (no `if`)
+    "require_stage_committed": {
+        "detects": require_stage_committed.command_runs_stage,
+        "acts_on": [
+            "backlog draft create x",
+            "backlog draft promote 3",
+            'cd y && backlog task edit 3 -s "In Progress"',
+            "/usr/local/bin/backlog task edit 3 -s Done",
+            "FOO=1 backlog draft create x",
         ],
     },
     # TASK-56: denies the Done move of the branch's task while a test marker

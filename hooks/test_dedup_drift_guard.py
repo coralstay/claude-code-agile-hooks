@@ -211,6 +211,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "session_start.py",
         "backlog_commit_scope.py",
         "require_test_first.py",  # TASK-56
+        "require_stage_committed.py",  # TASK-59
     ]
     assert ddg.REGISTRY["has_active_task"] == [
         "block_stop_if_dirty.py",
@@ -258,6 +259,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
         "require_implementation_plan.py",  # TASK-58
+        "require_stage_committed.py",  # TASK-59
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -424,6 +426,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_push_coverage_check.py",  # TASK-39
             "require_test_first.py",  # TASK-56
             "require_implementation_plan.py",  # TASK-58
+            "require_stage_committed.py",  # TASK-59
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -435,6 +438,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
         "require_implementation_plan.py",  # TASK-58
+        "require_stage_committed.py",  # TASK-59
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
@@ -624,6 +628,24 @@ def test_registry_covers_task56_require_test_first_helpers():
         "command_head",
     ):
         assert "require_test_first.py" in ddg.REGISTRY[name]
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task59_stage_commit_hook():
+    """TASK-59#3: require_stage_committed.py copies the backlog-project check,
+    has_command and the four command-position helpers verbatim."""
+    for name in (
+        "is_backlog_project",
+        "has_command",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert ddg.REGISTRY[name][-1] == "require_stage_committed.py"
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))

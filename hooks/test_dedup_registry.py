@@ -26,6 +26,7 @@ MODULES = [
     "backlog_commit_scope.py",
     "require_test_first.py",
     "require_implementation_plan.py",
+    "require_stage_committed.py",  # TASK-59
 ]
 
 

@@ -95,6 +95,10 @@
           },
           {
             "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_stage_committed.py"
+          },
+          {
+            "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_test_first.py"
           },
           {
