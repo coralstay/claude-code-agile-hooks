@@ -95,6 +95,31 @@ BASELINE_BODIES = {
         def project_config_path(cwd):
             return None
         """,
+    # TASK-60: work order helpers shared by the hook and ../scripts/work_order.py
+    "parse_frontmatter": """
+        def parse_frontmatter(text):
+            return {}
+        """,
+    "parse_task": """
+        def parse_task(text):
+            return None
+        """,
+    "natural_key": """
+        def natural_key(task_id):
+            return [task_id]
+        """,
+    "read_tasks": """
+        def read_tasks(cwd):
+            return {}
+        """,
+    "incomplete_tasks": """
+        def incomplete_tasks(tasks):
+            return tasks
+        """,
+    "input_hash": """
+        def input_hash(incomplete):
+            return ""
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -124,6 +149,8 @@ def build_full_hooks_dir(tmp_path, overrides=None):
             file_functions.setdefault(filename, []).append(function_name)
 
     for filename, function_names in file_functions.items():
+        # TASK-60: "../scripts/work_order.py" lives outside hooks/
+        (hooks_dir / filename).parent.mkdir(parents=True, exist_ok=True)
         parts = []
         for function_name in function_names:
             body = overrides.get(filename, {}).get(
@@ -260,6 +287,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "require_test_first.py",  # TASK-56
         "require_implementation_plan.py",  # TASK-58
         "require_stage_committed.py",  # TASK-59
+        "require_work_order.py",  # TASK-60
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -299,6 +327,52 @@ def test_registry_covers_task39_git_subcommand_helpers():
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
     assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task60_work_order_helpers():
+    """TASK-60#2: require_work_order.py copies the command-position helpers
+    and, from ../scripts/work_order.py, the work order hash helpers."""
+    for name in (
+        "is_backlog_project",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert "require_work_order.py" in ddg.REGISTRY[name]
+    for name in ("natural_key", "read_tasks", "incomplete_tasks", "input_hash"):
+        assert ddg.REGISTRY[name] == ["../scripts/work_order.py", "require_work_order.py"]
+    # TASK-60#3: the commit scope hook reads staged task dependencies too
+    for name in ("parse_frontmatter", "parse_task"):
+        assert ddg.REGISTRY[name] == [
+            "../scripts/work_order.py",
+            "require_work_order.py",
+            "backlog_commit_scope.py",
+        ]
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_blocks_commit_when_script_copy_of_work_order_helper_drifts(
+    monkeypatch, capsys, tmp_path
+):
+    """TASK-60#2: drift between the hook and scripts/work_order.py is caught."""
+    build_full_hooks_dir(
+        tmp_path,
+        overrides={
+            "../scripts/work_order.py": {
+                "input_hash": """
+                    def input_hash(incomplete):
+                        return "x"
+                    """
+            }
+        },
+    )
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
+    err = capsys.readouterr().err
+    assert "input_hash" in err
 
 
 def test_allows_commit_when_all_registered_functions_identical(monkeypatch, tmp_path):
@@ -427,6 +501,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "require_test_first.py",  # TASK-56
             "require_implementation_plan.py",  # TASK-58
             "require_stage_committed.py",  # TASK-59
+            "require_work_order.py",  # TASK-60
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -439,6 +514,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "require_test_first.py",  # TASK-56
         "require_implementation_plan.py",  # TASK-58
         "require_stage_committed.py",  # TASK-59
+        "require_work_order.py",  # TASK-60
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
@@ -645,7 +721,7 @@ def test_registry_covers_task59_stage_commit_hook():
         "split_segments",
         "command_head",
     ):
-        assert ddg.REGISTRY[name][-1] == "require_stage_committed.py"
+        assert "require_stage_committed.py" in ddg.REGISTRY[name]
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))

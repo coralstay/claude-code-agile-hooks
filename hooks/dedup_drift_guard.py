@@ -46,6 +46,7 @@ REGISTRY = {
         "require_test_first.py",
         "require_implementation_plan.py",
         "require_stage_committed.py",
+        "require_work_order.py",
     ],
     "has_command": [
         "block_stop_if_dirty.py",
@@ -86,6 +87,7 @@ REGISTRY = {
         "require_test_first.py",
         "require_implementation_plan.py",
         "require_stage_committed.py",
+        "require_work_order.py",
     ],
     "split_segments": [
         "require_draft_first.py",
@@ -99,6 +101,7 @@ REGISTRY = {
         "require_test_first.py",
         "require_implementation_plan.py",
         "require_stage_committed.py",
+        "require_work_order.py",
     ],
     # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
     # 프로젝트 안/밖 판정(TASK-27 realpath 로직)을 그대로 복사해 쓴다
@@ -113,6 +116,7 @@ REGISTRY = {
         "require_test_first.py",
         "require_implementation_plan.py",
         "require_stage_committed.py",
+        "require_work_order.py",
     ],
     # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
     # pipeline_trace.py의 명령 위치 판정(env 할당·래퍼 건너뛰기)을 그대로 복사해 쓴다
@@ -130,6 +134,7 @@ REGISTRY = {
         "require_test_first.py",
         "require_implementation_plan.py",
         "require_stage_committed.py",
+        "require_work_order.py",
     ],
     "git_subcommand_index": [
         "pre_commit_check.py",
@@ -151,6 +156,23 @@ REGISTRY = {
         "block_stop_if_dirty.py",
         "context_flags.py",
     ],
+    # TASK-60: require_work_order.py가 작업 순서 해시를 직접 다시 계산하도록
+    # scripts/work_order.py의 헬퍼를 그대로 복사해 쓴다(hooks/ 기준 상대 경로).
+    # backlog_commit_scope.py도 작업 순서 커밋의 의존 변경 판정에 앞의 둘을 쓴다
+    "parse_frontmatter": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "parse_task": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "natural_key": ["../scripts/work_order.py", "require_work_order.py"],
+    "read_tasks": ["../scripts/work_order.py", "require_work_order.py"],
+    "incomplete_tasks": ["../scripts/work_order.py", "require_work_order.py"],
+    "input_hash": ["../scripts/work_order.py", "require_work_order.py"],
     # current_branch()는 파일마다 반환값 계약이 다르다(빈 문자열 vs None) —
     # 의도된 차이로 보이므로 REGISTRY에 등록하지 않는다.
 }

@@ -117,7 +117,7 @@ flowchart TB
 | PreToolUse: Edit\|Write             | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 죽은 접근 재시도 경고             |
 | PreToolUse: Edit\|Write             | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 다음 AC의 `<ID>#<n>`·관련 규칙 `<ID>#B<k>` 테스트 표식 없으면 소스 편집 차단 |
 | PreToolUse: Bash                    | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
-| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격·상태 전환 커밋에 다른 변경 섞이거나 새 드래프트가 2장 이상이면 차단 |
+| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격·상태 전환·작업 순서 커밋에 다른 변경 섞이거나 새 드래프트가 2장 이상이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
 | PreToolUse: Bash                    | [`pre_push_check.py`](hooks/pre_push_check.py)                     | 🔒 backlog | Done+summary 확인 후 push 허용    |
 | PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
@@ -125,6 +125,7 @@ flowchart TB
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
 | PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 사람 서명자(`humanSigners`)가 서명한 `Plan-Approved: <ID>` 커밋(계획 승인)까지 없으면 `-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_stage_committed.py`](hooks/require_stage_committed.py)   | 🔒 backlog | 커밋 안 된 `backlog/` 변경이 있으면 다음 단계 명령(draft create·promote·`-s "In Progress"`·`-s Done`) 차단 |
+| PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
@@ -287,6 +288,20 @@ backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 �
   --final-summary "..." -s Done`처럼 한 명령으로 끝내면 통과합니다. 반대로 `--add-ref`·`--doc`·
   `--check-ac` 등을 따로 실행해 두고 커밋하지 않은 채 `-s "In Progress"`/`-s Done`을 하면
   막힙니다 — 그 편집을 먼저 커밋하세요.
+
+**작업 순서(백로깅 절차)**: 승격할 때마다 **승격 → `--dep` 정리 → 작업 순서 생성 → 커밋** 순서로
+진행합니다. `backlog draft promote <ID>`와 그 승격 커밋 뒤에 `backlog task edit <ID> --dep <ID>`로
+의존을 정리하고, 프로젝트 루트에서 `python3 ~/.claude/hooks/claude-code-agile-hooks/work_order.py`
+(이 저장소에서는 [`scripts/work_order.py`](scripts/work_order.py), `install.sh`가 훅 옆에 복사합니다)를
+실행해 `backlog/work-order.md`를 만든 다음, 그 파일과 의존을 고친 태스크 파일만 별도 커밋으로
+남깁니다. 스크립트는 태스크 파일 frontmatter의 `dependencies`를 읽어 미완료(Done이 아닌) 태스크를
+단계별 표로 씁니다 — 같은 단계는 병렬, 단계 사이는 순차입니다. Done 태스크나 `backlog/tasks/`에 없는
+태스크에 대한 의존은 충족된 것으로 보고(없는 ID는 파일에 따로 적습니다), 순환 의존이 있으면 순환을
+보여 주고 파일을 쓰지 않습니다. 파일 첫 줄에는 미완료 태스크 ID 집합과 의존으로 만든 해시가 있어서,
+`require_work_order.py`가 다음 `backlog draft promote`나 `backlog task edit <ID> -s "In Progress"`
+전에 이 해시가 현재 태스크와 맞지 않으면(파일이 없을 때 포함) 막고 위 명령을 안내합니다. 승격 자체는
+승격 전 상태로 판정하므로 교착이 없고, 미완료 태스크가 하나도 없는 새 프로젝트는 파일 없이도
+통과합니다. 작업 순서 커밋에 다른 변경이 섞이면 `backlog_commit_scope.py`가 막습니다.
 
 ## 더 자세한 내용이 궁금하시다면
 

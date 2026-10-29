@@ -34,6 +34,12 @@
    **단계마다 커밋한다**: draft 1장 → 커밋 → 승격 → 커밋 → In Progress → 커밋 → 작업 → Done →
    커밋. 커밋 안 된 `backlog/` 변경이 남아 있으면 다음 단계 명령(`draft create` · `draft promote` ·
    `-s "In Progress"` · `-s Done`)을 훅이 막는다 — 앞 단계를 먼저 커밋한다.
+   승격할 때마다 **승격 → `--dep` 정리 → 작업 순서 생성 → 커밋** 순서를 지킨다. 승격 커밋 뒤
+   `backlog task edit <ID> --dep <ID>`로 의존을 정리하고, 프로젝트 루트에서
+   `python3 ~/.claude/hooks/claude-code-agile-hooks/work_order.py`로 `backlog/work-order.md`(같은
+   단계 = 병렬, 단계 사이 = 순차)를 만든 다음, 그 파일과 의존을 고친 태스크 파일만 별도 커밋으로
+   남긴다. 작업 순서가 없거나 현재 태스크 · 의존과 맞지 않으면 다음 `draft promote`와
+   `-s "In Progress"`를 훅이 막고, 작업 순서 커밋에 다른 변경이 섞여도 훅이 커밋을 막는다.
 3. **검토 (계획 → 리뷰 → 계획 승인)**: 유저가 드래프트를 확인/승인해 태스크로 승격되기 전까지는
    실행을 시작하지 않는다. 착수(In Progress) 전에 사람이 구현 계획을 리뷰하고 계획 승인을 한다.
    계획 승인은 사람이 자기 키로 직접 서명해 남기는 빈 커밋
