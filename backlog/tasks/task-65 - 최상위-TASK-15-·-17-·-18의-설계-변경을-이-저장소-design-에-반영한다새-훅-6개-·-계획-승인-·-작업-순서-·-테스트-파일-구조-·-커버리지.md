@@ -5,8 +5,8 @@ title: >-
   파일 구조 · 커버리지)
 status: To Do
 assignee: []
-created_date: '2026-10-22 05:52'
-updated_date: '2026-10-22 06:16'
+created_date: 2026-10-22 05:52
+updated_date: '2026-10-29T12:26:00Z'
 labels:
   - design
 dependencies: []
@@ -25,6 +25,7 @@ references:
 - [ ] #1 design/의 훅 목록 · 시스템 구성 · three-natures 다이어그램에 require_implementation_plan · require_stage_committed · require_work_order · require_test_layout · require_coverage_on_done · require_design_propagation과 바뀐 backlog_commit_scope · require_test_first · pre_push_coverage_check를 반영한다(다이어그램은 build-diagrams.py로 재렌더)
 - [ ] #2 design/의 동작 · 인터페이스 · 설정 장에 계획 → 리뷰 → 계획 승인(Plan-Approved, humanSigners), 단계별 커밋, 작업 순서 파일, 테스트 파일 구조, 커버리지 100%(line + branch) · coverageReportDir, 설계 문서 전파(Propagation-None)를 최상위 2.02 · 2.03 · 3.04 · 3.05와 같은 ID로 반영한다
 - [ ] #3 각 커밋 본문에 'Refs: coralstay-software-factory TASK-15 · TASK-17 · TASK-18'을 적는다
+- [ ] #4 최상위 TASK-19의 결정을 design/의 해당 장에 반영한다: A1(착수 검사 — 계획 승인 · 형식 · 작업 순서 — 를 task/<ID> 브랜치 생성 · 전환 때와 -s "In Progress" 때 두 번, 훅 설치 시에만), A2(착수 = main에 미병합 task/<ID> 브랜치, Edit/Write 게이트는 현재 브랜치 카드의 In Progress 확인), A5(작업 순서 검사도 브랜치 시점), A6(텍스트가 (수동)으로 끝나는 AC · DoD는 테스트 표식 예외, 비즈니스 규칙은 예외 없음), C2(RAIL-025 task 브랜치 커밋 메시지의 태스크 ID), squash 대응(병합 뒤 task/<ID> 브랜치 삭제 규칙과 '삭제 안 된 squash 브랜치는 착수 중으로 보인다'는 한계) — 이 커밋들의 본문에는 'Refs: coralstay-software-factory TASK-19'를 적는다
 <!-- AC:END -->
 
 ## Definition of Done
@@ -56,4 +57,6 @@ references:
 
 <!-- SECTION:NOTES:BEGIN -->
 착수 조건(유저, 2026-10-22): TASK-58 ~ 63(PR #54 ~ #59) 머지 후. Refs: coralstay-software-factory TASK-15 · TASK-17 · TASK-18
+
+결정 반영(유저, 2026-10-29): 최상위 TASK-19(충돌 A1 ~ A6 · C2 결정)의 전파를 AC #4로 더했다. 기존 AC #1 ~ #3은 그대로다. TASK-19 몫의 커밋에는 본문에 'Refs: coralstay-software-factory TASK-19'를 적는다(TASK-15 · 17 · 18 몫은 AC #3대로). 구현 카드 DRAFT-8 ~ 11(승격 뒤 ID)이 끝난 뒤 실제 동작과 맞춰 반영한다.
 <!-- SECTION:NOTES:END -->
