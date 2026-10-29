@@ -220,6 +220,11 @@ def render(incomplete, all_ids):
 
 
 def main(argv):
+    if argv and argv[0] in ("-h", "--help", "help"):
+        print("사용법 (Usage): work-order [project_dir]")
+        print("  backlog/tasks/*.md의 의존 관계를 위상 정렬(Kahn)하여 backlog/work-order.md를 생성합니다.")
+        print("  project_dir 생략 시 현재 디렉터리($PWD)를 대상으로 합니다.")
+        return 0
     if len(argv) > 1:
         print("usage: work_order.py [project_dir]", file=sys.stderr)
         return 2

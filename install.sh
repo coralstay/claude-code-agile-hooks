@@ -5,6 +5,18 @@
 # appends the workflow snippet to ~/.claude/CLAUDE.md. Safe to re-run.
 set -euo pipefail
 
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "help" ]; then
+  cat <<'EOF'
+사용법 (Usage): agile-hooks-install [-h|--help]
+
+설치 동작:
+  1. 훅 스크립트(hooks/*.py) 및 work_order.py를 ~/.claude/hooks/claude-code-agile-hooks/ 에 복사
+  2. settings.hooks.json을 ~/.claude/settings.json에 병합 (기존 다른 훅 보존)
+  3. 워크플로 규칙(CLAUDE.md.snippet)을 ~/.claude/CLAUDE.md에 추가
+EOF
+  exit 0
+fi
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_HOOKS_DIR="$HOME/.claude/hooks/claude-code-agile-hooks"
 SETTINGS_FILE="$HOME/.claude/settings.json"
