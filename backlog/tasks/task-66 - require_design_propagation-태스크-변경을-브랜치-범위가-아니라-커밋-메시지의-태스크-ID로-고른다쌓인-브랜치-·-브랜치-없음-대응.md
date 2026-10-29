@@ -5,12 +5,13 @@ title: >-
   브랜치 없음 대응)
 status: To Do
 assignee: []
-created_date: '2026-10-22 05:52'
-updated_date: '2026-10-22 06:16'
+created_date: 2026-10-22 05:52
+updated_date: '2026-10-29T23:49:00Z'
 labels:
   - hooks
   - bug
-dependencies: []
+dependencies:
+  - TASK-70
 references:
   - decision-15
 ---
