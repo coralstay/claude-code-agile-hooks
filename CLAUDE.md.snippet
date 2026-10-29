@@ -65,6 +65,11 @@
      안내만). 언어별 예시는 README.md 참고.
    - 프로젝트에 `.claude-code-agile-hooks.json`(옛 이름 `.claude-rails.json`도 읽음)의 `testCommand`가
      설정돼 있으면 테스트 실패 시 훅이 커밋을 막는다.
+   - 프로젝트 루트에 JS · TS · Java · Python · C++ 매니페스트(`package.json` · `tsconfig.json` · `pom.xml` ·
+     `build.gradle(.kts)` · `pyproject.toml` · `setup.cfg` · `pytest.ini` · `CMakeLists.txt`)가 있으면
+     `coverageCommand`(line + branch 100%)가 필수다. 훅이 push와 `-s Done` 전에 그 명령을 돌려, 설정이 없거나
+     명령이 실패하거나 언어별 리포트 위치(`coverage/` · `htmlcov/`·`coverage.xml` · `target/site/jacoco/`·
+     `build/reports/jacoco/`, `coverageReportDir`로 변경)에 이번 실행의 리포트가 없으면 막는다.
    - 변경사항을 커밋하지 않은 채 턴을 끝내려 하면 훅이 막는다 — 먼저 커밋부터 마무리한다.
    - AC 밖의 작업이 발견되면 조용히 범위를 넓히지 말고 유저에게 먼저 확인한다.
 5. **완료**: 테스트 통과 로그 등 객관적 증거를 확인한 뒤에만 `--check-ac`/`--check-dod`를

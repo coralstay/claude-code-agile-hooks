@@ -124,6 +124,10 @@
           },
           {
             "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_coverage_on_done.py"
+          },
+          {
+            "type": "command",
             "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/block_dangerous_commands.py"
           },
           {

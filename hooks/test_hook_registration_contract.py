@@ -44,6 +44,7 @@ import pre_commit_check
 import pre_git_safety_check
 import pre_push_check
 import pre_push_coverage_check
+import require_coverage_on_done
 import require_draft_first
 import require_implementation_plan
 import require_stage_committed
@@ -226,6 +227,18 @@ CONTRACT = {
             "/usr/local/bin/backlog draft promote DRAFT-1",
             "backlog task edit AO-1 -s 'In Progress'",
             "FOO=1 backlog task edit AO-1 --status 'In Progress'",
+        ],
+    },
+    # TASK-62#2: denies the Done move when a detected language has no
+    # coverageCommand (or the coverage run/report fails), so it is
+    # registered like the other gates (no `if`)
+    "require_coverage_on_done": {
+        "detects": lambda c: bool(require_coverage_on_done.done_targets(c)),
+        "acts_on": [
+            "backlog task edit AO-1 -s Done",
+            "cd y && backlog task edit AO-1 --status Done",
+            "/usr/local/bin/backlog task edit 1 -s Done",
+            "FOO=1 backlog task edit AO-1 -s Done",
         ],
     },
     # filtered on purpose: the gaps below are accepted

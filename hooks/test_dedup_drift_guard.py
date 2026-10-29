@@ -137,6 +137,50 @@ BASELINE_BODIES = {
         def matches_any(relpath, globs):
             return False
         """,
+    "configured_coverage_command": """
+        def configured_coverage_command(cwd):
+            return None
+        """,
+    "segment_done_target": """
+        def segment_done_target(segment):
+            return None
+        """,
+    "done_targets": """
+        def done_targets(command):
+            return []
+        """,
+    "language_manifests": """
+        def language_manifests():
+            return []
+        """,
+    "detect_languages": """
+        def detect_languages(cwd):
+            return []
+        """,
+    "missing_command_payload": """
+        def missing_command_payload(languages):
+            return {}
+        """,
+    "default_report_paths": """
+        def default_report_paths():
+            return {}
+        """,
+    "configured_report_dir": """
+        def configured_report_dir(cwd):
+            return None
+        """,
+    "report_paths": """
+        def report_paths(languages, override):
+            return {}
+        """,
+    "fresh_report": """
+        def fresh_report(cwd, path, since):
+            return False
+        """,
+    "coverage_verdict": """
+        def coverage_verdict(cwd, command, languages, report_dir):
+            return None
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -265,6 +309,7 @@ def test_registry_covers_newly_added_dedup_functions():
     assert ddg.REGISTRY["run_shell"] == [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert "current_branch" not in ddg.REGISTRY
     # TASK-54: 설정 파일 이름 fallback 헬퍼도 두 게이트에 복사돼 있다
@@ -274,6 +319,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "require_test_first.py",  # TASK-56
         "require_implementation_plan.py",  # TASK-58#5 (humanSigners)
         "require_test_layout.py",  # TASK-61
+        "require_coverage_on_done.py",  # TASK-62
     ]
 
 
@@ -306,6 +352,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "require_implementation_plan.py",  # TASK-58
         "require_stage_committed.py",  # TASK-59
         "require_work_order.py",  # TASK-60
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -391,6 +438,41 @@ def test_blocks_commit_when_script_copy_of_work_order_helper_drifts(
     assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
     err = capsys.readouterr().err
     assert "input_hash" in err
+
+
+def test_registry_covers_task62_coverage_done_hook():
+    """TASK-62#2: the Done-time coverage gate (require_coverage_on_done.py)
+    copies the push gate's language/config helpers and require_test_first's
+    Done-move parsing; every copy must be registered."""
+    hook = "require_coverage_on_done.py"
+    for name in (
+        "is_backlog_project",
+        "project_config_path",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert hook in ddg.REGISTRY[name]
+    assert ddg.REGISTRY["segment_done_target"] == ["require_test_first.py", hook]
+    assert ddg.REGISTRY["done_targets"] == ["require_test_first.py", hook]
+    for name in (
+        "configured_coverage_command",
+        "language_manifests",
+        "detect_languages",
+        "missing_command_payload",
+        # TASK-62#3: the coverage run and report check
+        "default_report_paths",
+        "configured_report_dir",
+        "report_paths",
+        "fresh_report",
+        "coverage_verdict",
+    ):
+        assert ddg.REGISTRY[name] == ["pre_push_coverage_check.py", hook]
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
 
 
 def test_allows_commit_when_all_registered_functions_identical(monkeypatch, tmp_path):
@@ -520,6 +602,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "require_implementation_plan.py",  # TASK-58
             "require_stage_committed.py",  # TASK-59
             "require_work_order.py",  # TASK-60
+            "require_coverage_on_done.py",  # TASK-62
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -533,6 +616,7 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "require_implementation_plan.py",  # TASK-58
         "require_stage_committed.py",  # TASK-59
         "require_work_order.py",  # TASK-60
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",

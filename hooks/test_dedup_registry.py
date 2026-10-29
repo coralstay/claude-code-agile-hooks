@@ -29,6 +29,7 @@ MODULES = [
     "require_stage_committed.py",  # TASK-59
     "require_work_order.py",  # TASK-60
     "require_test_layout.py",
+    "require_coverage_on_done.py",  # TASK-62
 ]
 
 

@@ -48,6 +48,7 @@ REGISTRY = {
         "require_stage_committed.py",
         "require_work_order.py",
         "require_test_layout.py",
+        "require_coverage_on_done.py",
     ],
     "has_command": [
         "block_stop_if_dirty.py",
@@ -67,6 +68,7 @@ REGISTRY = {
     "run_shell": [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
     ],
     # TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback
     "project_config_path": [
@@ -75,6 +77,7 @@ REGISTRY = {
         "require_test_first.py",
         "require_implementation_plan.py",
         "require_test_layout.py",
+        "require_coverage_on_done.py",
     ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
     "tokenize": [
@@ -90,6 +93,7 @@ REGISTRY = {
         "require_implementation_plan.py",
         "require_stage_committed.py",
         "require_work_order.py",
+        "require_coverage_on_done.py",
     ],
     "split_segments": [
         "require_draft_first.py",
@@ -104,6 +108,7 @@ REGISTRY = {
         "require_implementation_plan.py",
         "require_stage_committed.py",
         "require_work_order.py",
+        "require_coverage_on_done.py",
     ],
     # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
     # 프로젝트 안/밖 판정(TASK-27 realpath 로직)을 그대로 복사해 쓴다
@@ -119,6 +124,7 @@ REGISTRY = {
         "require_implementation_plan.py",
         "require_stage_committed.py",
         "require_work_order.py",
+        "require_coverage_on_done.py",
     ],
     # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
     # pipeline_trace.py의 명령 위치 판정(env 할당·래퍼 건너뛰기)을 그대로 복사해 쓴다
@@ -137,6 +143,7 @@ REGISTRY = {
         "require_implementation_plan.py",
         "require_stage_committed.py",
         "require_work_order.py",
+        "require_coverage_on_done.py",
     ],
     "git_subcommand_index": [
         "pre_commit_check.py",
@@ -194,6 +201,54 @@ REGISTRY = {
     "read_tasks": ["../scripts/work_order.py", "require_work_order.py"],
     "incomplete_tasks": ["../scripts/work_order.py", "require_work_order.py"],
     "input_hash": ["../scripts/work_order.py", "require_work_order.py"],
+    # TASK-62: 완료(-s Done) 시점 커버리지 게이트 require_coverage_on_done.py가
+    # require_test_first.py의 Done 이동 판정과 push 게이트의 언어 감지 ·
+    # 설정 읽기를 그대로 복사해 쓴다
+    "segment_done_target": [
+        "require_test_first.py",
+        "require_coverage_on_done.py",
+    ],
+    "done_targets": [
+        "require_test_first.py",
+        "require_coverage_on_done.py",
+    ],
+    "configured_coverage_command": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "language_manifests": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "detect_languages": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "missing_command_payload": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-62#3: 커버리지 실행과 언어별 리포트(이번 실행 이후 mtime) 확인
+    "default_report_paths": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "configured_report_dir": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "report_paths": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "fresh_report": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "coverage_verdict": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
     # current_branch()는 파일마다 반환값 계약이 다르다(빈 문자열 vs None) —
     # 의도된 차이로 보이므로 REGISTRY에 등록하지 않는다.
 }
