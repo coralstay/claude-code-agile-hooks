@@ -44,6 +44,10 @@ REGISTRY = {
         "require_draft_first.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_test_layout.py",
         "require_coverage_on_done.py",
     ],
     "has_command": [
@@ -54,6 +58,7 @@ REGISTRY = {
         "session_start.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_stage_committed.py",
     ],
     "has_active_task": [
         "block_stop_if_dirty.py",
@@ -70,6 +75,8 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_test_layout.py",
         "require_coverage_on_done.py",
     ],
     # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
@@ -83,6 +90,9 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
         "require_coverage_on_done.py",
     ],
     "split_segments": [
@@ -95,6 +105,9 @@ REGISTRY = {
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
         "require_coverage_on_done.py",
     ],
     # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
@@ -108,6 +121,9 @@ REGISTRY = {
         "pre_push_coverage_check.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
         "require_coverage_on_done.py",
     ],
     # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
@@ -124,6 +140,9 @@ REGISTRY = {
         "pre_push_coverage_check.py",
         "backlog_commit_scope.py",
         "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
         "require_coverage_on_done.py",
     ],
     "git_subcommand_index": [
@@ -140,12 +159,48 @@ REGISTRY = {
         "require_active_task.py",
         "pipeline_trace.py",
         "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    # TASK-61: require_test_layout.py가 testFirst.testGlobs를 같은 의미로 읽도록
+    # require_test_first.py의 glob 헬퍼를 그대로 복사해 쓴다
+    "is_glob_list": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "glob_regex": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "glob_matches": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "matches_any": [
+        "require_test_first.py",
+        "require_test_layout.py",
     ],
     # TASK-31: Stop payload의 background_tasks로 parallel_session을 판정하는 헬퍼
     "background_tasks_running": [
         "block_stop_if_dirty.py",
         "context_flags.py",
     ],
+    # TASK-60: require_work_order.py가 작업 순서 해시를 직접 다시 계산하도록
+    # scripts/work_order.py의 헬퍼를 그대로 복사해 쓴다(hooks/ 기준 상대 경로).
+    # backlog_commit_scope.py도 작업 순서 커밋의 의존 변경 판정에 앞의 둘을 쓴다
+    "parse_frontmatter": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "parse_task": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "natural_key": ["../scripts/work_order.py", "require_work_order.py"],
+    "read_tasks": ["../scripts/work_order.py", "require_work_order.py"],
+    "incomplete_tasks": ["../scripts/work_order.py", "require_work_order.py"],
+    "input_hash": ["../scripts/work_order.py", "require_work_order.py"],
     # TASK-62: 완료(-s Done) 시점 커버리지 게이트 require_coverage_on_done.py가
     # require_test_first.py의 Done 이동 판정과 push 게이트의 언어 감지 ·
     # 설정 읽기를 그대로 복사해 쓴다

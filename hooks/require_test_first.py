@@ -16,8 +16,9 @@ live in the Description under a `## 비즈니스 규칙` heading (up to the next
 markdown heading), one per line as `- B<k> (AC #<n>) <rule>`; each rule
 names the AC it belongs to.
 
-Test markers: a test names what it covers with `<ID>#<n>` (AC) and
-`<ID>#B<k>` (rule), e.g. `@DisplayName("AO-27#B2 ...")`. A marker counts
+Test markers: a test names what it covers with `<ID>#<n>` (AC),
+`<ID>#B<k>` (rule) and `<ID>#D<n>` (Definition of Done item, TASK-61),
+e.g. `@DisplayName("AO-27#B2 ...")`. A marker counts
 when its exact string appears in any file matched by testGlobs in the
 working tree, with no letter/digit/`-` right before it and no digit right
 after it (`AO-27#1` is not satisfied by `AO-27#10`).
@@ -30,8 +31,10 @@ config and files outside the project are never gated.
 
 Bash `backlog task edit <ID> ... -s Done` (`--status Done`,
 `--status=Done`, any case) for the branch's task (`AO-27`, `ao-27`, `27`):
-every AC marker and every rule marker must exist, else deny listing the
-missing ones - no rule ends untested. The command is parsed in command
+every AC marker, every rule marker and (TASK-61) a `<ID>#D<n>` marker for
+every Definition of Done item (`- [ ] #n` / `- [x] #n`, checked or not)
+must exist, else deny listing the missing ones - no rule ends untested.
+DoD items belong to no AC, so the Edit|Write check never asks for them. The command is parsed in command
 position like pre_commit_check.py (heredoc bodies dropped, continuations
 joined, segments split, env assignments and wrappers skipped, `backlog`
 compared by basename), so `echo ... -s Done` or a commit message quoting it
@@ -42,7 +45,7 @@ are not seen.
 Both checks deny first when the card has a `## 비즈니스 규칙` heading with a
 line under it that isn't `- B<k> (AC #<n>) <rule>` or names an AC the card
 lacks (the message shows the expected format). No heading -> only AC
-markers are required. A card with no ACs requires nothing. A malformed
+markers are required. A card with no ACs and no DoD items requires nothing. A malformed
 `testFirst` block (or unreadable config) denies on the task branch - the
 project asked for the gate - except edits of the config file itself.
 
@@ -385,8 +388,15 @@ def card_sections(text):
 
 def parse_card(text):
     """dict(id, in_progress, acs=[(n, checked, text)], rules=[(k, n, text)],
-    errors=[bad rule lines])."""
-    card = {"id": None, "in_progress": False, "acs": [], "rules": [], "errors": []}
+    dod=[(n, checked, text)], errors=[bad rule lines])."""
+    card = {
+        "id": None,
+        "in_progress": False,
+        "acs": [],
+        "rules": [],
+        "dod": [],
+        "errors": [],
+    }
     for line in text.split("\n"):
         m = TASK_LINE_RE.match(line)
         if m and card["id"] is None:
@@ -398,6 +408,11 @@ def parse_card(text):
         m = AC_RE.match(line.strip())
         if m:
             card["acs"].append((int(m.group(2)), m.group(1) != " ", m.group(3)))
+    # TASK-61: Definition of Done items use the same checkbox lines as ACs
+    for line in sections.get("Definition of Done", "").split("\n"):
+        m = AC_RE.match(line.strip())
+        if m:
+            card["dod"].append((int(m.group(2)), m.group(1) != " ", m.group(3)))
     in_rules = False
     for line in sections.get("Description", "").split("\n"):
         stripped = line.strip()
@@ -422,6 +437,10 @@ def ac_marker(task_id, n):
 
 def rule_marker(task_id, k):
     return f"{task_id}#B{k}"
+
+
+def dod_marker(task_id, n):
+    return f"{task_id}#D{n}"
 
 
 def deny(message):
@@ -490,9 +509,16 @@ def check_done(cwd, test_globs, card):
         labels[ac_marker(task_id, n)] = f"(AC #{n}) {ac_text}"
     for k, rule_ac, rule_text in card["rules"]:
         labels[rule_marker(task_id, k)] = f"(B{k}, AC #{rule_ac}) {rule_text}"
+    for n, _, dod_text in card["dod"]:
+        labels[dod_marker(task_id, n)] = f"(DoD #{n}) {dod_text}"
     missing = missing_markers(cwd, test_globs, list(labels))
     if missing:
-        deny_missing(task_id, missing, labels, f"{task_id}을(를) Done으로 옮기기 전에 모든 AC · 비즈니스 규칙의")
+        deny_missing(
+            task_id,
+            missing,
+            labels,
+            f"{task_id}을(를) Done으로 옮기기 전에 모든 AC · 비즈니스 규칙 · DoD의",
+        )
 
 
 def main():

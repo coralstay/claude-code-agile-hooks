@@ -46,7 +46,10 @@ import pre_push_check
 import pre_push_coverage_check
 import require_coverage_on_done
 import require_draft_first
+import require_implementation_plan
+import require_stage_committed
 import require_test_first
+import require_work_order
 
 SETTINGS = os.path.join(os.path.dirname(__file__), os.pardir, "settings.hooks.json")
 SEPARATOR_CHARS = set(";&|()\n")
@@ -177,6 +180,32 @@ CONTRACT = {
             "/usr/local/bin/backlog task create x",
         ],
     },
+    # TASK-58#7: denies promote / In Progress without a SOAP plan, AC, DoD
+    # and the plan approval (approval gate), so it is registered like the
+    # other gates (no `if`)
+    "require_implementation_plan": {
+        "detects": lambda c: bool(require_implementation_plan.gated_commands(c)),
+        "acts_on": [
+            "backlog draft promote DRAFT-1",
+            "cd y && backlog draft promote 1",
+            "/usr/local/bin/backlog draft promote DRAFT-1",
+            'backlog task edit TASK-1 -s "In Progress"',
+            "cd y && backlog task edit 1 --status 'In Progress'",
+            "FOO=1 backlog task edit TASK-1 -s 'In Progress'",
+        ],
+    },
+    # TASK-59: denies a lifecycle stage command while backlog/ has
+    # uncommitted changes, so it is registered like the other gates (no `if`)
+    "require_stage_committed": {
+        "detects": require_stage_committed.command_runs_stage,
+        "acts_on": [
+            "backlog draft create x",
+            "backlog draft promote 3",
+            'cd y && backlog task edit 3 -s "In Progress"',
+            "/usr/local/bin/backlog task edit 3 -s Done",
+            "FOO=1 backlog draft create x",
+        ],
+    },
     # TASK-56: denies the Done move of the branch's task while a test marker
     # is missing, so it is registered like the other gates (no `if`)
     "require_test_first": {
@@ -186,6 +215,18 @@ CONTRACT = {
             "cd y && backlog task edit AO-1 --status Done",
             "/usr/local/bin/backlog task edit 1 -s Done",
             "FOO=1 backlog task edit AO-1 -s Done",
+        ],
+    },
+    # TASK-60: denies promote / In Progress while backlog/work-order.md is
+    # stale, so it is registered like the other gates (no `if`)
+    "require_work_order": {
+        "detects": require_work_order.command_starts_stage,
+        "acts_on": [
+            "backlog draft promote DRAFT-1",
+            "cd y && backlog draft promote DRAFT-1",
+            "/usr/local/bin/backlog draft promote DRAFT-1",
+            "backlog task edit AO-1 -s 'In Progress'",
+            "FOO=1 backlog task edit AO-1 --status 'In Progress'",
         ],
     },
     # TASK-62#2: denies the Done move when a detected language has no
@@ -334,6 +375,17 @@ def test_bash_hooks_are_all_classified():
 @pytest.mark.parametrize("name", sorted(UNFILTERED_BY_DESIGN))
 def test_hooks_without_a_command_family_have_no_filter(name):
     assert name not in if_rules()
+
+
+def test_require_test_layout_sees_every_edit_and_write():
+    """TASK-61 (TASK-61#D2): the test file layout gate is registered once,
+    on PreToolUse Edit|Write, with no `if` filter to hide a test file."""
+    found = [
+        (event, matcher, rule)
+        for event, matcher, name, rule in registrations()
+        if name == "require_test_layout"
+    ]
+    assert found == [("PreToolUse", "Edit|Write", None)]
 
 
 def test_pre_git_safety_check_has_no_filter():
