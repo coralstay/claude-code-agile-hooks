@@ -95,6 +95,96 @@ BASELINE_BODIES = {
         def project_config_path(cwd):
             return None
         """,
+    # TASK-60: work order helpers shared by the hook and ../scripts/work_order.py
+    "parse_frontmatter": """
+        def parse_frontmatter(text):
+            return {}
+        """,
+    "parse_task": """
+        def parse_task(text):
+            return None
+        """,
+    "natural_key": """
+        def natural_key(task_id):
+            return [task_id]
+        """,
+    "read_tasks": """
+        def read_tasks(cwd):
+            return {}
+        """,
+    "incomplete_tasks": """
+        def incomplete_tasks(tasks):
+            return tasks
+        """,
+    "input_hash": """
+        def input_hash(incomplete):
+            return ""
+        """,
+    # TASK-61: glob helpers shared by require_test_first/require_test_layout
+    "is_glob_list": """
+        def is_glob_list(value):
+            return False
+        """,
+    "glob_regex": """
+        def glob_regex(pattern):
+            return None
+        """,
+    "glob_matches": """
+        def glob_matches(pattern, relpath):
+            return False
+        """,
+    "matches_any": """
+        def matches_any(relpath, globs):
+            return False
+        """,
+    "configured_coverage_command": """
+        def configured_coverage_command(cwd):
+            return None
+        """,
+    "segment_done_target": """
+        def segment_done_target(segment):
+            return None
+        """,
+    "done_targets": """
+        def done_targets(command):
+            return []
+        """,
+    "language_manifests": """
+        def language_manifests():
+            return []
+        """,
+    "detect_languages": """
+        def detect_languages(cwd):
+            return []
+        """,
+    "missing_command_payload": """
+        def missing_command_payload(languages):
+            return {}
+        """,
+    "default_report_paths": """
+        def default_report_paths():
+            return {}
+        """,
+    "configured_report_dir": """
+        def configured_report_dir(cwd):
+            return None
+        """,
+    "report_paths": """
+        def report_paths(languages, override):
+            return {}
+        """,
+    "fresh_report": """
+        def fresh_report(cwd, path, since):
+            return False
+        """,
+    "coverage_verdict": """
+        def coverage_verdict(cwd, command, languages, report_dir):
+            return None
+        """,
+    "same_task": """
+        def same_task(token, task_id):
+            return False
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -124,6 +214,8 @@ def build_full_hooks_dir(tmp_path, overrides=None):
             file_functions.setdefault(filename, []).append(function_name)
 
     for filename, function_names in file_functions.items():
+        # TASK-60: "../scripts/work_order.py" lives outside hooks/
+        (hooks_dir / filename).parent.mkdir(parents=True, exist_ok=True)
         parts = []
         for function_name in function_names:
             body = overrides.get(filename, {}).get(
@@ -211,6 +303,7 @@ def test_registry_covers_newly_added_dedup_functions():
         "session_start.py",
         "backlog_commit_scope.py",
         "require_test_first.py",  # TASK-56
+        "require_stage_committed.py",  # TASK-59
     ]
     assert ddg.REGISTRY["has_active_task"] == [
         "block_stop_if_dirty.py",
@@ -220,6 +313,7 @@ def test_registry_covers_newly_added_dedup_functions():
     assert ddg.REGISTRY["run_shell"] == [
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",  # TASK-62
     ]
     assert "current_branch" not in ddg.REGISTRY
     # TASK-54: 설정 파일 이름 fallback 헬퍼도 두 게이트에 복사돼 있다
@@ -227,6 +321,9 @@ def test_registry_covers_newly_added_dedup_functions():
         "pre_commit_check.py",
         "pre_push_coverage_check.py",
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58#5 (humanSigners)
+        "require_test_layout.py",  # TASK-61
+        "require_coverage_on_done.py",  # TASK-62
     ]
 
 
@@ -256,6 +353,11 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58
+        "require_stage_committed.py",  # TASK-59
+        "require_work_order.py",  # TASK-60
+        "require_coverage_on_done.py",  # TASK-62
+        "require_design_propagation.py",  # TASK-63
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
@@ -291,6 +393,88 @@ def test_registry_covers_task39_git_subcommand_helpers():
             assert gate in ddg.REGISTRY[name]
     assert ddg.REGISTRY["git_subcommand_index"] == gates
     assert ddg.REGISTRY["command_runs_git"] == gates
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task60_work_order_helpers():
+    """TASK-60#2: require_work_order.py copies the command-position helpers
+    and, from ../scripts/work_order.py, the work order hash helpers."""
+    for name in (
+        "is_backlog_project",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert "require_work_order.py" in ddg.REGISTRY[name]
+    for name in ("natural_key", "read_tasks", "incomplete_tasks", "input_hash"):
+        assert ddg.REGISTRY[name] == ["../scripts/work_order.py", "require_work_order.py"]
+    # TASK-60#3: the commit scope hook reads staged task dependencies too
+    for name in ("parse_frontmatter", "parse_task"):
+        assert ddg.REGISTRY[name] == [
+            "../scripts/work_order.py",
+            "require_work_order.py",
+            "backlog_commit_scope.py",
+        ]
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_blocks_commit_when_script_copy_of_work_order_helper_drifts(
+    monkeypatch, capsys, tmp_path
+):
+    """TASK-60#2: drift between the hook and scripts/work_order.py is caught."""
+    build_full_hooks_dir(
+        tmp_path,
+        overrides={
+            "../scripts/work_order.py": {
+                "input_hash": """
+                    def input_hash(incomplete):
+                        return "x"
+                    """
+            }
+        },
+    )
+    assert run_main(monkeypatch, {"cwd": str(tmp_path), "tool_input": COMMIT}) == 2
+    err = capsys.readouterr().err
+    assert "input_hash" in err
+
+
+def test_registry_covers_task62_coverage_done_hook():
+    """TASK-62#2: the Done-time coverage gate (require_coverage_on_done.py)
+    copies the push gate's language/config helpers and require_test_first's
+    Done-move parsing; every copy must be registered."""
+    hook = "require_coverage_on_done.py"
+    for name in (
+        "is_backlog_project",
+        "project_config_path",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert hook in ddg.REGISTRY[name]
+    for name in ("segment_done_target", "done_targets"):
+        assert ddg.REGISTRY[name][0] == "require_test_first.py"
+        assert hook in ddg.REGISTRY[name]
+    for name in (
+        "configured_coverage_command",
+        "language_manifests",
+        "detect_languages",
+        "missing_command_payload",
+        # TASK-62#3: the coverage run and report check
+        "default_report_paths",
+        "configured_report_dir",
+        "report_paths",
+        "fresh_report",
+        "coverage_verdict",
+    ):
+        assert ddg.REGISTRY[name] == ["pre_push_coverage_check.py", hook]
     import os
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
@@ -421,6 +605,11 @@ def test_registry_covers_task32_pipeline_trace_copies():
             "pre_commit_check.py",  # TASK-39
             "pre_push_coverage_check.py",  # TASK-39
             "require_test_first.py",  # TASK-56
+            "require_implementation_plan.py",  # TASK-58
+            "require_stage_committed.py",  # TASK-59
+            "require_work_order.py",  # TASK-60
+            "require_coverage_on_done.py",  # TASK-62
+            "require_design_propagation.py",  # TASK-63
         ]
     assert ddg.REGISTRY["strip_heredoc_bodies"] == [
         "require_draft_first.py",
@@ -431,11 +620,17 @@ def test_registry_covers_task32_pipeline_trace_copies():
         "pre_push_coverage_check.py",  # TASK-39
         "backlog_commit_scope.py",  # TASK-39
         "require_test_first.py",  # TASK-56
+        "require_implementation_plan.py",  # TASK-58
+        "require_stage_committed.py",  # TASK-59
+        "require_work_order.py",  # TASK-60
+        "require_coverage_on_done.py",  # TASK-62
+        "require_design_propagation.py",  # TASK-63
     ]
     assert ddg.REGISTRY["is_outside_project"] == [
         "require_active_task.py",
         "pipeline_trace.py",
         "require_test_first.py",  # TASK-56
+        "require_test_layout.py",  # TASK-61
     ]
 
 
@@ -624,3 +819,35 @@ def test_registry_covers_task56_require_test_first_helpers():
 
     real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
     assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task59_stage_commit_hook():
+    """TASK-59#3: require_stage_committed.py copies the backlog-project check,
+    has_command and the four command-position helpers verbatim."""
+    for name in (
+        "is_backlog_project",
+        "has_command",
+        "strip_heredoc_bodies",
+        "tokenize",
+        "split_segments",
+        "command_head",
+    ):
+        assert "require_stage_committed.py" in ddg.REGISTRY[name]
+    import os
+
+    real_hooks_dir = os.path.dirname(os.path.abspath(ddg.__file__))
+    assert ddg.find_drift(real_hooks_dir) == []
+
+
+def test_registry_covers_task63_done_detection_copies():
+    """TASK-63#D2: require_design_propagation.py copies require_test_first.py's
+    command-position Done detection, and REGISTRY keeps the copies equal."""
+    for name in ("segment_done_target", "done_targets"):
+        assert ddg.REGISTRY[name][0] == "require_test_first.py"
+        assert "require_design_propagation.py" in ddg.REGISTRY[name]
+    assert ddg.REGISTRY["same_task"] == [
+        "require_test_first.py",
+        "require_design_propagation.py",
+    ]
+    for name in ("strip_heredoc_bodies", "tokenize", "split_segments", "command_head"):
+        assert "require_design_propagation.py" in ddg.REGISTRY[name]

@@ -17,6 +17,8 @@ echo "==> hooks 스크립트 설치: $TARGET_HOOKS_DIR"
 mkdir -p "$TARGET_HOOKS_DIR"
 cp "$REPO_DIR"/hooks/*.py "$TARGET_HOOKS_DIR/"
 echo "    훅 본체 + 테스트(test_*.py)를 같은 디렉토리에 나란히 설치함 (로컬 실제 구성과 동일)"
+# TASK-60: 작업 순서 생성기. require_work_order.py가 옆자리의 work_order.py를 안내하므로 같은 곳에 둔다
+cp "$REPO_DIR/scripts/work_order.py" "$TARGET_HOOKS_DIR/"
 
 echo "==> settings.json에 hooks 병합 (추가 전용 — 다른 도구의 훅은 보존)"
 python3 "$REPO_DIR/scripts/merge_settings.py" "$SETTINGS_FILE" "$REPO_DIR/settings.hooks.json"
