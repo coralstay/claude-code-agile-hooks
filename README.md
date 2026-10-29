@@ -116,6 +116,7 @@ flowchart TB
 | PreToolUse: Edit\|Write             | [`require_active_task.py`](hooks/require_active_task.py)           | 🔒 backlog | In Progress 태스크 없으면 차단 (프로젝트 밖 경로는 제외) |
 | PreToolUse: Edit\|Write             | [`dead_end_registry.py`](hooks/dead_end_registry.py)               | 범용       | 죽은 접근 재시도 경고             |
 | PreToolUse: Edit\|Write             | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 다음 AC의 `<ID>#<n>`·관련 규칙 `<ID>#B<k>` 테스트 표식 없으면 소스 편집 차단 |
+| PreToolUse: Edit\|Write             | [`require_test_layout.py`](hooks/require_test_layout.py)           | 🔒 backlog | 테스트 파일 구조(헤더 → AC/DoD → Coverage) 어기면 차단, 기존 파일은 안내만 |
 | PreToolUse: Bash                    | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
 | PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격·상태 전환·작업 순서 커밋에 다른 변경 섞이거나 새 드래프트가 2장 이상이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
@@ -126,7 +127,7 @@ flowchart TB
 | PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 사람 서명자(`humanSigners`)가 서명한 `Plan-Approved: <ID>` 커밋(계획 승인)까지 없으면 `-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_stage_committed.py`](hooks/require_stage_committed.py)   | 🔒 backlog | 커밋 안 된 `backlog/` 변경이 있으면 다음 단계 명령(draft create·promote·`-s "In Progress"`·`-s Done`) 차단 |
 | PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
-| PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
+| PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙·DoD 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
 | PreToolUse: Bash(gh pr create*)     | [`pr_provenance_stamp.py`](hooks/pr_provenance_stamp.py)           | 범용       | PR 본문에 provenance 삽입         |
@@ -210,9 +211,82 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 `require_test_first.py`가 AC 하나씩 TDD를 강제합니다. `task/<ID>` 브랜치에서 그 태스크가 In
 Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 표식 `<ID>#<n>`과 그 AC에 묶인
 비즈니스 규칙 표식 `<ID>#B<k>`가 테스트 파일 어딘가에 있어야 하고, `backlog task edit <ID> -s
-Done` 전에는 모든 AC·규칙 표식이 있어야 합니다. 비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙`
-절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다. 표식 문자열만 보므로 테스트가 실제로 먼저
-실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도 보지 못합니다.
+Done` 전에는 모든 AC·규칙 표식과 Definition of Done 항목마다 `<ID>#D<n>` 표식이 있어야 합니다.
+비즈니스 규칙은 카드 설명의 `## 비즈니스 규칙` 절에 `- B<k> (AC #<n>) <규칙>` 형식으로 적습니다.
+표식 문자열만 보므로 테스트가 실제로 먼저 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도
+보지 못합니다.
+
+**테스트 파일 구조**: backlog.md 프로젝트에서는 `require_test_layout.py`가 JS · TS · Java ·
+Python · C++ 테스트 파일의 순서를 고정합니다.
+
+1. 맨 위 첫 주석 블록: 태스크마다 한 줄 `<ID>: <한 줄 요약>`.
+2. `== AC/DoD ==` 섹션 표식 아래: 카드의 AC/DoD로 쓴 테스트. AC `<ID>#<n>` · 규칙 `<ID>#B<k>` ·
+   DoD `<ID>#D<n>` 표식은 이 섹션 안에만 둡니다.
+3. `== Coverage ==` 섹션 표식 아래: 커버리지 100%를 채우기 위한 테스트.
+
+주석 기호는 Python `#`, JS/TS/Java/C++ `//`이고, 헤더는 맨 앞 `/* ... */` 블록 하나로 써도 됩니다.
+섹션 표식은 그 문자열만 있는 한 줄 주석입니다. 대상은 `testFirst.testGlobs`가 있으면 그 파일(이
+5개 언어 확장자만), 없으면 이름 기본값입니다 — Python `test_*.py` · `*_test.py`, JS/TS
+`*.test.*` · `*.spec.*`(js · jsx · ts · tsx · mjs · cjs), Java `*Test.java` · `*Tests.java`, C++
+`*_test.cc` · `*_test.cpp` · `*_test.cxx` · `test_*.cpp`. 새로 만드는 테스트 파일과 이미 헤더나
+섹션 표식이 있는 파일만 검사하고(Edit는 바꾼 뒤 내용으로 판단), 둘 다 없는 기존 파일은 통과시키며
+규약 안내만 보여 줍니다. 언어별 예시는 다음과 같습니다.
+
+```python
+# TASK-12: 토큰 예산 라우터
+import pytest
+
+# == AC/DoD ==
+def test_picks_cheapest_model():  # TASK-12#1
+    ...
+
+def test_rejects_negative_budget():  # TASK-12#B1
+    ...
+
+# == Coverage ==
+def test_empty_config_uses_default():
+    ...
+```
+
+```ts
+// TASK-12: 토큰 예산 라우터
+import { route } from "./router";
+
+// == AC/DoD ==
+test("TASK-12#1 picks the cheapest model", () => {});
+test("TASK-12#D1 logs the chosen policy", () => {});
+
+// == Coverage ==
+test("empty config uses the default", () => {});
+```
+
+```java
+/*
+ * TASK-12: 토큰 예산 라우터
+ * TASK-15: 라우터 로그
+ */
+package router;
+
+class RouterTest {
+    // == AC/DoD ==
+    @Test @DisplayName("TASK-12#1 고른다") void picks() {}
+    @Test @DisplayName("TASK-15#B2 기록한다") void logs() {}
+
+    // == Coverage ==
+    @Test void emptyConfig() {}
+}
+```
+
+```cpp
+// TASK-12: 토큰 예산 라우터
+#include <gtest/gtest.h>
+
+// == AC/DoD ==
+TEST(Router, PicksCheapest) {}  // TASK-12#1
+
+// == Coverage ==
+TEST(Router, EmptyConfig) {}
+```
 
 **구현 계획과 계획 승인(계획 → 리뷰 → 계획 승인)**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
 `backlog task edit <ID> -s "In Progress"`를 카드 파일을 읽어 검사합니다. 카드에는 AC와 DoD가

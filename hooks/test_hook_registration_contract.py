@@ -364,6 +364,17 @@ def test_hooks_without_a_command_family_have_no_filter(name):
     assert name not in if_rules()
 
 
+def test_require_test_layout_sees_every_edit_and_write():
+    """TASK-61 (TASK-61#D2): the test file layout gate is registered once,
+    on PreToolUse Edit|Write, with no `if` filter to hide a test file."""
+    found = [
+        (event, matcher, rule)
+        for event, matcher, name, rule in registrations()
+        if name == "require_test_layout"
+    ]
+    assert found == [("PreToolUse", "Edit|Write", None)]
+
+
 def test_pre_git_safety_check_has_no_filter():
     """TASK-46 regression: the gh check must see `cd x && gh pr merge 1`.
     (main()-level block: test_pre_git_safety_check.py
