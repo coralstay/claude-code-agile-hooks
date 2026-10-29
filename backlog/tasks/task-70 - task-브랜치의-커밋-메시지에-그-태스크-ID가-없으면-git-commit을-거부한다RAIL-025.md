@@ -1,7 +1,7 @@
 ---
-id: DRAFT-11
+id: TASK-70
 title: task 브랜치의 커밋 메시지에 그 태스크 ID가 없으면 git commit을 거부한다(RAIL-025)
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-29T12:23:00Z'
 updated_date: '2026-10-29T12:24:00Z'
