@@ -417,6 +417,25 @@ def test_install_sh_no_legacy_notice_on_clean_home(tmp_path):
     assert not (home / ".claude" / "hooks" / "claude-rails").exists()
 
 
+def test_install_sh_copies_work_order_script_next_to_hooks(tmp_path):
+    """TASK-60#2: require_work_order.py points at its sibling work_order.py,
+    so install.sh must put the generator there."""
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    result = subprocess.run(
+        ["bash", INSTALL_SH],
+        env={**os.environ, "HOME": str(home)},
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    installed = home / ".claude" / "hooks" / "claude-code-agile-hooks"
+    with open(os.path.join(SCRIPTS_DIR, "work_order.py")) as f:
+        assert (installed / "work_order.py").read_text() == f.read()
+    assert (installed / "require_work_order.py").is_file()
+
+
 # --- TASK-54: migration from the old claude-rails install dir ------------------------
 
 OLD = "python3 $HOME/.claude/hooks/claude-rails/"

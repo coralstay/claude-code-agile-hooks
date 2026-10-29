@@ -118,12 +118,15 @@ flowchart TB
 | PreToolUse: Edit\|Write             | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 다음 AC의 `<ID>#<n>`·관련 규칙 `<ID>#B<k>` 테스트 표식 없으면 소스 편집 차단 |
 | PreToolUse: Edit\|Write             | [`require_test_layout.py`](hooks/require_test_layout.py)           | 🔒 backlog | 테스트 파일 구조(헤더 → AC/DoD → Coverage) 어기면 차단, 기존 파일은 안내만 |
 | PreToolUse: Bash                    | [`pre_commit_check.py`](hooks/pre_commit_check.py)                 | 🔒 backlog | 브랜치/테스트 확인 후 커밋 허용   |
-| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격 커밋에 다른 변경 섞이면 차단 |
+| PreToolUse: Bash                    | [`backlog_commit_scope.py`](hooks/backlog_commit_scope.py)         | 🔒 backlog | 드래프트 생성/승격·상태 전환·작업 순서 커밋에 다른 변경 섞이거나 새 드래프트가 2장 이상이면 차단 |
 | PreToolUse: Bash(git *)             | [`dedup_drift_guard.py`](hooks/dedup_drift_guard.py)               | 범용       | 복붙 함수 drift 시 커밋 차단      |
 | PreToolUse: Bash                    | [`pre_push_check.py`](hooks/pre_push_check.py)                     | 🔒 backlog | Done+summary 확인 후 push 허용    |
 | PreToolUse: Bash                    | [`pre_push_coverage_check.py`](hooks/pre_push_coverage_check.py)   | 범용       | 커버리지 확인                     |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
+| PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 사람 서명자(`humanSigners`)가 서명한 `Plan-Approved: <ID>` 커밋(계획 승인)까지 없으면 `-s "In Progress"` 차단 |
+| PreToolUse: Bash                    | [`require_stage_committed.py`](hooks/require_stage_committed.py)   | 🔒 backlog | 커밋 안 된 `backlog/` 변경이 있으면 다음 단계 명령(draft create·promote·`-s "In Progress"`·`-s Done`) 차단 |
+| PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙·DoD 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
 | PreToolUse: Bash                    | [`block_dangerous_commands.py`](hooks/block_dangerous_commands.py) | 범용       | 위험 명령 차단                    |
 | PreToolUse: Bash                    | [`case_insensitive_guard.py`](hooks/case_insensitive_guard.py)     | 범용       | 대소문자 경로 삭제 오발사 방지    |
@@ -284,6 +287,95 @@ TEST(Router, PicksCheapest) {}  // TASK-12#1
 // == Coverage ==
 TEST(Router, EmptyConfig) {}
 ```
+
+**구현 계획과 계획 승인(계획 → 리뷰 → 계획 승인)**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
+`backlog task edit <ID> -s "In Progress"`를 카드 파일을 읽어 검사합니다. 카드에는 AC와 DoD가
+하나 이상 있어야 하고, Implementation Plan(`--plan`)은 아래 SOAP 예약 제목 네 개를 이 순서로 한
+번씩, 철자 그대로 쓰고 각 절에 본문을 채워야 합니다(대소문자·띄어쓰기·제목 수준 변형은 인정하지
+않습니다). 제목이 없거나, 순서가 다르거나, 두 번 나오거나, 본문이 비어 있으면 무엇이 빠졌는지
+안내하며 막습니다.
+
+```markdown
+### Subjective
+요청 · 배경: 유저가 무엇을 왜 원하는가
+
+### Objective
+확인한 사실: 코드 · 측정값 · 현재 동작
+
+### Assessment
+판단: 문제가 무엇이고 어떤 접근을 고르는가
+
+### Plan
+구현 순서
+```
+
+In Progress로 옮길 때는 여기에 더해 승인 게이트를 통과해야 합니다 — 계획 → 리뷰 → 계획 승인.
+계획 승인은 사람이 계획을 리뷰한 뒤 자기 키로 직접 서명해 남기는 빈 커밋입니다.
+
+```bash
+git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow-empty -S -m "Plan-Approved: TASK-58"
+```
+
+훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Plan-Approved: <ID>`인 커밋을 찾고, 그중 하나라도
+`git log --format=%G?`가 `G`(유효한 서명)이고 서명자 principal(`%GS`)이 프로젝트 설정의
+`humanSigners`에 있어야 통과시킵니다. 승인 커밋이 없을 때, 서명이 유효하지 않을 때(`%G?` ≠ `G`),
+사람이 아닌 서명자가 서명했을 때를 구분해 안내합니다. 훅은 계획 승인 커밋을 만들지 않고, Claude도
+만들지 않습니다 — 유저에게 리뷰와 계획 승인을 요청합니다.
+
+```json
+{ "humanSigners": ["human"] }
+```
+
+사람과 Claude를 서명으로 구분하려면 키를 둘로 나눕니다(사람이 직접 설정합니다).
+
+- **AI 키**: Claude Code 세션 전용 키를 따로 만들고, `~/.claude/settings.json`의 `env`로 그
+  세션에서만 서명 키를 바꿉니다:
+  `"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.signingkey", "GIT_CONFIG_VALUE_0": "<AI 키 .pub 파일의 절대 경로>"`.
+- **사람 키**: 기존 키는 ssh-agent에서 내려(`ssh-add -d`) 서명할 때마다 암호를 입력해야 하게
+  둡니다. 그래야 Claude 세션이 사람 키로 조용히 서명할 수 없습니다.
+- **allowed_signers**: `~/.ssh/allowed_signers`에 두 키를 서로 다른 principal로 올리고
+  (`human <사람 공개키>`, `ai-claude-code <AI 공개키>`),
+  `git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers`로 연결합니다.
+- **humanSigners**: 프로젝트 설정(`.claude-code-agile-hooks.json`, 옛 `.claude-rails.json`)에 사람
+  principal만 적습니다. 없거나 비어 있으면 훅은 위 설정 방법을 안내하며 In Progress를 막습니다.
+
+남은 위험: `~/.ssh/allowed_signers`와 프로젝트 설정은 로컬에서 고칠 수 있는 파일이라, 에이전트가
+AI 키를 사람 principal로 올리거나 `humanSigners`를 바꿀 수 있습니다. 이 파일들은 `config_guard.py`
+같은 훅으로 따로 보호해야 합니다(이 훅은 보호하지 않습니다).
+
+backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
+검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은
+우회는 보지 못합니다.
+
+**단계별 커밋**: backlog.md 프로젝트에서는 카드 생애주기의 단계마다 커밋합니다 — draft 1장 작성 →
+커밋 → 승격 → 커밋 → `-s "In Progress"` → 커밋 → 작업(AC마다 커밋) → `-s Done` → 커밋. 두 훅이
+나눠 강제합니다.
+
+- `backlog_commit_scope.py`(커밋 쪽): 새 드래프트 파일(`backlog/drafts/`)이 2장 이상 든 커밋을
+  막습니다. 또 스테이징된 `backlog/tasks/` 파일의 frontmatter `status:`가 HEAD와 달라져 `In
+  Progress`나 `Done`이 되면 상태 전환 커밋으로 보고, 그 태스크 파일 하나 말고 다른 변경이 섞이면
+  막습니다(HEAD에 없던 파일은 이전 상태가 없는 것으로 봅니다).
+- `require_stage_committed.py`(명령 쪽): 명령 위치의 `backlog draft create`·`backlog draft
+  promote`·`backlog task edit <ID> -s "In Progress"`/`-s Done` 앞에서 `git status --porcelain --
+  backlog/`에 커밋 안 된 변경이 있으면 먼저 커밋하라고 막습니다. `backlog/` 밖의 작업 파일은 보지
+  않습니다. 명령 자신이 만드는 변경은 검사 뒤에 생기므로 `backlog task edit <ID> --check-ac 1
+  --final-summary "..." -s Done`처럼 한 명령으로 끝내면 통과합니다. 반대로 `--add-ref`·`--doc`·
+  `--check-ac` 등을 따로 실행해 두고 커밋하지 않은 채 `-s "In Progress"`/`-s Done`을 하면
+  막힙니다 — 그 편집을 먼저 커밋하세요.
+
+**작업 순서(백로깅 절차)**: 승격할 때마다 **승격 → `--dep` 정리 → 작업 순서 생성 → 커밋** 순서로
+진행합니다. `backlog draft promote <ID>`와 그 승격 커밋 뒤에 `backlog task edit <ID> --dep <ID>`로
+의존을 정리하고, 프로젝트 루트에서 `python3 ~/.claude/hooks/claude-code-agile-hooks/work_order.py`
+(이 저장소에서는 [`scripts/work_order.py`](scripts/work_order.py), `install.sh`가 훅 옆에 복사합니다)를
+실행해 `backlog/work-order.md`를 만든 다음, 그 파일과 의존을 고친 태스크 파일만 별도 커밋으로
+남깁니다. 스크립트는 태스크 파일 frontmatter의 `dependencies`를 읽어 미완료(Done이 아닌) 태스크를
+단계별 표로 씁니다 — 같은 단계는 병렬, 단계 사이는 순차입니다. Done 태스크나 `backlog/tasks/`에 없는
+태스크에 대한 의존은 충족된 것으로 보고(없는 ID는 파일에 따로 적습니다), 순환 의존이 있으면 순환을
+보여 주고 파일을 쓰지 않습니다. 파일 첫 줄에는 미완료 태스크 ID 집합과 의존으로 만든 해시가 있어서,
+`require_work_order.py`가 다음 `backlog draft promote`나 `backlog task edit <ID> -s "In Progress"`
+전에 이 해시가 현재 태스크와 맞지 않으면(파일이 없을 때 포함) 막고 위 명령을 안내합니다. 승격 자체는
+승격 전 상태로 판정하므로 교착이 없고, 미완료 태스크가 하나도 없는 새 프로젝트는 파일 없이도
+통과합니다. 작업 순서 커밋에 다른 변경이 섞이면 `backlog_commit_scope.py`가 막습니다.
 
 ## 더 자세한 내용이 궁금하시다면
 

@@ -13,6 +13,26 @@ the staged index with `git diff --cached --name-status -M -z` and denies:
    than those renames/deletes and files under backlog/tasks/. Editing the
    promoted task file right after promotion (`task edit --add-ref`, `--doc`)
    and touching other task files is allowed; code/docs/config is not.
+3. TASK-59#1: draft-creation commits that add two or more new drafts - the
+   history should show each draft (draft 1장 → 커밋) on its own.
+4. TASK-59#2: status-transition commits that carry anything else. A staged
+   file under backlog/tasks/ is a transition when the `status:` key of its
+   YAML frontmatter (the block between the first two `---` lines) reads
+   `In Progress` or `Done` in the staged blob (`git cat-file blob :<path>`)
+   and something else - or nothing, for a file not in HEAD - in HEAD
+   (`HEAD:<old path>`, so a title rename is followed). Such a commit must
+   hold only that task file (its own rename included); other paths, or a
+   second transitioning task file, are denied. The staged blob is read, not
+   the worktree, and from the simulated index when simulation applies.
+5. Work order commits that carry anything else (TASK-60): the index stages
+   backlog/work-order.md AND anything other than task files under
+   backlog/tasks/ (modified or renamed) whose `dependencies` frontmatter
+   differs between HEAD and the index. Tidying `--dep` after a promotion and
+   regenerating the work order land together as their own commit; a task
+   file edited for any other reason, a new or deleted task, or code is
+   denied. The staged content is read with `git show :<path>` from the same
+   index the check looks at (the simulated one, see below), HEAD with
+   `git show HEAD:<path>`.
 
 Timing caveat: PreToolUse runs *before* the Bash command, so the index it
 sees is the pre-command one. To close the common cases this hook simulates,
@@ -60,6 +80,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 
 FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
 SEPARATOR_CHARS = set(";&|()\n")
@@ -69,6 +90,10 @@ HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 
 DRAFTS = "backlog/drafts/"
 TASKS = "backlog/tasks/"
+WORK_ORDER = "backlog/work-order.md"
+KEY_RE = re.compile(r"^([A-Za-z_][\w-]*):\s*(.*)$")
+TRANSITION_STATUSES = {"In Progress", "Done"}
+STATUS_RE = re.compile(r"^status:\s*(.*?)\s*$")
 COMMIT_SHORT_WITH_ARG = set("mFcCt")
 COMMIT_LONG_WITH_ARG = {
     "--message",
@@ -234,6 +259,62 @@ def staged_entries(cwd, env=None):
     return parse_name_status(result.stdout)
 
 
+def read_blob(cwd, spec, env=None):
+    """Contents of `git cat-file blob <spec>` (e.g. `:path`, `HEAD:path`),
+    or None when git can't resolve it."""
+    result = subprocess.run(
+        ["git", "cat-file", "blob", spec],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout
+
+
+def frontmatter_status(text):
+    """Value of the `status:` key in the leading `---` YAML frontmatter
+    (quotes stripped), or None."""
+    lines = (text or "").split("\n")
+    if lines[0].strip() != "---":
+        return None
+    status = None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            return status
+        m = STATUS_RE.match(line)
+        if m and status is None:
+            status = m.group(1).strip("'\"")
+    return None  # unterminated: not frontmatter
+
+
+def status_transitions(cwd, entries, env=None):
+    """TASK-59#2: staged task files whose status becomes In Progress/Done
+    relative to HEAD (paths as staged)."""
+    found = []
+    for letter, path, new_path in entries:
+        staged = new_path or path
+        if letter == "D" or not staged.startswith(TASKS):
+            continue
+        status = frontmatter_status(read_blob(cwd, ":" + staged, env))
+        if status not in TRANSITION_STATUSES:
+            continue
+        if frontmatter_status(read_blob(cwd, "HEAD:" + path)) != status:
+            found.append(staged)
+    return found
+
+
+def inspect_index(cwd, env=None):
+    """(staged entries, status transitions) of the index `env` points at,
+    or None when the index can't be read."""
+    entries = staged_entries(cwd, env=env)
+    if entries is None:
+        return None
+    return entries, status_transitions(cwd, entries, env)
+
+
 # --- same-command staging simulation ----------------------------------------
 
 
@@ -302,9 +383,11 @@ def staging_plan(command):
     return None
 
 
-def simulated_entries(cwd, adds, commit_all):
+@contextmanager
+def simulated_index(cwd, adds, commit_all):
     """Replays the staging steps on a temporary copy of the index and
-    returns the resulting staged entries. Never touches the real index."""
+    yields the env that points git at it (None if the index can't be
+    located). Never touches the real index."""
     result = subprocess.run(
         ["git", "rev-parse", "--git-path", "index"],
         cwd=cwd,
@@ -312,7 +395,8 @@ def simulated_entries(cwd, adds, commit_all):
         text=True,
     )
     if result.returncode != 0:
-        return None
+        yield None
+        return
     real_index = os.path.join(cwd, result.stdout.strip())
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -328,7 +412,101 @@ def simulated_entries(cwd, adds, commit_all):
             steps.append(["git", "add", "-u"])
         for step in steps:
             subprocess.run(step, cwd=cwd, capture_output=True, text=True, env=env)
-        return staged_entries(cwd, env=env)
+        yield env
+
+
+def simulated_entries(cwd, adds, commit_all):
+    """The staged entries after replaying the staging steps (see
+    simulated_index), or None."""
+    with simulated_index(cwd, adds, commit_all) as env:
+        return staged_entries(cwd, env=env) if env else None
+
+
+# --- TASK-60: dependencies of staged task files ------------------------------
+# (parse_frontmatter/parse_task are copied from ../scripts/work_order.py and
+# registered in dedup_drift_guard.REGISTRY)
+
+
+def parse_frontmatter(text):
+    """The top-level keys of a `---` frontmatter block. Values are strings,
+    or lists for block (`- x`) and inline (`[x, y]`) lists. Only what
+    backlog.md writes is understood - this is not a YAML parser."""
+
+    def unquote(value):
+        if len(value) >= 2 and value[0] == value[-1] == "'":
+            return value[1:-1].replace("''", "'")
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            return value[1:-1]
+        return value
+
+    lines = text.split("\n")
+    if lines[0].strip() != "---":
+        return {}
+    fields = {}
+    key = None
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        m = KEY_RE.match(line)
+        if m:
+            key, value = m.group(1), m.group(2).strip()
+            if value.startswith("[") and value.endswith("]"):
+                inner = value[1:-1].strip()
+                fields[key] = [unquote(v.strip()) for v in inner.split(",")] if inner else []
+            elif value in (">-", ">", "|", "|-"):
+                fields[key] = ""
+            else:
+                fields[key] = unquote(value)
+            continue
+        item = line.strip()
+        if key is None or not item:
+            continue
+        if item == "-" or item.startswith("- "):
+            if not isinstance(fields[key], list):
+                fields[key] = []
+            fields[key].append(unquote(item[2:].strip()))
+        elif isinstance(fields[key], str):
+            fields[key] = (fields[key] + " " + item).strip()
+    return fields
+
+
+def parse_task(text):
+    """{id, title, status, deps} of a task file, or None without an id."""
+    fm = parse_frontmatter(text)
+    task_id = fm.get("id")
+    if not isinstance(task_id, str) or not task_id:
+        return None
+    deps = fm.get("dependencies") or []
+    if isinstance(deps, str):
+        deps = [deps]
+    return {
+        "id": task_id.upper(),
+        "title": fm.get("title") or "",
+        "status": fm.get("status") or "",
+        "deps": sorted({d.upper() for d in deps if d}),
+    }
+
+
+def dependencies_changed(cwd, path, new_path, env=None):
+    """True if the staged task file `new_path` lists other dependencies
+    than `path` at HEAD. A file missing on either side or without a task
+    id is not a dependency change."""
+
+    def deps_at(spec):
+        result = subprocess.run(
+            ["git", "show", spec],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            env=env,
+        )
+        task = parse_task(result.stdout) if result.returncode == 0 else None
+        return task["deps"] if task else None
+
+    before = deps_at(f"HEAD:{path}")
+    after = deps_at(f":{new_path}")
+    return before is not None and after is not None and before != after
 
 
 # --- policy -----------------------------------------------------------------
@@ -361,11 +539,25 @@ def format_offenders(entries):
     return listed
 
 
-def check_scope(entries):
-    """Returns a deny message, or None if the staged set is acceptable."""
+def check_scope(entries, transitions=(), deps_changed=None):
+    """Returns a deny message, or None if the staged set is acceptable.
+    `transitions` lists staged task paths whose status becomes In Progress
+    or Done (status_transitions). `deps_changed(path, new_path)` tells
+    whether a staged task file changed its dependencies (TASK-60); without
+    it no task file qualifies."""
     new_drafts = [
         e for e in entries if e[0] in ("A", "C") and (e[2] or e[1]).startswith(DRAFTS)
     ]
+    if len(new_drafts) >= 2:
+        # TASK-59#1: one draft per commit, so each draft has its own point
+        # in history (draft 1장 → 커밋)
+        return (
+            "[claude-code-agile-hooks] 드래프트 생성 커밋에는 새 드래프트 한 장만 담는다 — "
+            "스테이징에 새 드래프트가 여러 개 있습니다:\n"
+            + format_offenders(new_drafts)
+            + "\n한 장씩 커밋하세요. 나머지는 'git restore --staged <path>'로 내린 뒤 "
+            "다음 커밋으로 나누세요."
+        )
     if new_drafts:
         offenders = [
             e for e in entries if not all(p.startswith(DRAFTS) for p in entry_paths(e))
@@ -398,7 +590,56 @@ def check_scope(entries):
                 + "\n승격(과 승격된 태스크의 ref/doc 연결)만 먼저 커밋하고, 나머지는 "
                 "'git restore --staged <path>'로 내린 뒤 별도 커밋으로 나누세요."
             )
+
+    if transitions:
+        offenders = [e for e in entries if (e[2] or e[1]) != transitions[0]]
+        if len(transitions) > 1 or offenders:
+            listed = "\n".join(f"  - {p} (상태 전환)" for p in transitions)
+            return (
+                "[claude-code-agile-hooks] 상태 전환 커밋(→ In Progress, → Done)에는 그 "
+                "태스크 파일만 담는다 — 스테이징에 상태 전환과 그 밖의 변경이 섞여 있습니다:\n"
+                + listed
+                + ("\n" + format_offenders(offenders) if offenders else "")
+                + "\n태스크 파일 하나의 상태 전환만 먼저 커밋하고, 나머지는 "
+                "'git restore --staged <path>'로 내린 뒤 별도 커밋으로 나누세요."
+            )
+
+    if any(WORK_ORDER in entry_paths(e) for e in entries):
+        offenders = [
+            e
+            for e in entries
+            if WORK_ORDER not in entry_paths(e)
+            and not (
+                e[0] in ("M", "R")
+                and all(p.startswith(TASKS) for p in entry_paths(e))
+                and deps_changed is not None
+                and deps_changed(e[1], e[2] or e[1])
+            )
+        ]
+        if offenders:
+            return (
+                "[claude-code-agile-hooks] 작업 순서 커밋은 backlog/work-order.md와 의존"
+                "(dependencies)을 고친 태스크 파일만 담는다 — 스테이징에 그 밖의 파일이 "
+                "섞여 있습니다:\n"
+                + format_offenders(offenders)
+                + "\n작업 순서와 의존 변경만 먼저 커밋하고, 나머지는 "
+                "'git restore --staged <path>'로 내린 뒤 별도 커밋으로 나누세요."
+            )
     return None
+
+
+def scope_message(cwd, env=None):
+    """check_scope() on the index `env` points at (the real one if None);
+    None when the index can't be read."""
+    inspected = inspect_index(cwd, env=env)
+    if inspected is None:
+        return None
+    entries, transitions = inspected
+    return check_scope(
+        entries,
+        transitions,
+        lambda path, new_path: dependencies_changed(cwd, path, new_path, env),
+    )
 
 
 def deny(message):
@@ -424,13 +665,10 @@ def main():
 
     plan = staging_plan(command)
     if plan and (plan[0] or plan[1]):
-        entries = simulated_entries(cwd, plan[0], plan[1])
+        with simulated_index(cwd, plan[0], plan[1]) as env:
+            message = scope_message(cwd, env) if env else None
     else:
-        entries = staged_entries(cwd)
-    if entries is None:
-        sys.exit(0)
-
-    message = check_scope(entries)
+        message = scope_message(cwd)
     if message:
         deny(message)
     sys.exit(0)
