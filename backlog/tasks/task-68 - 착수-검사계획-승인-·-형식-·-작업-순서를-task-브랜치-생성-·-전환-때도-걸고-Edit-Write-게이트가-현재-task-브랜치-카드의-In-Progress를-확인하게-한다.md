@@ -6,11 +6,16 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-10-29T12:20:00Z'
-updated_date: '2026-10-29T23:46:00Z'
+updated_date: '2026-10-29T23:50:00Z'
 labels:
   - hooks
 dependencies:
   - TASK-67
+references:
+  - decision-14
+documentation:
+  - >-
+    https://github.com/coralstay/coralstay-software-factory/tree/task/task-19/design
 ---
 
 ## Description

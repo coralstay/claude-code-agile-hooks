@@ -4,10 +4,13 @@ title: testFirst Done 게이트에서 '(수동)'으로 끝나는 AC · DoD는 �
 status: To Do
 assignee: []
 created_date: '2026-10-29T12:21:00Z'
-updated_date: '2026-10-29T12:22:00Z'
+updated_date: '2026-10-29T23:50:00Z'
 labels:
   - hooks
 dependencies: []
+documentation:
+  - >-
+    https://github.com/coralstay/coralstay-software-factory/tree/task/task-19/design
 ---
 
 ## Description

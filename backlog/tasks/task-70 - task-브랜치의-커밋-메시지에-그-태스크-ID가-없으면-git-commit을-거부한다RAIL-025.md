@@ -4,11 +4,14 @@ title: task 브랜치의 커밋 메시지에 그 태스크 ID가 없으면 git c
 status: To Do
 assignee: []
 created_date: '2026-10-29T12:23:00Z'
-updated_date: '2026-10-29T23:49:00Z'
+updated_date: '2026-10-29T23:50:00Z'
 labels:
   - hooks
 dependencies:
   - TASK-67
+documentation:
+  - >-
+    https://github.com/coralstay/coralstay-software-factory/tree/task/task-19/design
 ---
 
 ## Description
