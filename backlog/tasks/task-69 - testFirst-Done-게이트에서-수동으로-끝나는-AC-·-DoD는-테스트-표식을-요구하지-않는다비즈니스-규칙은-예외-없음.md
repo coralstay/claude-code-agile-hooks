@@ -1,7 +1,7 @@
 ---
-id: DRAFT-10
+id: TASK-69
 title: testFirst Done 게이트에서 '(수동)'으로 끝나는 AC · DoD는 테스트 표식을 요구하지 않는다(비즈니스 규칙은 예외 없음)
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-29T12:21:00Z'
 updated_date: '2026-10-29T12:22:00Z'
