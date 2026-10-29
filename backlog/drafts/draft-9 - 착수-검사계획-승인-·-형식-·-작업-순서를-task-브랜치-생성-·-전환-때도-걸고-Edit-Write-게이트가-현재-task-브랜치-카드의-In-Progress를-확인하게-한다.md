@@ -6,7 +6,7 @@ title: >-
 status: Draft
 assignee: []
 created_date: '2026-10-29T12:20:00Z'
-updated_date: '2026-10-29T12:20:00Z'
+updated_date: '2026-10-29T23:35:00Z'
 labels:
   - hooks
 dependencies:
@@ -20,12 +20,12 @@ dependencies:
 
 A2: Edit/Write 게이트 require_active_task는 지금 저장소 안 어느 카드든 In Progress면 통과한다. README · CLAUDE.md.snippet은 'In Progress 상태와 브랜치명을 확인한다'고 적고 있다. 이 둘을 맞춘다. 현재 `task/<ID>` 브랜치의 카드가 In Progress여야 통과한다.
 
-브랜치 생성 · 전환으로 치는 명령(이 카드의 결정, 리뷰 때 확인): `git switch -c/-C/--create/--force-create`, `git checkout -b/-B`, 이미 있는 브랜치로 가는 `git switch task/X` · `git checkout task/X`(원격만 있을 때 자동으로 만드는 경우 포함), `git worktree add [-b/-B task/X] <path> [시작점]` · `git worktree add <path> task/X`, 그리고 전환 없이 만들기만 하는 `git branch task/X [시작점]` · `git branch -m/-c <old> task/X`. `git branch`까지 넣는 이유: 착수 판단이 '브랜치가 있는가'이므로 전환 없이 만들어도 착수가 된다. 이미 main에 병합된 브랜치로 가는 전환은 착수가 아니므로 검사하지 않는다. `git checkout task/X -- <path>`(파일 꺼내기) · `git fetch origin task/X:task/X` · `git update-ref` · `bash -c` 같은 간접 실행은 범위 밖이다(decision-1).
+브랜치 생성 · 전환으로 치는 명령(유저 결정 2026-10-30, 화이트리스트 — '단순히 생각해'): 대상이 `task/<ID>`인 `git switch`(`-c/-C` 포함)와 `git checkout`(`-b/-B` 포함)만. 그 밖의 명령(`git branch`, `git worktree add`, 경로 checkout `git checkout X -- path`, `fetch x:task/X`, `bash -c` 간접 실행 등)은 잡지 않는다 — 그 경로로 시작한 작업도 `-s "In Progress"` 시점 검사(AC #4)가 받친다. 이미 main에 병합된 task 브랜치로의 전환은 검사하지 않는다.
 
 선행: DRAFT-8(대상 저장소 해석 · project_root — `cd <dir> && git switch`, 워크트리). TASK-64가 require_work_order의 트리거를 넓히므로 같은 파일에서 충돌한다. 먼저 끝나는 쪽 위에 쌓는다. 새 결정 decision-16이 decision-14의 '검사 시점'을 확장한다. 이 저장소의 `.claude-code-agile-hooks.json`에는 `humanSigners`가 없다. 그래서 지금도 이 저장소의 In Progress 전환은 전부 막힌다. 유저가 자기 principal을 넣어야 한다. 이 카드는 최상위 coralstay-software-factory TASK-19의 결정을 구현한다. 커밋 본문에 'Refs: coralstay-software-factory TASK-19'를 적는다. H2 완료 뒤 유저의 ~/.claude/CLAUDE.md에 있는 같은 문구('훅이 In Progress 상태와 브랜치명을 확인한다')를 고치자고 제안만 한다(직접 고치지 않는다).
 
 ## 비즈니스 규칙
-- B1 (AC #1) 사람이 서명한 Plan-Approved 승인 커밋이 없으면 `git switch -c task/X`(및 위 생성 · 전환 명령)를 거부한다
+- B1 (AC #1) 사람이 서명한 Plan-Approved 승인 커밋이 없으면 `git switch -c task/X`(및 화이트리스트의 switch · checkout)를 거부한다
 - B2 (AC #1) 승인 커밋 서명이 유효해도(%G? = G) 서명자(%GS)가 humanSigners에 없으면 거부한다
 - B3 (AC #1) 카드에 SOAP 계획 · AC · DoD 중 하나라도 없으면 거부한다
 - B4 (AC #1) task/ 가 아닌 브랜치의 생성 · 전환과, 이미 main에 병합된 task 브랜치로의 전환은 검사하지 않는다
@@ -38,7 +38,7 @@ A2: Edit/Write 게이트 require_active_task는 지금 저장소 안 어느 카�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 브랜치 시점 검사: Claude의 Bash가 task/<ID> 브랜치를 만들거나(switch -c/-C · checkout -b/-B · branch · branch -m/-c · worktree add -b/-B) 미병합 task/<ID> 브랜치로 전환하면(switch · checkout · worktree add <path> task/X), 대상 저장소(DRAFT-8 command_target_dir)에서 계획 승인과 계획 · AC · DoD 형식(RAIL-020)을 검사하고 없으면 거부한다
+- [ ] #1 브랜치 시점 검사: Claude의 Bash가 화이트리스트 명령 — 대상이 task/<ID>인 git switch(-c/-C 포함) · git checkout(-b/-B 포함) — 으로 미병합 task/<ID> 브랜치를 만들거나 전환하면, 대상 저장소(DRAFT-8 command_target_dir)에서 계획 승인과 계획 · AC · DoD 형식(RAIL-020)을 검사하고 없으면 거부한다. git branch · git worktree add 등 목록 밖 명령은 검사하지 않는다
 - [ ] #2 승인 커밋은 새 브랜치의 시작점(명시 인자 → 없으면 대상 저장소 HEAD, 기존 브랜치면 그 tip, 원격만 있으면 origin/task/X)에서 닿는 범위에서 찾는다
 - [ ] #3 작업 순서 파일 최신 여부(RAIL-023)도 브랜치 생성 · 전환 시점에 검사한다(require_work_order)
 - [ ] #4 backlog task edit <ID> -s "In Progress" 시점의 세 검사(승인 · 형식 · 작업 순서)는 그대로 유지한다 — 오케스트레이터가 훅 밖에서 git worktree add로 만든 브랜치를 위해
@@ -66,7 +66,7 @@ A2: Edit/Write 게이트 require_active_task는 지금 저장소 안 어느 카�
 유저가 2026-10-29 착수 판단을 '미병합 task/<ID> 브랜치가 있음'으로 정했다(A2). 그래서 승인 없이 브랜치만 만들어도 착수가 되지 않도록 착수 검사를 브랜치 생성 · 전환 시점으로 옮기라고 했다(A1 수정, A5). 오케스트레이터가 훅 밖에서 브랜치를 만드는 경우가 있어 In Progress 시점 검사도 남기라고 했다(A1 보완). 또 Edit/Write 게이트가 문서 설명처럼 현재 브랜치 카드를 보게 하라고 했다(A2).
 
 ### Objective
-- require_implementation_plan.py:229-241 segment_gate는 `draft promote`(형식 검사)와 `task edit -s "In Progress"`(형식 + 승인)만 잡는다. git 브랜치 명령은 보지 않는다.
+- require_implementation_plan.py:229-241 segment_gate는 `draft promote`(형식 검사)와 `task edit -s "In Progress"`(형식 + 승인)만 잡는다. git 브랜치 명령(화이트리스트 switch · checkout)은 보지 않는다.
 - require_implementation_plan.py:358-381 approval_status는 `git log --format=%H %s HEAD`(L365)로 HEAD에서 닿는 커밋만 찾는다. 브랜치를 만드는 순간 HEAD는 아직 이전 브랜치다.
 - require_implementation_plan.py:459-476 check_card는 kind == "start"일 때만 approval_problem을 더한다. humanSigners는 human_signers(L125-147)가 프로젝트 설정에서 읽는다.
 - require_work_order.py:137-183 command_starts_stage는 `draft promote`와 `-s "In Progress"`만 감지한다. main(L311-344)은 작업 트리의 태스크 파일로 해시를 비교한다.
