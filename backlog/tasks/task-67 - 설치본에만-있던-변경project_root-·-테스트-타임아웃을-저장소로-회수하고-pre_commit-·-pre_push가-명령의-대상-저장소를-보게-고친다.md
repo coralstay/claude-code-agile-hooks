@@ -1,9 +1,9 @@
 ---
-id: DRAFT-8
+id: TASK-67
 title: >-
   설치본에만 있던 변경(project_root · 테스트 타임아웃)을 저장소로 회수하고, pre_commit · pre_push가 명령의 대상
   저장소를 보게 고친다
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-29T12:17:00Z'
 updated_date: '2026-10-29T23:36:00Z'
