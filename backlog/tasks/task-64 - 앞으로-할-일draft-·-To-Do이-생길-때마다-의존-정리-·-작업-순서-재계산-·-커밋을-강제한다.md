@@ -3,8 +3,8 @@ id: TASK-64
 title: 앞으로 할 일(draft · To Do)이 생길 때마다 의존 정리 · 작업 순서 재계산 · 커밋을 강제한다
 status: To Do
 assignee: []
-created_date: '2026-10-22 05:34'
-updated_date: '2026-10-22 05:35'
+created_date: 2026-10-22 05:34
+updated_date: '2026-10-29T12:25:00Z'
 labels:
   - hooks
 dependencies: []
@@ -22,7 +22,7 @@ references:
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 생성 직후 강제: draft create · draft promote · 재오픈(Done에서 다른 상태로) 커밋 바로 다음 커밋은 작업 순서 커밋이어야 하고, 그 사이에 다른 커밋이 오면 deny한다
-- [ ] #2 검사 시점 확대: 다음 draft promote · -s "In Progress"에 더해 draft create · -s Done · git push에서도 작업 순서가 없거나 낡았으면 deny한다
+- [ ] #2 검사 시점 확대: 다음 draft promote · task/<ID> 브랜치 생성 · 전환 · -s "In Progress"에 더해 draft create · -s Done · git push에서도 작업 순서가 없거나 낡았으면 deny한다(브랜치 생성 · 전환 트리거 자체는 DRAFT-9에서 만들고, -s "In Progress" 트리거는 훅 밖에서 브랜치를 만드는 오케스트레이터 때문에 유지한다)
 - [ ] #3 의존 검토 기록: 새로 생긴 draft · 태스크마다 의존이 있으면 --dep로, 없으면 '의존 없음'을 명시해야 하고(형식은 착수 시 결정), 표시가 없는 항목이 있으면 work_order.py가 실패한다
 - [ ] #4 문구 반영 + draft 포함: work_order.py와 해시 계산 대상을 미완료 태스크 + draft로 넓히고(draft는 구분 표시, 승격 뒤 DRAFT-N을 가리키는 의존이 남아 있으면 다시 걸라고 안내), README · CLAUDE.md.snippet의 '승격할 때마다'를 '앞으로 할 일(draft · To Do)이 생기거나 다시 열리거나 의존이 바뀔 때마다'로 바꾼다
 <!-- AC:END -->
@@ -60,4 +60,6 @@ TASK-60의 work_order.py · require_work_order.py · backlog_commit_scope.py를 
 
 <!-- SECTION:NOTES:BEGIN -->
 착수 조건(유저, 2026-10-22): TASK-59(PR #55) · TASK-60(PR #56)이 main에 머지된 뒤 착수한다. 이 카드는 main 기준 브랜치에서 승격돼 그 태스크 파일이 아직 없어 --dep를 걸지 못했다 — 착수 시 --dep TASK-59,TASK-60을 건다.
+
+결정 반영(유저, 2026-10-29, 최상위 TASK-19 A1 수정 · A5): AC #2 트리거에 task/<ID> 브랜치 생성 · 전환을 더하고 -s "In Progress"는 유지한다. AC 번호는 그대로다(#2 문구만 바뀜). 브랜치 시점 트리거는 DRAFT-9가 require_work_order에 넣으므로 같은 파일에서 충돌한다 — 먼저 끝나는 쪽 위에 쌓는다.
 <!-- SECTION:NOTES:END -->
