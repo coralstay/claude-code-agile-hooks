@@ -1,7 +1,7 @@
 ---
-id: DRAFT-10
+id: TASK-71
 title: 'main 복구: work_order.py --help 분기를 테스트로 덮어 커버리지 100%를 되찾는다'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-10-30T17:05:00Z'
 updated_date: '2026-10-30T17:05:00Z'
