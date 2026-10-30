@@ -17,7 +17,13 @@ EOF
   exit 0
 fi
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_SRC="${BASH_SOURCE[0]}"
+while [ -h "$_SRC" ]; do
+  _DIR="$(cd -P "$(dirname "$_SRC")" && pwd)"
+  _SRC="$(readlink "$_SRC")"
+  [[ $_SRC != /* ]] && _SRC="$_DIR/$_SRC"
+done
+REPO_DIR="$(cd -P "$(dirname "$_SRC")" && pwd)"
 TARGET_HOOKS_DIR="$HOME/.claude/hooks/claude-code-agile-hooks"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
