@@ -1,5 +1,5 @@
 # @oss sh      bats-core        v1.14.0
 # @oss sh      shellcheck       v0.11.0
 # @oss sh      shfmt            v3.14.0
-# @oss sh      hyperfine        master
-# @oss core    jq               master
+# @oss sh      hyperfine        v1.20.0
+# @oss core    jq               jq-1.7.1
