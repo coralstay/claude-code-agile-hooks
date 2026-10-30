@@ -4,7 +4,7 @@ title: 'main 복구: work_order.py --help 분기를 테스트로 덮어 커버�
 status: In Progress
 assignee: []
 created_date: '2026-10-30T17:05:00Z'
-updated_date: '2026-10-30T17:08:00Z'
+updated_date: '2026-10-30T17:11:00Z'
 labels:
   - bug
   - test
@@ -19,12 +19,12 @@ dependencies: []
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 scripts/work_order.py의 -h · --help · help가 사용법을 stdout에 출력하고 0을 반환하는지 테스트로 확인한다
+- [x] #1 scripts/work_order.py의 -h · --help · help가 사용법을 stdout에 출력하고 0을 반환하는지 테스트로 확인한다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 coverageCommand가 100%로 통과한 로그를 final summary에 남긴다 (수동)
+- [x] #1 coverageCommand가 100%로 통과한 로그를 final summary에 남긴다 (수동)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -45,3 +45,12 @@ dependencies: []
 1. 테스트(표식 <ID>#1) 추가 → 전체 테스트 · 커버리지 100% 확인 → 커밋.
 2. Done → push → PR(README 복원 · DRAFT-9 포함, merge commit).
 <!-- SECTION:PLAN:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+main(origin/main 9244103)의 커버리지 99.94%를 100%로 되돌렸다. e89810b가 넣은 scripts/work_order.py의 -h · --help · help 분기(:223-227)를 덮는 매개변수화 테스트를 scripts/test_work_order.py에 더했다(7d016df, TASK-71#1) — 사용법이 stdout에 나오고 0을 반환하며 stderr는 비어 있다. 코드는 바꾸지 않았다.
+
+검증: coverageCommand(uvx … pytest --cov) 결과 TOTAL 5561 stmts · 2310 branches, miss 0, 'Required test coverage of 100.0% reached. Total coverage: 100.00%', 2450 passed.
+같은 브랜치에는 README 복원(3f8abc8, Antigravity 커밋 9244103 revert — test_require_stage_committed.py:238 복구)과 DRAFT-9(gitleaks)가 함께 있다.
+<!-- SECTION:FINAL_SUMMARY:END -->
