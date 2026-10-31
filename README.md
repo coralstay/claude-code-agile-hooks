@@ -31,11 +31,11 @@ Claude Code의 [hooks](https://code.claude.com/docs/ko/hooks) 이벤트마다 �
 
 ## 주요 특징을 소개해 드립니다
 
-- 기계적 강제와 사람의 판단을 명확히 나누었습니다 — 검증 가능한 부분은 훅으로
+- **기계적 강제와 사람의 판단을 명확히 나누었습니다** — 검증 가능한 부분은 훅으로
   막고, 백로그 승인과 push 전 코드 리뷰 두 곳만 사람에게 맡겨두었습니다.
-- 완전히 독립적으로 만들었습니다 — 훅끼리 서로 import하지 않아, 코드 중복은
+- **완전히 독립적으로 만들었습니다** — 훅끼리 서로 import하지 않아, 코드 중복은
   있지만 한 훅의 버그가 다른 훅에 영향을 주지 않도록 하였습니다.
-- Python으로 작성하였습니다 — 원래 여러 개는 bash 스크립트였으나, 셸보다
+- **Python으로 작성하였습니다** — 원래 여러 개는 bash 스크립트였으나, 셸보다
   가독성이 낫고 작성자가 Python 생태계에 더 익숙하다는 실용적인 이유로 Python으로
   옮겼습니다. 여러 대안을 검토하기는 하였으나, 정답이 하나만 있는 문제는 아니었다고
   생각합니다.
@@ -172,7 +172,7 @@ cd ~/githubs/claude-code-agile-hooks && ./install.sh
 ```
 
 `~/.claude/settings.json`에는 [`scripts/merge_settings.py`](scripts/merge_settings.py)로
-추가 전용 병합을 합니다. 다른 도구의 훅은 그대로 두고, 빠진 claude-code-agile-hooks 항목만
+**추가 전용 병합**을 합니다. 다른 도구의 훅은 그대로 두고, 빠진 claude-code-agile-hooks 항목만
 (이벤트, matcher) 그룹에 추가하므로 다시 실행해도 중복되지 않습니다. 쓰기 전에
 `settings.json.bak.<timestamp>`로 백업하고, 추가/갱신된 항목을 목록으로 보여 드립니다.
 
@@ -197,11 +197,11 @@ uvx --with pytest-cov --with pytest-xdist pytest -q -n auto --cov      # 병렬 
 입력·깨진 JSON·정상 입력에서 크래시 없이 정해진 종료 코드를 내는지 확인합니다. 이때 `HOME`을
 임시 디렉토리로 바꿔 실행하므로 실제 `~/.claude`는 건드리지 않습니다.
 
-CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 `main` push와 모든 PR에서
+**CI**: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)이 `main` push와 모든 PR에서
 ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커버리지가 100% 미만이면
 실패합니다.
 
-로컬 게이트: 이 저장소에도 [`.claude-code-agile-hooks.json`](.claude-code-agile-hooks.json)이 있어서, 설치된
+**로컬 게이트**: 이 저장소에도 [`.claude-code-agile-hooks.json`](.claude-code-agile-hooks.json)이 있어서, 설치된
 훅이 이 저장소에서 커밋할 때마다 `testCommand`(병렬 테스트, 커버리지 없이)를, push할
 때마다 `coverageCommand`(CI와 같은 병렬 명령에 `--cov-report=term-missing --cov-report=xml`을
 더한 것)를 돌립니다. 실패하면 커밋·push가 막힙니다. 이 저장소도 `pyproject.toml`로 Python이
@@ -211,8 +211,8 @@ ubuntu·macOS × Python 3.11·3.12로 위의 병렬 명령을 돌립니다. 커�
 제외됩니다. 아직 옛 이름 `.claude-rails.json`만 쓰는 프로젝트에서는 그 설정을 그대로 읽고
 기록도 예전처럼 `.claude-rails/`에 남깁니다.
 
-테스트 먼저(opt-in): 프로젝트 설정에
-`"testFirst": {"sourceGlobs": ["src/main/java/"], "testGlobs": ["src/test/java/"]}`를 넣으면
+**테스트 먼저(opt-in)**: 프로젝트 설정에
+`"testFirst": {"sourceGlobs": ["src/main/java/**"], "testGlobs": ["src/test/java/**"]}`를 넣으면
 `require_test_first.py`가 AC 하나씩 TDD를 강제합니다. `task/<ID>` 브랜치에서 그 태스크가 In
 Progress일 때, 소스 파일을 고치기 전에 체크 안 된 첫 AC n의 표식 `<ID>#<n>`과 그 AC에 묶인
 비즈니스 규칙 표식 `<ID>#B<k>`가 테스트 파일 어딘가에 있어야 하고, `backlog task edit <ID> -s
@@ -221,7 +221,7 @@ Done` 전에는 모든 AC·규칙 표식과 Definition of Done 항목마다 `<ID
 표식 문자열만 보므로 테스트가 실제로 먼저 실패했는지는 확인하지 않고, Bash로 쓴 소스 파일도
 보지 못합니다.
 
-테스트 파일 구조: backlog.md 프로젝트에서는 `require_test_layout.py`가 JS · TS · Java ·
+**테스트 파일 구조**: backlog.md 프로젝트에서는 `require_test_layout.py`가 JS · TS · Java ·
 Python · C++ 테스트 파일의 순서를 고정합니다.
 
 1. 맨 위 첫 주석 블록: 태스크마다 한 줄 `<ID>: <한 줄 요약>`.
@@ -293,7 +293,7 @@ TEST(Router, PicksCheapest) {}  // TASK-12#1
 TEST(Router, EmptyConfig) {}
 ```
 
-구현 계획과 계획 승인(계획 → 리뷰 → 계획 승인): `require_implementation_plan.py`는 `backlog draft promote <ID>`와
+**구현 계획과 계획 승인(계획 → 리뷰 → 계획 승인)**: `require_implementation_plan.py`는 `backlog draft promote <ID>`와
 `backlog task edit <ID> -s "In Progress"`를 카드 파일을 읽어 검사합니다. 카드에는 AC와 DoD가
 하나 이상 있어야 하고, Implementation Plan(`--plan`)은 아래 SOAP 예약 제목 네 개를 이 순서로 한
 번씩, 철자 그대로 쓰고 각 절에 본문을 채워야 합니다(대소문자·띄어쓰기·제목 수준 변형은 인정하지
@@ -333,15 +333,15 @@ git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow
 
 사람과 Claude를 서명으로 구분하려면 키를 둘로 나눕니다(사람이 직접 설정합니다).
 
-- AI 키: Claude Code 세션 전용 키를 따로 만들고, `~/.claude/settings.json`의 `env`로 그
+- **AI 키**: Claude Code 세션 전용 키를 따로 만들고, `~/.claude/settings.json`의 `env`로 그
   세션에서만 서명 키를 바꿉니다:
   `"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.signingkey", "GIT_CONFIG_VALUE_0": "<AI 키 .pub 파일의 절대 경로>"`.
-- 사람 키: 기존 키는 ssh-agent에서 내려(`ssh-add -d`) 서명할 때마다 암호를 입력해야 하게
+- **사람 키**: 기존 키는 ssh-agent에서 내려(`ssh-add -d`) 서명할 때마다 암호를 입력해야 하게
   둡니다. 그래야 Claude 세션이 사람 키로 조용히 서명할 수 없습니다.
-- allowed_signers: `~/.ssh/allowed_signers`에 두 키를 서로 다른 principal로 올리고
+- **allowed_signers**: `~/.ssh/allowed_signers`에 두 키를 서로 다른 principal로 올리고
   (`human <사람 공개키>`, `ai-claude-code <AI 공개키>`),
   `git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers`로 연결합니다.
-- humanSigners: 프로젝트 설정(`.claude-code-agile-hooks.json`, 옛 `.claude-rails.json`)에 사람
+- **humanSigners**: 프로젝트 설정(`.claude-code-agile-hooks.json`, 옛 `.claude-rails.json`)에 사람
   principal만 적습니다. 없거나 비어 있으면 훅은 위 설정 방법을 안내하며 In Progress를 막습니다.
 
 남은 위험: `~/.ssh/allowed_signers`와 프로젝트 설정은 로컬에서 고칠 수 있는 파일이라, 에이전트가
@@ -352,7 +352,7 @@ backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 �
 검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은
 우회는 보지 못합니다.
 
-단계별 커밋: backlog.md 프로젝트에서는 카드 생애주기의 단계마다 커밋합니다 — draft 1장 작성 →
+**단계별 커밋**: backlog.md 프로젝트에서는 카드 생애주기의 단계마다 커밋합니다 — draft 1장 작성 →
 커밋 → 승격 → 커밋 → `-s "In Progress"` → 커밋 → 작업(AC마다 커밋) → `-s Done` → 커밋. 두 훅이
 나눠 강제합니다.
 
@@ -368,7 +368,7 @@ backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 �
   `--check-ac` 등을 따로 실행해 두고 커밋하지 않은 채 `-s "In Progress"`/`-s Done`을 하면
   막힙니다 — 그 편집을 먼저 커밋하세요.
 
-작업 순서(백로깅 절차): 승격할 때마다 승격 → `--dep` 정리 → 작업 순서 생성 → 커밋 순서로
+**작업 순서(백로깅 절차)**: 승격할 때마다 **승격 → `--dep` 정리 → 작업 순서 생성 → 커밋** 순서로
 진행합니다. `backlog draft promote <ID>`와 그 승격 커밋 뒤에 `backlog task edit <ID> --dep <ID>`로
 의존을 정리하고, 프로젝트 루트에서 `python3 ~/.claude/hooks/claude-code-agile-hooks/work_order.py`
 (이 저장소에서는 [`scripts/work_order.py`](scripts/work_order.py), `install.sh`가 훅 옆에 복사합니다)를
@@ -387,16 +387,16 @@ backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 �
 `pre_push_coverage_check.py`(push 전)와 `require_coverage_on_done.py`(`backlog task edit <ID> -s
 Done` 전, backlog.md 프로젝트)가 같은 게이트를 돌립니다.
 
-1. 언어 감지: 프로젝트 루트(하위 디렉토리는 보지 않음)의 매니페스트로 감지합니다 —
+1. **언어 감지**: 프로젝트 루트(하위 디렉토리는 보지 않음)의 매니페스트로 감지합니다 —
    `package.json` → JavaScript, `tsconfig.json` → TypeScript, `pom.xml` · `build.gradle` ·
    `build.gradle.kts` → Java, `pyproject.toml` · `setup.cfg` · `pytest.ini` → Python,
    `CMakeLists.txt` → C++.
-2. coverageCommand 필수: 언어가 하나라도 감지됐는데 프로젝트 설정에 `coverageCommand`가 없으면
+2. **coverageCommand 필수**: 언어가 하나라도 감지됐는데 프로젝트 설정에 `coverageCommand`가 없으면
    push와 `-s Done`을 막습니다. 감지된 언어가 없으면 예전처럼 opt-in입니다(설정이 없으면 아무 말도
    하지 않고, 있으면 종료 코드만 봅니다).
-3. 실행과 판정: `coverageCommand`를 돌려 0이 아닌 종료 코드면 막습니다. 100%(line + branch)
+3. **실행과 판정**: `coverageCommand`를 돌려 0이 아닌 종료 코드면 막습니다. 100%(line + branch)
    임계값은 각 도구 설정에 두고, 훅은 종료 코드로만 판정합니다(숫자를 지어내지 않습니다).
-4. 리포트 확인: 명령이 성공해도, 감지된 언어마다 아래 위치에 이번 실행이 쓴(mtime이 실행
+4. **리포트 확인**: 명령이 성공해도, 감지된 언어마다 아래 위치에 **이번 실행이 쓴**(mtime이 실행
    시작 이후, 시작 시각은 초 단위로 내림) 파일이 하나라도 있어야 통과합니다. 디렉토리면 그 아래
    어떤 파일이든 셉니다. 실행 전부터 있던 리포트는 세지 않습니다.
 
@@ -415,7 +415,7 @@ C++에서 llvm-cov(`llvm-cov show -format=html -output-dir=coverage`)를 쓰셔�
 `fail_under`는 branch를 켜면 line과 branch를 합친 총계를 보는데, 100%는 둘 다 100%일 때만
 나옵니다. Maven에서는 `report` 골이 실행되도록(예: `verify` 단계에 바인딩) 해 주세요.
 
-리포트 위치 바꾸기: 프로젝트 설정의 `coverageReportDir`로 바꿉니다. 경로는 프로젝트 루트
+**리포트 위치 바꾸기**: 프로젝트 설정의 `coverageReportDir`로 바꿉니다. 경로는 프로젝트 루트
 기준이고 파일도 디렉토리도 됩니다.
 
 ```json
@@ -431,7 +431,7 @@ C++에서 llvm-cov(`llvm-cov show -format=html -output-dir=coverage`)를 쓰셔�
 리포트를 가리키게 할 수 있습니다). `-s Done`마다 `coverageCommand` 전체를 한 번 돌리므로 그만큼
 시간이 듭니다. 하위 디렉토리의 모노레포 패키지는 감지하지 않습니다.
 
-설계 문서 전파(최상위 저장소): `require_design_propagation.py`는 최상위
+**설계 문서 전파(최상위 저장소)**: `require_design_propagation.py`는 최상위
 `design/00-문서-정보.md`에 `## 문서 계층` > `### 장 대응표`가 있는 저장소에서만 작동합니다(그 밖의
 저장소는 통과). 표는 훅에 박혀 있지 않고 매번 그 문서에서 읽으며, 표 위에 적힌 형식 규칙(장 표기 ·
 `범위` = `전체` · `§n` · 영역 접두어, 칸은 ` · `로 나누고 없으면 `—`)을 따릅니다. 최상위 태스크를
@@ -454,23 +454,23 @@ C++에서 llvm-cov(`llvm-cov show -format=html -output-dir=coverage`)를 쓰셔�
 
 ## 더 자세한 내용이 궁금하시다면
 
-- 전체 스펙(Phase 명세, HITL 표, 설치/삭제, 파일 구성)은 `backlog doc view doc-2`
+- **전체 스펙**(Phase 명세, HITL 표, 설치/삭제, 파일 구성)은 `backlog doc view doc-2`
   에서 확인하실 수 있습니다.
-- 세션 회고와 태스크별 상세 기록은 `backlog doc list`에서 확인하실 수 있습니다.
-- 핵심 의사결정은 `backlog decision list`에서 확인하실 수 있습니다.
-- 알려진 한계와 다음 단계 후보는 `backlog draft list`에서 확인하실 수 있습니다.
+- **세션 회고와 태스크별 상세 기록**은 `backlog doc list`에서 확인하실 수 있습니다.
+- **핵심 의사결정**은 `backlog decision list`에서 확인하실 수 있습니다.
+- **알려진 한계와 다음 단계 후보**는 `backlog draft list`에서 확인하실 수 있습니다.
 
 ## 라이선스
 
-[GNU AGPL-3.0](./LICENSE) — 저장소 전체에 적용됩니다(전문: [`LICENSE`](./LICENSE), [GNU AGPL-3.0 원문](https://www.gnu.org/licenses/agpl-3.0.html)).
+[GNU AGPL-3.0-only](./LICENSE) — 저장소 전체에 적용됩니다(전문: [`LICENSE`](./LICENSE), [GNU AGPL-3.0 원문](https://www.gnu.org/licenses/agpl-3.0.html)).
 네트워크 서비스 제공이나 상용 사용 시에도 AGPL 조건에 따라 수정 소스를 공개해야 합니다.
 
-- 외부 코드 — `hooks/`의 일부 훅은 MIT 라이선스로 배포된
+- **외부 코드 —** `hooks/`의 일부 훅은 MIT 라이선스로 배포된
   [karanb192/claude-code-hooks](https://github.com/karanb192/claude-code-hooks)를 포팅한 것입니다.
   그 원 저작물에는 원래의 MIT 조건이 그대로 적용되며, 원 저작권 고지와 대상 파일 목록은
   [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)에 있습니다.
-- 상용 라이선스 — 위 외부 코드를 제외한 부분은 저작권자가 단독이므로 듀얼 라이선스가 가능합니다.
+- **상용 라이선스 —** 위 외부 코드를 제외한 부분은 저작권자가 단독이므로 듀얼 라이선스가 가능합니다.
   AGPL 조건(네트워크 서비스 제공 시 수정 소스 공개)이 맞지 않는 상용 사용은 별도로 협의합니다.
   문의: <coralstay3595@gmail.com> (또는 이 저장소의 GitHub Issue).
-- 기여 — 듀얼 라이선스 유지를 위해, 기여자는 자신의 기여를 AGPL-3.0과 상용 라이선스 양쪽으로
+- **기여 —** 듀얼 라이선스 유지를 위해, 기여자는 자신의 기여를 AGPL-3.0-only와 상용 라이선스 양쪽으로
   배포할 권리를 저작권자에게 허여하는 데 동의한 것으로 봅니다.

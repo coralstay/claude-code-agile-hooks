@@ -302,3 +302,13 @@ def test_script_runs_as_cli_task_60_1(project):
     )
     assert result.returncode == 0, result.stderr
     assert (project / "backlog" / "work-order.md").is_file()
+
+
+@pytest.mark.parametrize("flag", ["-h", "--help", "help"])
+def test_main_help_prints_usage_and_returns_zero_task_71_1(flag, capsys):
+    """TASK-71#1: -h · --help · help print the usage to stdout and exit 0."""
+    assert wo.main([flag]) == 0
+    captured = capsys.readouterr()
+    assert captured.out.startswith("사용법 (Usage): work-order [project_dir]\n")
+    assert "backlog/work-order.md" in captured.out
+    assert captured.err == ""
