@@ -4,11 +4,16 @@ title: 테스트의 git 하위 프로세스를 사용자 전역 · 시스템 · 
 status: To Do
 assignee: []
 created_date: '2026-11-05T20:31:00Z'
-updated_date: '2026-11-05T20:34:00Z'
+updated_date: '2026-11-05T21:26:00Z'
 labels:
   - tests
   - workflow
 dependencies: []
+references:
+  - source-header DRAFT-3
+  - coding-agent-git-commit-tool tests/isolated_repo.py child_env(GF-125)
+documentation:
+  - ~/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
@@ -61,3 +66,16 @@ dependencies: []
 3. AC #3: 전체 실행으로 기존 격리 테스트 확인, coverageCommand 100%.
 4. AC #4 · #5: 5회 연속 실행 로그, 사람 터미널 확인(유저).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 원인 확인(2026-11-06)
+- 테스트 커밋의 서명 실패는 Secretive 4.0.0의 쇼트 리드 결함이다. OpenSSH는 에이전트 요청을 길이 4바이트와 본문 두 번에 나눠 쓰는데(authfd.c L147-L151), Secretive는 한 번 읽은 덩어리를 메시지 하나로 처리해(SocketController.swift L93-L100) 길이만 읽으면 해석 실패 후 응답 없이 연결을 닫는다(AppDelegate.swift L59-L66) → 'communication with agent failed'. 병렬 테스트의 CPU 부하가 두 쓰기 사이를 벌려 드러났다.
+- 대조 실험: 같은 중계(길이와 본문 사이 50ms)로 Secretive 0/5, OpenSSH ssh-agent 5/5. 재현 스크립트: scratchpad repro/secretive_short_read_repro.py(upkeep으로 옮길 예정).
+- 이 카드가 고치는 것은 그 결함이 아니라 '테스트가 사용자 서명 환경을 물려받는 것'이다. 테스트 커밋은 서명할 이유가 없다.
+
+## 유저 결정(2026-11-06)
+- 방식: commit-tool(tests/isolated_repo.py child_env — GIT_CONFIG_GLOBAL 빈 파일, GIT_CONFIG_SYSTEM=/dev/null, GF-125)·source-header(TASK-3 GitCase)와 같은 관례로 이 저장소 테스트를 격리한다. 전역 ~/.gitconfig의 includeIf(임시 폴더 서명 끄기) 방식은 쓰지 않는다.
+- Secretive upstream(#577)에는 코멘트를 올리지 않는다.
+<!-- SECTION:NOTES:END -->
