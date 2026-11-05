@@ -1,0 +1,827 @@
+import io
+import json
+import os
+import subprocess
+import time
+
+import pytest
+
+import backlog_commit_scope as bcs
+
+DRAFT = "backlog/drafts/draft-1 - 새-기능.md"
+TASK = "backlog/tasks/task-7 - 새-기능.md"
+OTHER_TASK = "backlog/tasks/task-3 - 기존.md"
+DRAFT_BODY = (
+    "---\nid: DRAFT-1\ntitle: 새 기능\nstatus: Draft\nlabels: []\n---\n\n"
+    "## Description\n\n" + "긴 설명 줄입니다.\n" * 20
+)
+
+
+def git(repo, *args):
+    subprocess.run(
+        ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True
+    )
+
+
+def write(repo, rel, text="x\n"):
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+@pytest.fixture
+def repo(tmp_path):
+    git(tmp_path, "init", "-q")
+    git(tmp_path, "config", "user.email", "t@example.com")
+    git(tmp_path, "config", "user.name", "t")
+    git(tmp_path, "config", "commit.gpgsign", "false")
+    write(tmp_path, "backlog/config.yml", "project_name: t\n")
+    write(tmp_path, "src/app.py", "print(1)\n")
+    write(tmp_path, OTHER_TASK, "---\nid: TASK-3\n---\n")
+    git(tmp_path, "add", "-A")
+    git(tmp_path, "commit", "-q", "-m", "init")
+    return tmp_path
+
+
+@pytest.fixture
+def repo_with_draft(repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "draft")
+    return repo
+
+
+def promote(repo):
+    """Mimic `backlog draft promote`: move the file and rewrite its id/status."""
+    os.makedirs(repo / "backlog/tasks", exist_ok=True)
+    body = (repo / DRAFT).read_text()
+    (repo / DRAFT).unlink()
+    write(
+        repo,
+        TASK,
+        body.replace("DRAFT-1", "TASK-7").replace("status: Draft", "status: To Do"),
+    )
+
+
+def run_main(monkeypatch, cwd, command="git commit -m x"):
+    payload = {"cwd": str(cwd), "tool_input": {"command": command}}
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    with pytest.raises(SystemExit) as exc_info:
+        bcs.main()
+    return exc_info.value.code
+
+
+# --- check_scope (pure) ----------------------------------------------------
+
+
+def test_check_scope_empty_is_fine():
+    assert bcs.check_scope([]) is None
+
+
+def test_check_scope_draft_only_is_fine():
+    assert bcs.check_scope([("A", DRAFT, None)]) is None
+
+
+def test_check_scope_draft_plus_draft_edit_is_fine():
+    entries = [("A", DRAFT, None), ("M", "backlog/drafts/draft-0 - old.md", None)]
+    assert bcs.check_scope(entries) is None
+
+
+def test_check_scope_draft_mixed_is_denied():
+    msg = bcs.check_scope([("A", DRAFT, None), ("M", "src/app.py", None)])
+    assert "드래프트 생성 커밋은 드래프트만" in msg
+    assert "src/app.py" in msg
+
+
+def test_check_scope_promotion_only_is_fine():
+    assert bcs.check_scope([("R", DRAFT, TASK)]) is None
+
+
+def test_check_scope_promotion_with_task_edits_is_fine():
+    entries = [("R", DRAFT, TASK), ("M", OTHER_TASK, None)]
+    assert bcs.check_scope(entries) is None
+
+
+def test_check_scope_promotion_mixed_is_denied():
+    msg = bcs.check_scope([("R", DRAFT, TASK), ("M", "README.md", None)])
+    assert "승격 커밋은 승격만" in msg
+    assert "README.md" in msg
+
+
+def test_check_scope_unpaired_delete_add_counts_as_promotion():
+    entries = [("D", DRAFT, None), ("A", TASK, None), ("M", "src/app.py", None)]
+    assert "승격 커밋은 승격만" in bcs.check_scope(entries)
+
+
+def test_check_scope_plain_code_commit_is_fine():
+    assert bcs.check_scope([("M", "src/app.py", None), ("A", "x.py", None)]) is None
+
+
+def test_check_scope_task_edits_with_code_are_fine():
+    # A normal implementation commit touching a task file is not a promotion.
+    entries = [("M", OTHER_TASK, None), ("M", "src/app.py", None)]
+    assert bcs.check_scope(entries) is None
+
+
+# --- parse_name_status ------------------------------------------------------
+
+
+def test_parse_name_status_handles_renames_and_spaces():
+    raw = f"R089\0{DRAFT}\0{TASK}\0M\0src/a b.py\0"
+    assert bcs.parse_name_status(raw) == [
+        ("R", DRAFT, TASK),
+        ("M", "src/a b.py", None),
+    ]
+
+
+# --- main against real repos ------------------------------------------------
+
+
+def test_new_draft_alone_passes(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    git(repo, "add", DRAFT)
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_new_draft_mixed_with_code_denied(monkeypatch, capsys, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    err = capsys.readouterr().err
+    assert "드래프트 생성 커밋은 드래프트만" in err
+    assert "src/app.py" in err
+
+
+def test_promotion_alone_passes(monkeypatch, repo_with_draft):
+    promote(repo_with_draft)
+    git(repo_with_draft, "add", "-A")
+    assert run_main(monkeypatch, repo_with_draft) == 0
+
+
+def test_promotion_with_edit_of_promoted_task_passes(monkeypatch, repo_with_draft):
+    promote(repo_with_draft)
+    path = repo_with_draft / TASK
+    path.write_text(
+        path.read_text().replace("labels: []", "labels: []\nreferences: [decision-1]")
+    )
+    git(repo_with_draft, "add", "-A")
+    assert run_main(monkeypatch, repo_with_draft) == 0
+
+
+def test_promotion_mixed_with_code_denied(monkeypatch, capsys, repo_with_draft):
+    promote(repo_with_draft)
+    write(repo_with_draft, "src/app.py", "print(3)\n")
+    git(repo_with_draft, "add", "-A")
+    assert run_main(monkeypatch, repo_with_draft) == 2
+    assert "승격 커밋은 승격만" in capsys.readouterr().err
+
+
+def test_git_dash_c_commit_is_recognized(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo, f"git -C {repo} commit -m x") == 2
+
+
+def test_non_commit_command_passes(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo, "git status") == 0
+
+
+def test_non_backlog_repo_passes(monkeypatch, repo):
+    (repo / "backlog/config.yml").unlink()
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_passes_when_git_missing(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    monkeypatch.setattr(bcs, "has_command", lambda name: False)
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_passes_on_invalid_json(monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO("nope"))
+    with pytest.raises(SystemExit) as exc_info:
+        bcs.main()
+    assert exc_info.value.code == 0
+
+
+def test_initial_commit_with_mixed_draft_denied(monkeypatch, tmp_path):
+    git(tmp_path, "init", "-q")
+    write(tmp_path, "backlog/config.yml", "project_name: t\n")
+    write(tmp_path, DRAFT, DRAFT_BODY)
+    git(tmp_path, "add", "-A")
+    # config.yml is outside backlog/drafts/ -> mixed
+    assert run_main(monkeypatch, tmp_path) == 2
+
+
+# --- same-command `git add` / `commit -a` simulation -------------------------
+
+
+def test_same_command_git_add_is_simulated(monkeypatch, capsys, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    code = run_main(monkeypatch, repo, "git add src/app.py && git commit -m x")
+    assert code == 2
+    assert "src/app.py" in capsys.readouterr().err
+
+
+def test_same_command_git_add_all_is_simulated(monkeypatch, repo_with_draft):
+    promote(repo_with_draft)
+    write(repo_with_draft, "src/app.py", "print(3)\n")
+    assert run_main(monkeypatch, repo_with_draft, "git add -A && git commit -m p") == 2
+
+
+def test_simulation_sees_same_size_edit_in_the_index_write_second(
+    monkeypatch, repo_with_draft
+):
+    """TASK-43 (flaky under concurrent runs): an edit of the same size made
+    in the same second the index was written has a stat that still matches
+    the cached one; git catches it only because the entry is 'racy' (its
+    mtime isn't older than the index file's) and compares content. The
+    simulation's temp index must keep the real index's mtime, or the copy
+    looks newer, the entry looks clean and `git add -A` misses the edit.
+    Pinned with fixed mtimes; ctime is ignored as git does with
+    core.trustctime=false (otherwise the rewrite's new ctime gives it away
+    and the race needs real timing to show)."""
+    repo = repo_with_draft
+    git(repo, "config", "core.trustctime", "false")
+    then = int(time.time()) - 100
+    app = repo / "src/app.py"
+    os.utime(app, (then, then))
+    git(repo, "update-index", "--refresh")  # cached stat of app.py = then
+    os.utime(repo / ".git/index", (then, then))  # index written that second
+    promote(repo)
+    app.write_text("print(3)\n")  # same size as print(1)
+    os.utime(app, (then, then))
+    os.utime(repo / ".git/index", (then, then))
+    assert run_main(monkeypatch, repo, "git add -A && git commit -m p") == 2
+
+
+def test_same_command_git_add_of_promotion_only_passes(monkeypatch, repo_with_draft):
+    promote(repo_with_draft)
+    write(repo_with_draft, "src/app.py", "print(3)\n")  # left unstaged
+    command = "git add backlog && git commit -m 'TASK-7: 승격'"
+    assert run_main(monkeypatch, repo_with_draft, command) == 0
+
+
+def test_simulation_does_not_touch_real_index(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    run_main(monkeypatch, repo, "git add src/app.py; git commit -m x")
+    staged = subprocess.run(
+        ["git", "-C", str(repo), "diff", "--cached", "--name-only"],
+        capture_output=True,
+        text=True,
+    ).stdout
+    assert "src/app.py" not in staged
+
+
+@pytest.mark.parametrize("flag", ["-a", "--all", "-am", "-qam"])
+def test_commit_all_flag_is_simulated(monkeypatch, repo, flag):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")  # tracked, modified, unstaged
+    git(repo, "add", DRAFT)
+    command = (
+        f"git commit {flag} x" if flag.endswith("m") else f"git commit {flag} -m x"
+    )
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_message_containing_a_is_not_commit_all(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")  # unstaged, must stay out
+    git(repo, "add", DRAFT)
+    assert run_main(monkeypatch, repo, "git commit -m a") == 0
+
+
+def test_git_add_with_shell_expansion_is_not_simulated(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    # `$F` can't be resolved here; fall back to the real index (draft only).
+    assert run_main(monkeypatch, repo, "git add $F && git commit -m x") == 0
+
+
+def test_cd_before_commit_disables_simulation(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    command = "cd elsewhere && git add src/app.py && git commit -m x"
+    assert run_main(monkeypatch, repo, command) == 0
+
+
+def test_git_add_with_redirection_is_not_simulated(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    command = "git add src/app.py > /dev/null && git commit -m x"
+    assert run_main(monkeypatch, repo, command) == 0
+
+
+# --- TASK-39: only a `git commit`/`git add` in command position counts -------
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo git commit",
+        "echo /usr/bin/git commit -m x",
+        "backlog task edit TASK-1 --notes 'git commit 전에 확인'",
+        "cat <<'EOF' > notes.md\ngit commit -m x\nEOF",
+        "git status",
+    ],
+)
+def test_text_mentioning_commit_is_not_checked(monkeypatch, repo, command):
+    # Regression: these used to be judged as a commit against a mixed index.
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo, command) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "/usr/bin/git commit -m x",
+        "FOO=1 git commit -m x",
+        "sudo -E git commit -m x",
+        "echo ok && git commit -m x",
+        "(git commit -m x)",
+        "git \\\ncommit -m x",
+        'git commit -m "unterminated',
+    ],
+)
+def test_real_commit_forms_are_checked(monkeypatch, repo, command):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_heredoc_body_git_add_is_not_replayed(monkeypatch, repo):
+    # The `git add` line is heredoc text, not a command: only the draft is
+    # really staged, so the commit passes.
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    command = "cat <<'EOF' > n.txt\ngit add src/app.py\nEOF\ngit commit -m x"
+    assert run_main(monkeypatch, repo, command) == 0
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sudo git add src/app.py && git commit -m x",
+        "/usr/bin/git add src/app.py; FOO=1 git commit -m x",
+        "git add src/app.py && sudo git commit -m x",
+    ],
+)
+def test_prefixed_git_add_is_replayed(monkeypatch, repo, command):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", DRAFT)
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_prefixed_commit_all_is_simulated(monkeypatch, repo):
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, "src/app.py", "print(2)\n")  # tracked, unstaged
+    git(repo, "add", DRAFT)
+    assert run_main(monkeypatch, repo, "FOO=1 git commit -am x") == 2
+
+
+# --- staging_plan (pure) ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "command, expected",
+    [
+        ("git commit -m x", ([], False)),
+        ("git add a b && git commit -a", ([["a", "b"]], True)),
+        ("git status; git add a; git log; git commit", ([["a"]], False)),
+        ("FOO=1 git; git commit", ([], False)),
+        ("git add a && git -C /p commit -a", ([["a"]], False)),
+        ("git add a && git --no-pager commit -a", ([["a"]], False)),
+        ("git add a && GIT_DIR=/p git commit -a", ([["a"]], False)),
+        ("git -C /p add a && git commit", None),
+        ("GIT_INDEX_FILE=/tmp/i git add a && git commit", None),
+        ("cd /p && git commit", None),
+        ("sudo cd /p; git commit", None),
+        ("git add $F && git commit", None),
+        ('git commit -m "x', None),
+        ("echo git commit", None),
+        # TASK-41: a segment of only env assignments / wrapper flags has no
+        # command head; it is skipped and the later commit is still planned
+        ("FOO=1; env -i; git commit -a", ([], True)),
+        ("cat <<EOF\ngit add a\ngit commit\nEOF", None),
+    ],
+)
+def test_staging_plan(command, expected):
+    assert bcs.staging_plan(command) == expected
+
+
+# --- commit_stages_all ------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        (["--all"], True),
+        (["-a"], True),
+        (["-qa"], True),
+        (["-m", "-a"], False),
+        (["-ma"], False),
+        (["--message", "-a"], False),
+        (["--message=-a"], False),
+        (["--amend"], False),
+        (["--", "-a"], False),
+        (["-"], False),
+        (["path"], False),
+        # TASK-41: a flag cluster without `a` or an arg-taking flag doesn't
+        # end the scan - a later -a still means "stage everything"
+        (["-sv", "-a"], True),
+        (["-sv"], False),
+    ],
+)
+def test_commit_stages_all(args, expected):
+    assert bcs.commit_stages_all(args) is expected
+
+
+# --- remaining branches -----------------------------------------------------
+
+
+def test_parse_name_status_skips_empty_and_truncated_fields():
+    assert bcs.parse_name_status("\0M\0a.py\0\0D") == [("M", "a.py", None)]
+
+
+def test_parse_name_status_truncated_rename_falls_back():
+    # `R` without both paths is read as a plain entry with one path.
+    assert bcs.parse_name_status("R100\0old") == [("R", "old", None)]
+
+
+def test_is_backlog_project_false_for_empty_cwd():
+    assert bcs.is_backlog_project("") is False
+
+
+def test_has_command_real():
+    assert bcs.has_command("python3") is True
+    assert bcs.has_command("definitely-not-a-real-command-xyz") is False
+
+
+def test_staged_entries_none_outside_repo(tmp_path):
+    assert bcs.staged_entries(str(tmp_path)) is None
+
+
+def test_simulated_entries_none_outside_repo(tmp_path):
+    assert bcs.simulated_entries(str(tmp_path), [["a"]], False) is None
+
+
+def test_simulation_without_existing_index(monkeypatch, tmp_path):
+    # Fresh repo: no index file yet, the temp index starts empty.
+    git(tmp_path, "init", "-q")
+    write(tmp_path, "backlog/config.yml", "project_name: t\n")
+    write(tmp_path, DRAFT, DRAFT_BODY)
+    command = f"git add '{DRAFT}' && git commit -m x"
+    assert run_main(monkeypatch, tmp_path, command) == 0
+
+
+def test_passes_when_index_unreadable(monkeypatch, repo):
+    monkeypatch.setattr(bcs, "staged_entries", lambda cwd, env=None: None)
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_format_offenders_truncates_long_lists():
+    entries = [("M", f"src/f{i}.py", None) for i in range(bcs.MAX_LISTED + 3)]
+    listed = bcs.format_offenders(entries + [("M", "src/f0.py", None)])
+    assert "src/f9.py" in listed
+    assert f"src/f{bcs.MAX_LISTED}.py" not in listed
+    assert "... 외 3개" in listed
+
+
+# --- TASK-59#1: one new draft per commit ------------------------------------
+
+DRAFT_2 = "backlog/drafts/draft-2 - 다른-기능.md"
+
+
+def test_check_scope_two_new_drafts_denied():
+    """TASK-59#1: a commit that adds two new draft files is denied."""
+    msg = bcs.check_scope([("A", DRAFT, None), ("A", DRAFT_2, None)])
+    assert "드래프트 한 장" in msg
+    assert DRAFT in msg and DRAFT_2 in msg
+
+
+def test_check_scope_copied_draft_counts_as_new():
+    """TASK-59#1: a copy into backlog/drafts/ is a new draft too."""
+    entries = [("A", DRAFT, None), ("C", "backlog/drafts/draft-0 - x.md", DRAFT_2)]
+    assert "드래프트 한 장" in bcs.check_scope(entries)
+
+
+def test_two_new_drafts_in_one_commit_denied(monkeypatch, capsys, repo):
+    """TASK-59#1: end to end - two drafts staged together are denied."""
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, DRAFT_2, DRAFT_BODY.replace("DRAFT-1", "DRAFT-2"))
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    assert "드래프트 한 장" in capsys.readouterr().err
+
+
+def test_second_draft_added_in_same_command_denied(monkeypatch, repo):
+    """TASK-59#1: the same-command `git add` simulation sees the second draft."""
+    write(repo, DRAFT, DRAFT_BODY)
+    write(repo, DRAFT_2, DRAFT_BODY.replace("DRAFT-1", "DRAFT-2"))
+    git(repo, "add", DRAFT)
+    command = f"git add '{DRAFT_2}' && git commit -m x"
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+# --- TASK-59#2: status-transition commits carry only that task file ---------
+
+TASK_BODY = "---\nid: TASK-3\ntitle: 기존\nstatus: {}\nlabels: []\n---\n\n본문\n"
+
+
+def set_status(repo, status, rel=OTHER_TASK):
+    write(repo, rel, TASK_BODY.format(status))
+
+
+@pytest.fixture
+def repo_todo(repo):
+    set_status(repo, "To Do")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "todo")
+    return repo
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (TASK_BODY.format("In Progress"), "In Progress"),
+        ("---\nid: X\nstatus: 'Done'\n---\n", "Done"),
+        ('---\nstatus: "In Progress"  \n---\n', "In Progress"),
+        ("---\nid: X\n---\nstatus: Done\n", None),  # body, not frontmatter
+        ("status: Done\n", None),  # no frontmatter at all
+        ("---\nid: X\nstatus: Done\n", None),  # unterminated frontmatter
+        (None, None),
+    ],
+)
+def test_frontmatter_status(text, expected):
+    """TASK-59#2: the transition is read from the `status:` frontmatter key."""
+    assert bcs.frontmatter_status(text) == expected
+
+
+def test_check_scope_transition_alone_is_fine():
+    """TASK-59#2: a transition commit holding only its task file passes."""
+    assert bcs.check_scope([("M", OTHER_TASK, None)], [OTHER_TASK]) is None
+
+
+def test_check_scope_transition_with_renamed_task_file_is_fine():
+    """TASK-59#2: the task file's own rename (title change) is part of it."""
+    entries = [("R", OTHER_TASK, TASK)]
+    assert bcs.check_scope(entries, [TASK]) is None
+
+
+def test_check_scope_transition_mixed_is_denied():
+    """TASK-59#2: anything else next to the transitioning task file is denied."""
+    entries = [("M", OTHER_TASK, None), ("M", "src/app.py", None)]
+    msg = bcs.check_scope(entries, [OTHER_TASK])
+    assert "상태 전환 커밋" in msg
+    assert "src/app.py" in msg
+
+
+def test_check_scope_two_transitions_denied():
+    """TASK-59#2: two task files changing status at once are denied too."""
+    entries = [("M", OTHER_TASK, None), ("M", TASK, None)]
+    msg = bcs.check_scope(entries, [OTHER_TASK, TASK])
+    assert "상태 전환 커밋" in msg
+    assert TASK in msg and OTHER_TASK in msg
+
+
+@pytest.mark.parametrize("status", ["In Progress", "Done"])
+def test_transition_commit_alone_passes(monkeypatch, repo_todo, status):
+    """TASK-59#2: `-s "In Progress"` / `-s Done` committed on its own passes."""
+    set_status(repo_todo, status)
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+@pytest.mark.parametrize("status", ["In Progress", "Done"])
+def test_transition_commit_mixed_with_code_denied(
+    monkeypatch, capsys, repo_todo, status
+):
+    """TASK-59#2: the transition plus code in one commit is denied."""
+    set_status(repo_todo, status)
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 2
+    err = capsys.readouterr().err
+    assert "상태 전환 커밋" in err
+    assert "src/app.py" in err
+
+
+def test_transition_mixed_via_same_command_add_denied(monkeypatch, repo_todo):
+    """TASK-59#2: the simulated index is read for the staged status too."""
+    set_status(repo_todo, "Done")
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", OTHER_TASK)
+    assert run_main(monkeypatch, repo_todo, "git commit -am done") == 2
+
+
+def test_staged_status_is_judged_not_the_worktree(monkeypatch, repo_todo):
+    """TASK-59#2: a Done edit left unstaged is not a transition."""
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "src/app.py")
+    set_status(repo_todo, "Done")  # worktree only
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+@pytest.mark.parametrize("status", ["To Do", "Done"])
+def test_non_transition_task_edit_with_code_passes(monkeypatch, repo_todo, status):
+    """TASK-59#2: To Do -> To Do edits and Done -> Done edits are no transition."""
+    if status == "Done":
+        set_status(repo_todo, "Done")
+        git(repo_todo, "commit", "-qam", "done")
+    path = repo_todo / OTHER_TASK
+    path.write_text(path.read_text() + "더 적음\n")
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+def test_new_task_file_added_as_done_counts_as_transition(monkeypatch, repo):
+    """TASK-59#2: no HEAD version means the status changed (None -> Done)."""
+    set_status(repo, "Done", rel=TASK)
+    write(repo, "src/app.py", "print(9)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+
+
+def test_deleted_task_file_is_no_transition(monkeypatch, repo_todo):
+    """TASK-59#2: a staged deletion has no new status to read."""
+    git(repo_todo, "rm", "-q", OTHER_TASK)
+    write(repo_todo, "src/app.py", "print(9)\n")
+    git(repo_todo, "add", "-A")
+    assert run_main(monkeypatch, repo_todo) == 0
+
+
+def test_status_transitions_reads_head_of_the_old_path(repo_todo):
+    """TASK-59#2: for a renamed task file the HEAD side is the old path."""
+    set_status(repo_todo, "Done")
+    git(repo_todo, "commit", "-qam", "done")
+    (repo_todo / OTHER_TASK).unlink()
+    set_status(repo_todo, "Done", rel=TASK)  # Done -> Done, only renamed
+    git(repo_todo, "add", "-A")
+    entries = bcs.staged_entries(str(repo_todo))
+    assert entries == [("R", OTHER_TASK, TASK)]
+    assert bcs.status_transitions(str(repo_todo), entries) == []
+
+
+def test_read_blob_none_for_missing_object(repo):
+    """TASK-59#2: unreadable blobs (no HEAD yet, bad path) give None."""
+    assert bcs.read_blob(str(repo), "HEAD:nope.md") is None
+
+
+# --- TASK-60: work order commits ------------------------------------------------
+
+WORK_ORDER = "backlog/work-order.md"
+DEP_TASK_HEAD = "---\nid: TASK-3\ntitle: 기존\nstatus: To Do\ndependencies: []\n---\nbody\n"
+
+
+@pytest.fixture
+def repo_with_deps(repo):
+    write(repo, OTHER_TASK, DEP_TASK_HEAD)
+    write(repo, "backlog/tasks/task-4 - 다른.md", DEP_TASK_HEAD.replace("TASK-3", "TASK-4"))
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "tasks")
+    return repo
+
+
+def with_deps(text, deps):
+    lines = "".join(f"  - {d}\n" for d in deps)
+    return text.replace("dependencies: []\n", "dependencies:\n" + lines)
+
+
+def test_check_scope_work_order_alone_is_fine_task_60_3():
+    """TASK-60#3: the work order commit may hold just work-order.md."""
+    assert bcs.check_scope([("A", WORK_ORDER, None)]) is None
+    assert bcs.check_scope([("M", WORK_ORDER, None)]) is None
+
+
+def test_check_scope_work_order_with_dep_changed_tasks_is_fine_task_60_3():
+    entries = [("M", WORK_ORDER, None), ("M", OTHER_TASK, None)]
+    seen = []
+
+    def changed(old, new):
+        seen.append((old, new))
+        return True
+
+    assert bcs.check_scope(entries, deps_changed=changed) is None
+    assert seen == [(OTHER_TASK, OTHER_TASK)]
+
+
+def test_check_scope_work_order_with_unchanged_deps_task_is_denied_task_60_3():
+    entries = [("M", WORK_ORDER, None), ("M", OTHER_TASK, None)]
+    msg = bcs.check_scope(entries, deps_changed=lambda old, new: False)
+    assert "작업 순서 커밋" in msg
+    assert OTHER_TASK in msg
+    assert "작업 순서 커밋" in bcs.check_scope(entries)  # no judge: not proven
+
+
+def test_check_scope_work_order_with_code_or_new_task_is_denied_task_60_3():
+    yes = lambda old, new: True  # noqa: E731
+    for other in [
+        ("M", "src/app.py", None),
+        ("A", "backlog/tasks/task-9 - 새.md", None),
+        ("D", OTHER_TASK, None),
+        ("M", "backlog/config.yml", None),
+    ]:
+        msg = bcs.check_scope([("M", WORK_ORDER, None), other], deps_changed=yes)
+        assert msg and other[1] in msg, other
+
+
+def test_check_scope_work_order_with_renamed_task_uses_both_paths_task_60_3():
+    renamed = "backlog/tasks/task-3 - 새-이름.md"
+    seen = []
+    entries = [("M", WORK_ORDER, None), ("R", OTHER_TASK, renamed)]
+    assert bcs.check_scope(entries, deps_changed=lambda o, n: seen.append((o, n)) or True) is None
+    assert seen == [(OTHER_TASK, renamed)]
+
+
+def test_work_order_commit_with_dep_edit_passes_task_60_3(monkeypatch, repo_with_deps):
+    repo = repo_with_deps
+    write(repo, OTHER_TASK, with_deps(DEP_TASK_HEAD, ["TASK-4"]))
+    write(repo, WORK_ORDER, "order\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 0
+
+
+def test_work_order_commit_with_non_dep_task_edit_denied_task_60_3(
+    monkeypatch, capsys, repo_with_deps
+):
+    repo = repo_with_deps
+    write(repo, OTHER_TASK, DEP_TASK_HEAD.replace("title: 기존", "title: 바뀐 제목"))
+    write(repo, WORK_ORDER, "order\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    err = capsys.readouterr().err
+    assert OTHER_TASK in err
+    assert "backlog/work-order.md" in err
+
+
+def test_work_order_commit_with_code_denied_task_60_3(monkeypatch, capsys, repo):
+    write(repo, WORK_ORDER, "order\n")
+    write(repo, "src/app.py", "print(2)\n")
+    git(repo, "add", "-A")
+    assert run_main(monkeypatch, repo) == 2
+    assert "src/app.py" in capsys.readouterr().err
+
+
+def test_work_order_commit_simulated_same_command_add_task_60_3(
+    monkeypatch, repo_with_deps
+):
+    """TASK-60#3: the staged task content is read from the simulated index."""
+    repo = repo_with_deps
+    write(repo, OTHER_TASK, with_deps(DEP_TASK_HEAD, ["TASK-4"]))
+    write(repo, WORK_ORDER, "order\n")
+    command = "git add backlog && git commit -m 'TASK-60: 작업 순서'"
+    assert run_main(monkeypatch, repo, command) == 0
+    write(repo, "backlog/tasks/task-4 - 다른.md", "---\nid: TASK-4\ntitle: x\n---\n")
+    write(repo, OTHER_TASK, DEP_TASK_HEAD.replace("body", "body2"))
+    assert run_main(monkeypatch, repo, command) == 2
+
+
+def test_dependencies_changed_reads_head_and_index_task_60_3(repo_with_deps):
+    repo = repo_with_deps
+    assert not bcs.dependencies_changed(str(repo), OTHER_TASK, OTHER_TASK)
+    write(repo, OTHER_TASK, with_deps(DEP_TASK_HEAD, ["task-4"]))
+    assert not bcs.dependencies_changed(str(repo), OTHER_TASK, OTHER_TASK)  # unstaged
+    git(repo, "add", OTHER_TASK)
+    assert bcs.dependencies_changed(str(repo), OTHER_TASK, OTHER_TASK)
+    # path missing at HEAD, or not a task file: not a dependency change
+    assert not bcs.dependencies_changed(str(repo), "backlog/tasks/none.md", OTHER_TASK)
+    write(repo, "notes.md", "no frontmatter\n")
+    git(repo, "add", "notes.md")
+    git(repo, "commit", "-q", "-m", "n")
+    write(repo, "notes.md", "still none\n")
+    git(repo, "add", "notes.md")
+    assert not bcs.dependencies_changed(str(repo), "notes.md", "notes.md")
+
+
+def test_parse_task_helpers_task_60_3():
+    fm = bcs.parse_frontmatter(
+        "---\n  stray\ntitle: >-\n  a\n  b\nl: [x, 'y''s', \"z\"]\ne: []\nd:\n  - >-\n    z\n-\n---\n"
+    )
+    assert fm == {"title": "a b", "l": ["x", "y's", "z"], "e": [], "d": [">-", ""]}
+    assert bcs.parse_frontmatter("") == {}
+    assert bcs.parse_frontmatter("---\nid: X") == {"id": "X"}
+    assert bcs.parse_task("---\ntitle: x\n---\n") is None
+    assert bcs.parse_task("---\nid: t-1\ndependencies: t-0\n---\n")["deps"] == ["T-0"]

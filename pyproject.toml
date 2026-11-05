@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+testpaths = ["hooks", "scripts"]
+
+[tool.coverage.run]
+source = ["hooks", "scripts"]
+omit = ["*/test_*.py"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_also = ["if __name__ == .__main__.:"]

@@ -1,0 +1,449 @@
+#!/usr/bin/env python3
+"""PreToolUse (matcher: Bash, if: Bash(git *))
+The 27 hooks in this repo are deliberately self-contained (no shared
+imports between hook files - see require_active_task.py's module
+docstring), which means some functions are hand-copied across several
+files. That's exactly how a 2026-09-18 bug happened: a fix to
+`is_backlog_project()` landed in require_active_task.py but never
+propagated to its four other copies (see decision-2 in this repo's
+backlog for the full writeup).
+
+hooks/test_dedup_registry.py already catches this class of bug at the
+pytest level, but only if someone actually runs pytest. This hook makes
+the same check physically block `git commit` at commit time.
+
+REGISTRY maps a function name to the list of hook files (relative to
+hooks/) in which it must appear byte-for-byte-equivalent (compared via
+normalized AST, so comments/formatting differences don't matter, but any
+behavioral difference does). The checked repo's own REGISTRY (read as data
+from its hooks/dedup_drift_guard.py) takes precedence over the one embedded
+here; see load_repo_registry() (TASK-40).
+
+TASK-46: the `if: Bash(git *)` filter is kept on purpose. It matches the
+command text per subcommand (measured 2026-10-04), so `/usr/bin/git commit`
+and `FOO=1 git commit` skip this check - accepted, because this is a drift
+detector rather than a security control and test_dedup_registry.py catches
+the same drift in the test suite. The gap is listed with that reason in
+hooks/test_hook_registration_contract.py (`hidden_ok`).
+
+Fully self-contained: no imports from any other file in this repo."""
+
+import ast
+import json
+import os
+import shlex
+import sys
+
+REGISTRY = {
+    "is_backlog_project": [
+        "require_active_task.py",
+        "pre_commit_check.py",
+        "pre_push_check.py",
+        "block_stop_if_dirty.py",
+        "session_start.py",
+        "require_draft_first.py",
+        "backlog_commit_scope.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_test_layout.py",
+        "require_coverage_on_done.py",
+    ],
+    "has_command": [
+        "block_stop_if_dirty.py",
+        "pre_commit_check.py",
+        "pre_push_check.py",
+        "require_active_task.py",
+        "session_start.py",
+        "backlog_commit_scope.py",
+        "require_test_first.py",
+        "require_stage_committed.py",
+    ],
+    "has_active_task": [
+        "block_stop_if_dirty.py",
+        "pre_commit_check.py",
+        "require_active_task.py",
+    ],
+    "run_shell": [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-54: .claude-code-agile-hooks.json 우선, 옛 .claude-rails.json fallback
+    "project_config_path": [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_test_layout.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-29: 셸 명령을 세그먼트 단위로 나누는 토크나이저(드래프트 워크플로 훅 2개)
+    "tokenize": [
+        "require_draft_first.py",
+        "backlog_commit_scope.py",
+        "pipeline_trace.py",
+        "pre_push_check.py",
+        "config_guard.py",
+        "pre_git_safety_check.py",
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_coverage_on_done.py",
+        "require_design_propagation.py",  # TASK-63
+    ],
+    "split_segments": [
+        "require_draft_first.py",
+        "backlog_commit_scope.py",
+        "pipeline_trace.py",
+        "pre_push_check.py",
+        "config_guard.py",
+        "pre_git_safety_check.py",
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_coverage_on_done.py",
+        "require_design_propagation.py",  # TASK-63
+    ],
+    # TASK-32: pipeline_trace.py가 드래프트 명령 감지(heredoc 제외)와
+    # 프로젝트 안/밖 판정(TASK-27 realpath 로직)을 그대로 복사해 쓴다
+    "strip_heredoc_bodies": [
+        "require_draft_first.py",
+        "pipeline_trace.py",
+        "pre_push_check.py",
+        "pre_git_safety_check.py",
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_coverage_on_done.py",
+        "require_design_propagation.py",  # TASK-63
+    ],
+    # TASK-34: pre_push_check.py가 명령 위치의 git push만 판정하도록
+    # pipeline_trace.py의 명령 위치 판정(env 할당·래퍼 건너뛰기)을 그대로 복사해 쓴다
+    # TASK-37: pre_git_safety_check.py도 같은 4개 헬퍼를 그대로 복사해 쓴다
+    # TASK-39: pre_commit_check.py·pre_push_coverage_check.py·
+    # backlog_commit_scope.py도 같은 헬퍼로 명령 위치의 git 하위 명령만 판정한다
+    "command_head": [
+        "pipeline_trace.py",
+        "pre_push_check.py",
+        "config_guard.py",
+        "pre_git_safety_check.py",
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_coverage_on_done.py",
+        "require_design_propagation.py",  # TASK-63
+    ],
+    "git_subcommand_index": [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
+    ],
+    "command_runs_git": [
+        "pre_commit_check.py",
+        "pre_push_coverage_check.py",
+        "backlog_commit_scope.py",
+    ],
+    "is_outside_project": [
+        "require_active_task.py",
+        "pipeline_trace.py",
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    # TASK-61: require_test_layout.py가 testFirst.testGlobs를 같은 의미로 읽도록
+    # require_test_first.py의 glob 헬퍼를 그대로 복사해 쓴다
+    "is_glob_list": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "glob_regex": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "glob_matches": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    "matches_any": [
+        "require_test_first.py",
+        "require_test_layout.py",
+    ],
+    # TASK-31: Stop payload의 background_tasks로 parallel_session을 판정하는 헬퍼
+    "background_tasks_running": [
+        "block_stop_if_dirty.py",
+        "context_flags.py",
+    ],
+    # TASK-60: require_work_order.py가 작업 순서 해시를 직접 다시 계산하도록
+    # scripts/work_order.py의 헬퍼를 그대로 복사해 쓴다(hooks/ 기준 상대 경로).
+    # backlog_commit_scope.py도 작업 순서 커밋의 의존 변경 판정에 앞의 둘을 쓴다
+    "parse_frontmatter": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "parse_task": [
+        "../scripts/work_order.py",
+        "require_work_order.py",
+        "backlog_commit_scope.py",
+    ],
+    "natural_key": ["../scripts/work_order.py", "require_work_order.py"],
+    "read_tasks": ["../scripts/work_order.py", "require_work_order.py"],
+    "incomplete_tasks": ["../scripts/work_order.py", "require_work_order.py"],
+    "input_hash": ["../scripts/work_order.py", "require_work_order.py"],
+    # TASK-62: 완료(-s Done) 시점 커버리지 게이트 require_coverage_on_done.py가
+    # require_test_first.py의 Done 이동 판정과 push 게이트의 언어 감지 ·
+    # 설정 읽기를 그대로 복사해 쓴다
+    "segment_done_target": [
+        "require_test_first.py",
+        "require_coverage_on_done.py",
+        "require_design_propagation.py",  # TASK-63
+    ],
+    "done_targets": [
+        "require_test_first.py",
+        "require_coverage_on_done.py",
+        "require_design_propagation.py",  # TASK-63
+    ],
+    "configured_coverage_command": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "language_manifests": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "detect_languages": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "missing_command_payload": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-62#3: 커버리지 실행과 언어별 리포트(이번 실행 이후 mtime) 확인
+    "default_report_paths": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "configured_report_dir": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "report_paths": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "fresh_report": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    "coverage_verdict": [
+        "pre_push_coverage_check.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-63: require_design_propagation.py가 require_test_first.py의
+    # `backlog task edit <ID> -s Done` 명령 위치 판정(segment_done_target ·
+    # done_targets · same_task)을 그대로 복사해 쓴다
+    "same_task": [
+        "require_test_first.py",
+        "require_design_propagation.py",
+    ],
+    # current_branch()는 파일마다 반환값 계약이 다르다(빈 문자열 vs None) —
+    # 의도된 차이로 보이므로 REGISTRY에 등록하지 않는다.
+}
+
+FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+
+
+# TASK-39: once copied into four hooks; the other three now use the
+# command-position helpers (command_runs_git), so this single copy is no
+# longer in REGISTRY. It still looks at the word after any `git` token, so
+# `echo git commit` runs the (cheap, read-only) drift check - accepted.
+def command_invokes_git_subcommand(command, subcommand):
+    """True if `command` runs `git <subcommand>` anywhere, regardless of
+    global flags (like `-C <path>`) placed before the subcommand."""
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return subcommand in command
+
+    i = 0
+    while i < len(tokens):
+        if os.path.basename(tokens[i]) != "git":
+            i += 1
+            continue
+        j = i + 1
+        while j < len(tokens):
+            tok = tokens[j]
+            if tok in FLAGS_WITH_ARG:
+                j += 2
+                continue
+            if tok.startswith("-"):
+                j += 1
+                continue
+            if tok == subcommand:
+                return True
+            break
+        i = j
+    return False
+
+
+def valid_registry(value):
+    """True if `value` has REGISTRY's shape: dict of str -> list of
+    non-empty str."""
+    return isinstance(value, dict) and all(
+        isinstance(name, str)
+        and isinstance(files, list)
+        and all(isinstance(f, str) and f for f in files)
+        for name, files in value.items()
+    )
+
+
+def load_repo_registry(hooks_dir):
+    """TASK-40: returns the REGISTRY of the checked repo's own
+    hooks/dedup_drift_guard.py, or None if it can't be used. The installed
+    copy otherwise judges the repo with its own (possibly stale) REGISTRY,
+    which blocks every commit that edits the repo REGISTRY.
+
+    Read as data only - the file is parsed with `ast` and just the last
+    top-level `REGISTRY = {...}` is evaluated with ast.literal_eval, so
+    nothing from the repo is imported or executed (self-contained design,
+    decision-3). Read from the working tree, the same snapshot find_drift()
+    reads the hook copies from.
+
+    The repo REGISTRY is trusted as-is, even if emptied or weakened: it is
+    the reviewed source of truth, and this guard is a drift detector, not a
+    security control."""
+    path = os.path.join(hooks_dir, "dedup_drift_guard.py")
+    try:
+        with open(path) as f:
+            tree = ast.parse(f.read(), filename=path)
+    except (OSError, SyntaxError, ValueError):
+        return None
+    value_node = None
+    for node in tree.body:
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "REGISTRY"
+        ):
+            value_node = node.value
+    if value_node is None:
+        return None
+    try:
+        value = ast.literal_eval(value_node)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return None
+    return value if valid_registry(value) else None
+
+
+def registry_files_present(hooks_dir, registry=REGISTRY):
+    """Self-guard: only act inside claude-code-agile-hooks's own hooks/ directory. If
+    any file the REGISTRY references is missing, this isn't that repo -
+    stay quiet."""
+    all_files = {f for files in registry.values() for f in files}
+    return all(os.path.isfile(os.path.join(hooks_dir, f)) for f in all_files)
+
+
+def function_ast_dump(path, function_name):
+    """Returns the normalized AST dump of `function_name` defined in
+    `path`, or None if the file can't be parsed or the function isn't
+    defined there."""
+    try:
+        with open(path) as f:
+            source = f.read()
+        tree = ast.parse(source, filename=path)
+    except (OSError, SyntaxError):
+        return None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == function_name:
+            return ast.dump(node, annotate_fields=False, include_attributes=False)
+    return None
+
+
+def find_drift(hooks_dir, registry=REGISTRY):
+    """Returns a list of human-readable problem descriptions, one per
+    (function, files) registry entry that has drifted or is missing
+    somewhere. Empty list means everything matches."""
+    problems = []
+    for function_name, files in registry.items():
+        dumps = {}
+        for filename in files:
+            path = os.path.join(hooks_dir, filename)
+            dumps[filename] = function_ast_dump(path, function_name)
+
+        missing = [f for f, d in dumps.items() if d is None]
+        present = {f: d for f, d in dumps.items() if d is not None}
+
+        if missing:
+            problems.append(
+                f"- {function_name}(): 다음 파일에서 함수를 찾을 수 없습니다 (파싱 실패 또는 "
+                f"함수 없음): {', '.join(sorted(missing))}"
+            )
+
+        if len(set(present.values())) > 1:
+            baseline_file = next(iter(present))
+            baseline_dump = present[baseline_file]
+            mismatched = [
+                f
+                for f, d in present.items()
+                if d != baseline_dump and f != baseline_file
+            ]
+            problems.append(
+                f"- {function_name}(): {baseline_file} 기준과 다른 파일: {', '.join(sorted(mismatched))}"
+            )
+
+    return problems
+
+
+def deny(message):
+    print(message, file=sys.stderr)
+    sys.exit(2)
+
+
+def main():
+    try:
+        data = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        data = {}
+
+    cwd = data.get("cwd", "")
+    command = (data.get("tool_input") or {}).get("command", "")
+
+    if not command_invokes_git_subcommand(command, "commit"):
+        sys.exit(0)
+
+    hooks_dir = os.path.join(cwd, "hooks")
+    registry = load_repo_registry(hooks_dir)
+    if registry is None:
+        registry = REGISTRY
+    if not registry_files_present(hooks_dir, registry):
+        sys.exit(0)
+
+    problems = find_drift(hooks_dir, registry)
+    if problems:
+        deny(
+            "[claude-code-agile-hooks] 복붙된 훅 함수가 사본 간에 어긋났습니다 (dedup drift). "
+            "모든 사본을 동일하게 수정한 뒤 다시 커밋하세요:\n" + "\n".join(problems)
+        )
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

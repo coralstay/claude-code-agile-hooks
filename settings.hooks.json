@@ -1,0 +1,335 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/session_start.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/session_logger.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dead_rules_audit.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/standup_autopilot.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/bounty_board.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/context_flags.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/recap_archive.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/instructions_audit.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/session_logger.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dead_end_registry.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pipeline_trace.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_active_task.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dead_end_registry.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_test_first.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_test_layout.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pre_commit_check.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/backlog_commit_scope.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_draft_first.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_implementation_plan.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_stage_committed.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_work_order.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_test_first.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_design_propagation.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dedup_drift_guard.py",
+            "if": "Bash(git *)"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pre_push_check.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pre_push_coverage_check.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/require_coverage_on_done.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/block_dangerous_commands.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pre_git_safety_check.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/case_insensitive_guard.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pr_provenance_stamp.py",
+            "if": "Bash(gh pr create*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/protect_secrets.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/protect_tests.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/config_guard.py"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/instructions_audit.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/session_logger.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/nerf_receipts.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pipeline_trace.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/auto_stage.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dead_rules_audit.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/bounty_board.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/context_hogs.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/nerf_receipts.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/block_stop_if_dirty.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/reserved_tag_guard.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/nerf_receipts.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/standup_autopilot.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/context_flags.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pipeline_trace.py"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/session_logger.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/dead_rules_audit.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/standup_autopilot.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/recap_archive.py"
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "user_settings|project_settings|local_settings|policy_settings|skills",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/config_watch.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/pre_compact_backup.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/context_flags.py"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/permission_auto_allow.py"
+          }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/.claude/hooks/claude-code-agile-hooks/instructions_audit.py"
+          }
+        ]
+      }
+    ]
+  }
+}
