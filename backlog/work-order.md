@@ -1,4 +1,4 @@
-<!-- work-order-hash: 65ccee9eac69d312b4cb84145847964014b7b76abb44327aa54fd6eccf45e54b -->
+<!-- work-order-hash: d633b9e822fcc947e7d2c5144a8908f9f893a744a9863365ff2e58cb1f25e121 -->
 # 작업 순서
 
 `work_order.py`가 backlog/tasks의 의존(`dependencies`)으로 만든 파일이다 — 직접 고치지 말고 다시 생성한다. 같은 단계의 태스크는 병렬로, 단계는 위에서 아래로 순차로 진행한다. Done 태스크와 없는 태스크에 대한 의존은 충족된 것으로 본다.
@@ -9,9 +9,8 @@
 | 1 | TASK-65 | 설계 문서로 이 저장소의 현행 동작 방식을 정의한다(코드 기준 있는 그대로) — 최상위 TASK-15 · 17 · 18 · 19 전파 포함 |
 | 1 | TASK-67 | 설치본에만 있던 변경(project_root · 테스트 타임아웃)을 저장소로 회수하고, pre_commit · pre_push가 명령의 대상 저장소를 보게 고친다 |
 | 1 | TASK-69 | testFirst Done 게이트에서 '(수동)'으로 끝나는 AC · DoD는 테스트 표식을 요구하지 않는다(비즈니스 규칙은 예외 없음) |
-| 1 | TASK-74 | 테스트의 git 하위 프로세스를 사용자 전역 · 시스템 · 환경 변수 git 설정에서 격리한다(서명 간헐 실패 · Touch ID 폭주) |
+| 1 | TASK-72 | 사람 서명 판정을 사람 키 지문으로 고정한다(allowed_signers · humanSigners · 로컬 allowedSignersFile 우회 차단) |
 | 2 | TASK-68 | 착수 검사(계획 승인 · 형식 · 작업 순서)를 task 브랜치 생성 · 전환 때도 걸고, Edit/Write 게이트가 현재 task 브랜치 카드의 In Progress를 확인하게 한다 |
 | 2 | TASK-70 | task 브랜치의 커밋 메시지에 그 태스크 ID가 없으면 git commit을 거부한다(RAIL-025) |
-| 2 | TASK-72 | 사람 서명 판정을 사람 키 지문으로 고정한다(allowed_signers · humanSigners · 로컬 allowedSignersFile 우회 차단) |
+| 2 | TASK-73 | 수동 검증 Done 게이트: [수동 검증] 항목은 증거 줄 + 사람 서명 Manual-Verified(Card-Digest)로 통과, 승인 시점 대비 변경 · 브랜치 무관 Done 차단 |
 | 3 | TASK-66 | require_design_propagation: 태스크 변경을 브랜치 범위가 아니라 커밋 메시지의 태스크 ID로 고른다(쌓인 브랜치 · 브랜치 없음 대응) |
-| 3 | TASK-73 | 수동 검증 Done 게이트: [수동 검증] 항목은 증거 줄 + 사람 서명 Manual-Verified(Card-Digest)로 통과, 승인 시점 대비 변경 · 브랜치 무관 Done 차단 |
