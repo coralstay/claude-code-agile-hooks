@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-05T18:54:00Z'
-updated_date: '2026-11-05T22:23:00Z'
+updated_date: '2026-11-05T23:29:00Z'
 labels:
   - security
   - workflow
@@ -37,6 +37,7 @@ documentation:
 - B3 (AC #3) 서명을 읽는 git 호출은 저장소 · 전역 설정과 무관하게 gpg.ssh.allowedSignersFile=$HOME/.ssh/allowed_signers를 쓴다
 - B4 (AC #5) 지문 목록 파일이 없거나 비었거나 형식이 틀리면 승인 게이트는 거부한다(fail-closed)
 - B5 (AC #6) 지문 목록 파일은 설치된 훅과 같은 디렉터리(~/.claude/hooks/claude-code-agile-hooks/human-signers)에서만 읽는다 — 환경 변수 · 프로젝트 설정으로 경로를 바꿀 수 없다
+- B6 (AC #7) 서명을 읽는 git 호출은 서명 검증 프로그램도 고정한다(gpg.ssh.program=ssh-keygen, gpg.program=gpg, gpg.x509.program=gpgsm) — 저장소 · 전역 설정과 환경 변수로 검증 프로그램을 바꿔 판정을 지어낼 수 없다
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -47,6 +48,7 @@ documentation:
 - [ ] #4 지문 목록에 있는 키의 유효 서명(G)은 통과하고, 거부 메시지가 missing · invalid · not_human(지문 불일치)을 구별한다
 - [ ] #5 지문 목록 파일이 없거나 비었거나 형식이 틀리면 거부하고 만드는 방법(ssh-keygen -lf <사람 공개키>)을 안내한다
 - [ ] #6 지문 목록 파일은 훅 파일 옆에서만 읽고, 그 경로 쓰기가 config_guard에 막힘을 테스트로 고정한다
+- [ ] #7 저장소 로컬 · 전역 설정이나 환경 변수로 gpg.ssh.program · gpg.program · gpg.x509.program을 가짜 프로그램으로 바꿔도 판정이 바뀌지 않는다(가짜가 '사람 지문 G'를 지어내도 거부)
 <!-- AC:END -->
 
 ## Definition of Done
@@ -76,4 +78,8 @@ documentation:
 2. AC #5 · #6: 지문 파일 로딩(형식: 한 줄에 SHA256:… 하나, # 주석 허용) · fail-closed 메시지 테스트 → 구현. config_guard 테스트에 human-signers 경로 쓰기 차단 추가.
 3. REGISTRY에 human_signature 등록, README · CLAUDE.md.snippet · install.sh 안내, coverageCommand 100%.
 4. 유저가 install.sh 실행 · 지문 파일 작성 → 실제 저장소에서 확인(DoD #3).
+
+### 계획 변경(2026-11-06, 유저 결정 — 다시 승인 필요)
+구현 검증 중 남은 우회를 재현했다: 저장소 로컬 gpg.ssh.program을 가짜 스크립트로 바꾸면 AI 서명 커밋도 git이 'G + 사람 지문 + human'으로 보고해 지문 판정까지 통과한다. 명령줄 -c gpg.ssh.program=ssh-keygen 고정 시 다시 U(거부). 유저 결정: 맥락상 이 카드에서 막는다.
+5. AC #7: 가짜 검증 프로그램 시나리오 테스트 먼저(gpg.ssh.program · gpg.program · gpg.x509.program, 저장소 로컬 · 전역 · 환경 변수) → git_log()에 -c 고정 추가(ssh-keygen은 PATH에서 찾는다 — 훅 프로세스의 PATH는 Claude Code 환경에서 오고 저장소 설정으로 바꿀 수 없음, 판단을 주석에 남김). README 반영.
 <!-- SECTION:PLAN:END -->
