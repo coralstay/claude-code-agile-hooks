@@ -1,10 +1,10 @@
 ---
 id: TASK-74
 title: 테스트의 git 하위 프로세스를 사용자 전역 · 시스템 · 환경 변수 git 설정에서 격리한다(서명 간헐 실패 · Touch ID 폭주)
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-05T20:31:00Z'
-updated_date: '2026-11-05T21:26:00Z'
+updated_date: '2026-11-05T21:30:00Z'
 labels:
   - tests
   - workflow
