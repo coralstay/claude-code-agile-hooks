@@ -4,7 +4,7 @@ title: 테스트의 git 하위 프로세스를 사용자 전역 · 시스템 · 
 status: In Progress
 assignee: []
 created_date: '2026-11-05T20:31:00Z'
-updated_date: '2026-11-05T21:51:00Z'
+updated_date: '2026-11-05T21:54:00Z'
 labels:
   - tests
   - workflow
@@ -42,7 +42,7 @@ documentation:
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
 - [x] #2 [수동 검증] install.sh가 conftest.py를 설치본에 함께 복사하는지 확인하고(설치본 옆 테스트 실행 시에도 격리), 필요하면 반영한다
-- [ ] #3 [수동 검증] source-header DRAFT-3에 이 저장소 분 완료를 기록한다(commit-tool 분은 그쪽 카드)
+- [x] #3 [수동 검증] source-header DRAFT-3에 이 저장소 분 완료를 기록한다(commit-tool 분은 그쪽 카드)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -86,4 +86,6 @@ documentation:
 - 참고: 같은 5회 동안 키 목록 요청(REQUEST_IDENTITIES)은 135건 = 실행당 27건, 모두 test_require_implementation_plan.py(자체 키 파일로 서명할 때 ssh-keygen이 에이전트에 키 보유를 묻는 것). 서명 · 알림 없음. 이 카드 범위(git 설정) 밖이라 그대로 둠 — SSH_AUTH_SOCK까지 지울지는 유저 판단
 - 증거: TASK-74#D1 — 메인 세션 `coverageCommand`: hooks/conftest.py 100%, TOTAL 5575 stmts · 2312 branches 100%, 2453 passed
 - 증거: TASK-74#D2 — install.sh `cp "$REPO_DIR"/hooks/*.py`가 conftest.py와 새 테스트도 설치본에 복사 → 설치본 옆 테스트도 격리됨. conftest.py는 settings.hooks.json에 등록되지 않아 런타임 영향 없음. install.sh 수정 불필요
+
+- 증거: TASK-74#D3 — source-header DRAFT-3에 이 저장소 분 완료 기록(source-header 625e3da)
 <!-- SECTION:NOTES:END -->
