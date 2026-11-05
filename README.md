@@ -125,7 +125,7 @@ flowchart TB
 | PreToolUse: Bash                    | [`require_coverage_on_done.py`](hooks/require_coverage_on_done.py) | 🔒 backlog | `backlog task edit <ID> -s Done` 전 같은 커버리지 게이트 |
 | PreToolUse: Bash                    | [`pre_git_safety_check.py`](hooks/pre_git_safety_check.py)         | 범용       | main 직접 push/파괴적 gh 차단     |
 | PreToolUse: Bash                    | [`require_draft_first.py`](hooks/require_draft_first.py)           | 🔒 backlog | `backlog task create` 차단, 드래프트 경유 안내 |
-| PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 사람 서명자(`humanSigners`)가 서명한 `Plan-Approved: <ID>` 커밋(계획 승인)까지 없으면 `-s "In Progress"` 차단 |
+| PreToolUse: Bash                    | [`require_implementation_plan.py`](hooks/require_implementation_plan.py) | 🔒 backlog | SOAP 구현 계획·AC·DoD 없으면 `draft promote` 차단, 거기에 사람 키(지문 목록 `human-signers`)로 서명한 `Plan-Approved: <ID>` 커밋(계획 승인)까지 없으면 `-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_stage_committed.py`](hooks/require_stage_committed.py)   | 🔒 backlog | 커밋 안 된 `backlog/` 변경이 있으면 다음 단계 명령(draft create·promote·`-s "In Progress"`·`-s Done`) 차단 |
 | PreToolUse: Bash                    | [`require_work_order.py`](hooks/require_work_order.py)             | 🔒 backlog | `backlog/work-order.md`가 없거나 낡으면 다음 `draft promote`·`-s "In Progress"` 차단 |
 | PreToolUse: Bash                    | [`require_test_first.py`](hooks/require_test_first.py)             | 🔒 backlog | (opt-in `testFirst`) 모든 AC·규칙·DoD 표식 없으면 `backlog task edit <ID> -s Done` 차단 |
@@ -322,14 +322,26 @@ git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow
 ```
 
 훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Plan-Approved: <ID>`인 커밋을 찾고, 그중 하나라도
-`git log --format=%G?`가 `G`(유효한 서명)이고 서명자 principal(`%GS`)이 프로젝트 설정의
-`humanSigners`에 있어야 통과시킵니다. 승인 커밋이 없을 때, 서명이 유효하지 않을 때(`%G?` ≠ `G`),
-사람이 아닌 서명자가 서명했을 때를 구분해 안내합니다. 훅은 계획 승인 커밋을 만들지 않고, Claude도
-만들지 않습니다 — 유저에게 리뷰와 계획 승인을 요청합니다.
+`git log --format=%G?`가 `G`(유효한 서명)이고 서명 키 지문(`%GK`)이 사람 키 지문 목록에 있어야
+통과시킵니다. 서명자 principal(`%GS`)과 프로젝트 설정의 `humanSigners`는 판정에 쓰지 않습니다
+(설정에 남아 있으면 '더 이상 쓰지 않음'만 안내합니다). 서명은 저장소 · 전역 git 설정과 무관하게
+`-c gpg.ssh.allowedSignersFile=$HOME/.ssh/allowed_signers`로 검증합니다. 승인 커밋이 없을 때,
+서명이 유효하지 않을 때(`%G?` ≠ `G`), 지문 목록에 없는 키가 서명했을 때(그 `%GK`를 보여 줌)를 구분해
+안내합니다. 훅은 계획 승인 커밋을 만들지 않고, Claude도 만들지 않습니다 — 유저에게 리뷰와 계획 승인을
+요청합니다.
 
-```json
-{ "humanSigners": ["human"] }
+**사람 키 지문 목록** `~/.claude/hooks/claude-code-agile-hooks/human-signers`: 설치된 훅 파일과 같은
+디렉터리에서만 읽고(환경 변수 · 프로젝트 설정으로 경로를 바꿀 수 없음), `config_guard.py`가 이
+디렉터리 쓰기를 막으므로 사람이 직접 만듭니다. `install.sh`는 이 파일을 만들지 않습니다. 이 파일이
+없거나 비었거나 형식이 틀리면 **모든 프로젝트에서** `-s "In Progress"`가 막힙니다(fail-closed).
+
+```bash
+ssh-keygen -lf ~/.ssh/<사람 키>.pub          # 256 SHA256:AbC…xyz human (ED25519) — 두 번째 칸이 지문
+echo 'SHA256:AbC…xyz' >> ~/.claude/hooks/claude-code-agile-hooks/human-signers
 ```
+
+한 줄에 `SHA256:<base64>` 지문 하나, 빈 줄과 `#` 주석 줄은 허용합니다. 사람 키가 여럿이면 줄을
+더합니다.
 
 사람과 Claude를 서명으로 구분하려면 키를 둘로 나눕니다(사람이 직접 설정합니다).
 
@@ -338,15 +350,15 @@ git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow
   `"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.signingkey", "GIT_CONFIG_VALUE_0": "<AI 키 .pub 파일의 절대 경로>"`.
 - **사람 키**: 기존 키는 ssh-agent에서 내려(`ssh-add -d`) 서명할 때마다 암호를 입력해야 하게
   둡니다. 그래야 Claude 세션이 사람 키로 조용히 서명할 수 없습니다.
-- **allowed_signers**: `~/.ssh/allowed_signers`에 두 키를 서로 다른 principal로 올리고
-  (`human <사람 공개키>`, `ai-claude-code <AI 공개키>`),
-  `git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers`로 연결합니다.
-- **humanSigners**: 프로젝트 설정(`.claude-code-agile-hooks.json`, 옛 `.claude-rails.json`)에 사람
-  principal만 적습니다. 없거나 비어 있으면 훅은 위 설정 방법을 안내하며 In Progress를 막습니다.
+- **allowed_signers**: `~/.ssh/allowed_signers`에 두 키를 올리고(`human <사람 공개키>`,
+  `ai-claude-code <AI 공개키>`), `git config --global gpg.ssh.allowedSignersFile ~/.ssh/allowed_signers`로
+  연결합니다. 훅은 이 파일로만 서명을 검증합니다 — 사람 키가 여기 없으면 `%G?`가 `U`라 통과하지
+  못합니다.
+- **human-signers**: 위의 사람 키 지문 목록에 사람 키 지문만 적습니다. AI 키 지문은 적지 않습니다.
 
-남은 위험: `~/.ssh/allowed_signers`와 프로젝트 설정은 로컬에서 고칠 수 있는 파일이라, 에이전트가
-AI 키를 사람 principal로 올리거나 `humanSigners`를 바꿀 수 있습니다. 이 파일들은 `config_guard.py`
-같은 훅으로 따로 보호해야 합니다(이 훅은 보호하지 않습니다).
+`~/.ssh/allowed_signers`, 프로젝트 설정, `.git/config`는 에이전트가 고칠 수 있는 파일이지만, 판정은
+서명 키 지문으로 하므로 AI 키를 `human` principal로 올리거나, `humanSigners`에 AI principal을
+넣거나, 저장소 로컬 `gpg.ssh.allowedSignersFile`을 가짜 파일로 바꿔도 통과하지 않습니다.
 
 backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
 검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은

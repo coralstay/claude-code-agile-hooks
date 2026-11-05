@@ -63,4 +63,16 @@ if [ -d "$LEGACY_HOOKS_DIR" ]; then
   echo "    새 설치본($TARGET_HOOKS_DIR)이 동작하는 것을 확인한 뒤 직접 지워도 됩니다 (자동으로 지우지 않음)."
 fi
 
+# TASK-72: 사람 서명 판정은 훅 디렉터리의 사람 키 지문 목록으로 한다. 사람만 만들어야 하므로
+# 설치 스크립트는 이 파일을 만들지 않고 안내만 한다.
+HUMAN_SIGNERS_FILE="$TARGET_HOOKS_DIR/human-signers"
+if [ ! -s "$HUMAN_SIGNERS_FILE" ]; then
+  echo "==> 사람 키 지문 목록 필요: $HUMAN_SIGNERS_FILE 이 없거나 비어 있습니다."
+  echo "    이 파일을 만들기 전까지는 모든 프로젝트에서 backlog task edit <ID> -s \"In Progress\"가 막힙니다."
+  echo "    사람이 직접 만드세요 (자동으로 만들지 않음, Claude는 이 디렉터리에 쓸 수 없음):"
+  echo "      ssh-keygen -lf <사람 공개키 .pub>   # 두 번째 칸 SHA256:... 이 지문"
+  echo "      그 SHA256:... 값을 한 줄에 하나씩 $HUMAN_SIGNERS_FILE 에 적기 (빈 줄 · # 주석 허용)"
+  echo "    프로젝트 설정의 humanSigners는 더 이상 판정에 쓰지 않습니다."
+fi
+
 echo "==> 설치 완료."

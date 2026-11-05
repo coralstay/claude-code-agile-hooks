@@ -424,6 +424,39 @@ def test_fingerprint_path_has_no_override(env, monkeypatch, tmp_path):
 # == Coverage ==
 
 
+INSTALL_SH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "install.sh"
+)
+
+
+@pytest.mark.parametrize("existing", [None, "", "SHA256:x\n"], ids=["none", "empty", "filled"])
+def test_install_script_explains_but_never_writes_the_fingerprint_file(tmp_path, existing):
+    """install.sh (run against a tmp $HOME) tells how to make human-signers
+    while it is missing or empty, says nothing once it has content, and
+    never creates or changes it."""
+    home = tmp_path / "home"
+    signers = home / ".claude" / "hooks" / "claude-code-agile-hooks" / "human-signers"
+    signers.parent.mkdir(parents=True)
+    if existing is not None:
+        signers.write_text(existing)
+    result = subprocess.run(
+        ["bash", INSTALL_SH],
+        env={**os.environ, "HOME": str(home)},
+        capture_output=True,
+        text=True,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    if existing:
+        assert "human-signers" not in result.stdout
+        assert signers.read_text() == existing
+    else:
+        assert f"{signers} 이 없거나 비어 있습니다" in result.stdout
+        assert "ssh-keygen -lf" in result.stdout
+        assert '-s "In Progress"가 막힙니다' in result.stdout
+        assert signers.exists() == (existing is not None)
+
+
 def test_legacy_note_only_when_config_has_human_signers(env, monkeypatch, capsys):
     """No humanSigners key in the config: no 'no longer used' note."""
     env.config({"testCommand": "true"})

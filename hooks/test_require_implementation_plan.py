@@ -709,5 +709,5 @@ def test_docs_carry_soap_template_and_approval_command(name):
     assert positions == sorted(positions)
     assert 'git commit --allow-empty -S -m "Plan-Approved: <ID>"' in text
     assert "계획 → 리뷰 → 계획 승인" in text
-    assert "humanSigners" in text
+    assert "human-signers" in text and "ssh-keygen -lf" in text
     assert "Plan-Review-Go" not in text and "Go: <ID>" not in text
