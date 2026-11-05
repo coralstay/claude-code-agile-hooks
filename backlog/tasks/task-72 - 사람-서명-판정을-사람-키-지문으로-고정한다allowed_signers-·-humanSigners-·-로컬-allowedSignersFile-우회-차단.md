@@ -6,11 +6,15 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-11-05T18:54:00Z'
-updated_date: '2026-11-05T20:10:00Z'
+updated_date: '2026-11-05T20:14:00Z'
 labels:
   - security
   - workflow
 dependencies: []
+references:
+  - 'upkeep friction: 사람 서명 판정 설정 미보호'
+documentation:
+  - ~/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
