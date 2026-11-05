@@ -636,3 +636,35 @@ def test_edit_traversal_into_hooks_dir_blocked(monkeypatch):
 
 def test_edit_hooks_logs_file_allowed(monkeypatch):
     assert run_main(monkeypatch, "Write", {"file_path": f"{LOGS}/a.jsonl"}) == 0
+
+
+# --- TASK-72#6 TASK-72#B5: the pinned human key list human-signers sits in
+# the installed hook directory; an agent can't write it ---
+
+HUMAN_SIGNERS = "/Users/x/.claude/hooks/claude-code-agile-hooks/human-signers"
+HUMAN_SIGNERS_TILDE = "~/.claude/hooks/claude-code-agile-hooks/human-signers"
+
+
+@pytest.mark.parametrize("tool_name", ["Write", "Edit"])
+@pytest.mark.parametrize("path", [HUMAN_SIGNERS, HUMAN_SIGNERS_TILDE])
+def test_human_signers_file_edits_blocked(monkeypatch, tool_name, path):
+    """TASK-72#6"""
+    assert run_main(monkeypatch, tool_name, {"file_path": path}) == 2
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        f"echo SHA256:abc > {HUMAN_SIGNERS}",
+        f"echo SHA256:abc >> {HUMAN_SIGNERS}",
+        f"echo SHA256:abc >> {HUMAN_SIGNERS_TILDE}",
+        "printf 'SHA256:abc' | tee -a $HOME/.claude/hooks/claude-code-agile-hooks/human-signers",
+        f"ssh-keygen -lf ~/.ssh/ai.pub | awk '{{print $2}}' > {HUMAN_SIGNERS}",
+        f"cp /tmp/fake {HUMAN_SIGNERS}",
+        f"rm {HUMAN_SIGNERS}",
+        f"sed -i '' 's/a/b/' {HUMAN_SIGNERS}",
+    ],
+)
+def test_human_signers_file_bash_writes_blocked(monkeypatch, command):
+    """TASK-72#6"""
+    assert run_main(monkeypatch, "Bash", {"command": command}) == 2

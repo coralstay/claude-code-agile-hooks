@@ -368,6 +368,59 @@ def test_comments_blank_lines_and_several_fingerprints_are_allowed(env, monkeypa
     assert run_main(monkeypatch, env.path) == 0
 
 
+def run_hook_file(hook, cwd):
+    """Run a copy of the hook as the harness would, `python3 <path>`."""
+    payload = {"cwd": str(cwd), "tool_name": "Bash", "tool_input": {"command": START}}
+    return subprocess.run(
+        [sys.executable, str(hook)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_fingerprint_file_is_read_next_to_the_real_hook_file(env, tmp_path, keys):
+    """TASK-72#6 TASK-72#B5: the hook file copied to `real/` is run through a
+    symlink in `link/`. Only real/human-signers counts: decoys pinning the AI
+    key next to the symlink, in the repo root and named by the project config
+    are all ignored."""
+    real = tmp_path / "real"
+    link = tmp_path / "link"
+    real.mkdir()
+    link.mkdir()
+    shutil.copy(rip.__spec__.origin, real / "require_implementation_plan.py")
+    (link / "require_implementation_plan.py").symlink_to(real / "require_implementation_plan.py")
+    (real / "human-signers").write_text(keys["human"]["fp"] + "\n")
+    decoy = keys["ai"]["fp"] + "\n"
+    (link / "human-signers").write_text(decoy)
+    (env.path / "human-signers").write_text(decoy)
+    env.config({"humanSigners": ["ai-claude-code"], "humanSignersFile": str(link / "human-signers")})
+    hook = link / "require_implementation_plan.py"
+    pinned = os.path.join(os.path.realpath(real), "human-signers")
+
+    env.approve(key="ai")
+    denied = run_hook_file(hook, env.path)
+    assert denied.returncode == 2
+    assert f"%GK = {keys['ai']['fp']}" in denied.stderr
+    assert pinned in denied.stderr
+
+    env.approve()
+    assert run_hook_file(hook, env.path).returncode == 0
+
+    (real / "human-signers").unlink()
+    missing = run_hook_file(hook, env.path)
+    assert missing.returncode == 2
+    assert f"{pinned}이(가) 없습니다" in missing.stderr
+
+
+def test_fingerprint_path_has_no_override(env, monkeypatch, tmp_path):
+    """TASK-72#6 TASK-72#B5: environment variables don't move the file."""
+    expected = os.path.join(os.path.realpath(env.hooks), "human-signers")
+    for name in ("HUMAN_SIGNERS", "HUMAN_SIGNERS_FILE", "CLAUDE_CODE_AGILE_HOOKS_HUMAN_SIGNERS"):
+        monkeypatch.setenv(name, str(tmp_path / "elsewhere"))
+    assert rip.fingerprint_path() == expected
+
+
 # == Coverage ==
 
 
