@@ -6,11 +6,12 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-11-05T18:56:00Z'
-updated_date: '2026-11-05T20:26:00Z'
+updated_date: '2026-11-05T20:27:00Z'
 labels:
   - security
   - workflow
-dependencies: []
+dependencies:
+  - TASK-72
 references:
   - TASK-69(대체 대상)
   - source-header DRAFT-2(흡수)
