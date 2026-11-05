@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-05T18:54:00Z'
-updated_date: '2026-11-05T23:29:00Z'
+updated_date: '2026-11-05T23:47:00Z'
 labels:
   - security
   - workflow
@@ -42,19 +42,19 @@ documentation:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 AI 키를 allowed_signers에 human principal로 올려 서명한 Plan-Approved 커밋을 거부한다
-- [ ] #2 humanSigners에 AI principal을 넣어도 그 키 지문이 목록에 없으면 거부한다
-- [ ] #3 저장소 로컬 gpg.ssh.allowedSignersFile을 가짜 파일로 바꿔도 판정이 바뀌지 않는다
-- [ ] #4 지문 목록에 있는 키의 유효 서명(G)은 통과하고, 거부 메시지가 missing · invalid · not_human(지문 불일치)을 구별한다
-- [ ] #5 지문 목록 파일이 없거나 비었거나 형식이 틀리면 거부하고 만드는 방법(ssh-keygen -lf <사람 공개키>)을 안내한다
-- [ ] #6 지문 목록 파일은 훅 파일 옆에서만 읽고, 그 경로 쓰기가 config_guard에 막힘을 테스트로 고정한다
-- [ ] #7 저장소 로컬 · 전역 설정이나 환경 변수로 gpg.ssh.program · gpg.program · gpg.x509.program을 가짜 프로그램으로 바꿔도 판정이 바뀌지 않는다(가짜가 '사람 지문 G'를 지어내도 거부)
+- [x] #1 AI 키를 allowed_signers에 human principal로 올려 서명한 Plan-Approved 커밋을 거부한다
+- [x] #2 humanSigners에 AI principal을 넣어도 그 키 지문이 목록에 없으면 거부한다
+- [x] #3 저장소 로컬 gpg.ssh.allowedSignersFile을 가짜 파일로 바꿔도 판정이 바뀌지 않는다
+- [x] #4 지문 목록에 있는 키의 유효 서명(G)은 통과하고, 거부 메시지가 missing · invalid · not_human(지문 불일치)을 구별한다
+- [x] #5 지문 목록 파일이 없거나 비었거나 형식이 틀리면 거부하고 만드는 방법(ssh-keygen -lf <사람 공개키>)을 안내한다
+- [x] #6 지문 목록 파일은 훅 파일 옆에서만 읽고, 그 경로 쓰기가 config_guard에 막힘을 테스트로 고정한다
+- [x] #7 저장소 로컬 · 전역 설정이나 환경 변수로 gpg.ssh.program · gpg.program · gpg.x509.program을 가짜 프로그램으로 바꿔도 판정이 바뀌지 않는다(가짜가 '사람 지문 G'를 지어내도 거부)
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
-- [ ] #2 [수동 검증] README · CLAUDE.md.snippet · install.sh 안내에 지문 목록 파일과 만드는 방법을 반영한다
+- [x] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
+- [x] #2 [수동 검증] README · CLAUDE.md.snippet · install.sh 안내에 지문 목록 파일과 만드는 방법을 반영한다
 - [ ] #3 [수동 검증] 설치 후 실제 저장소에서 사람 키 Plan-Approved는 통과하고 AI 키 서명은 거부됨을 확인한다
 <!-- DOD:END -->
 
@@ -83,3 +83,15 @@ documentation:
 구현 검증 중 남은 우회를 재현했다: 저장소 로컬 gpg.ssh.program을 가짜 스크립트로 바꾸면 AI 서명 커밋도 git이 'G + 사람 지문 + human'으로 보고해 지문 판정까지 통과한다. 명령줄 -c gpg.ssh.program=ssh-keygen 고정 시 다시 U(거부). 유저 결정: 맥락상 이 카드에서 막는다.
 5. AC #7: 가짜 검증 프로그램 시나리오 테스트 먼저(gpg.ssh.program · gpg.program · gpg.x509.program, 저장소 로컬 · 전역 · 환경 변수) → git_log()에 -c 고정 추가(ssh-keygen은 PATH에서 찾는다 — 훅 프로세스의 PATH는 Claude Code 환경에서 오고 저장소 설정으로 바꿀 수 없음, 판단을 주석에 남김). README 반영.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 구현과 검증(2026-11-06)
+- 구현(서브에이전트): 2b0e96c(AC #1~#5), de39f52(AC #6), 056c825(DoD #2 문서), da099d9(AC #7 검증 프로그램 고정). 테스트: hooks/test_human_signature.py(신규), test_require_implementation_plan.py · test_config_guard.py 갱신
+- %GK 실측(git 2.54.0): 유효 서명 G|SHA256:<43자 base64>|principal, allowed_signers에 없으면 U(지문은 보임), 미설정이면 N(지문 빔)
+- 메인 세션 독립 검증: 실제 훅 모듈 approval_status에 우회 4겹(allowed_signers에 AI 키를 human으로, 로컬 allowedSignersFile 가짜, 로컬 gpg.ssh.program 가짜, 환경 변수 GIT_CONFIG_COUNT로 gpg.ssh.program 가짜)을 한꺼번에 건 저장소 → 그냥 git은 AI 서명을 'G|사람 지문|human'으로 보고, 훅은 ('not_human', <AI 지문>). 같은 저장소의 사람 서명은 ('approved', <사람 지문>)
+- 증거: TASK-72#D1 — 메인 세션 `coverageCommand`: require_implementation_plan.py 100%, TOTAL 5598 stmts · 2318 branches 100%, 2509 passed
+- 증거: TASK-72#D2 — README.md(human-signers 4곳, ssh-keygen -lf 예시 L343), CLAUDE.md.snippet L51, install.sh L73(파일이 없거나 비면 안내, 만들지 않음)
+- 남은 것(범위 밖, 기록): config_guard 매처는 Bash|Edit|Write라 MultiEdit 같은 다른 편집 도구는 못 봄. 이미 설치된 ~/.claude/CLAUDE.md는 마커 블록이 있어 새 안내 문구가 반영되지 않음(블록 삭제 후 재설치 필요). 이름으로 고정한 ssh-keygen · gpg · gpgsm은 훅 프로세스 PATH를 믿는다(코드 주석). revocationFile · minTrustLevel은 사람 서명을 막을 수만 있고 위조는 못 함. TASK-73이 서명 헬퍼를 복제할 때 dedup REGISTRY 등록
+<!-- SECTION:NOTES:END -->
