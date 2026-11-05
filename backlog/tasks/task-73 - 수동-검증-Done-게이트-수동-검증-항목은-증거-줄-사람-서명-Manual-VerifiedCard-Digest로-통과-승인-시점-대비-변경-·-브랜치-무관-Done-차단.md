@@ -1,9 +1,9 @@
 ---
-id: DRAFT-11
+id: TASK-73
 title: >-
   수동 검증 Done 게이트: [수동 검증] 항목은 증거 줄 + 사람 서명 Manual-Verified(Card-Digest)로 통과, 승인
   시점 대비 변경 · 브랜치 무관 Done 차단
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-11-05T18:56:00Z'
 updated_date: '2026-11-05T20:12:00Z'
