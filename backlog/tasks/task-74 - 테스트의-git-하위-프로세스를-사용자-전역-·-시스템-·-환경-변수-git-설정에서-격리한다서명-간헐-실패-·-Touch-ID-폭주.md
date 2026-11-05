@@ -4,7 +4,7 @@ title: 테스트의 git 하위 프로세스를 사용자 전역 · 시스템 · 
 status: In Progress
 assignee: []
 created_date: '2026-11-05T20:31:00Z'
-updated_date: '2026-11-05T21:54:00Z'
+updated_date: '2026-11-05T22:00:00Z'
 labels:
   - tests
   - workflow
@@ -35,7 +35,7 @@ documentation:
 - [x] #2 격리를 확인하는 테스트: 전역 · 환경 변수로 commit.gpgsign=true와 존재하지 않는 서명 키를 넣은 상태에서도 테스트 안의 git commit이 성공하고 git config로 그 값이 보이지 않는다
 - [x] #3 이미 자체 격리하던 테스트(test_require_implementation_plan · test_pre_git_safety_check · test_hook_runtime_contract)는 그대로 통과하고, 서명 테스트는 테스트가 명시한 키만 쓴다
 - [x] #4 [수동 검증] Claude Code 환경에서 testCommand(pytest -n auto) 전체를 5회 연속 돌려 실패가 없다
-- [ ] #5 [수동 검증] 사람 터미널에서 테스트를 돌려도 Touch ID 요청이 뜨지 않는다
+- [x] #5 [수동 검증] 사람 터미널에서 테스트를 돌려도 Touch ID 요청이 뜨지 않는다
 <!-- AC:END -->
 
 ## Definition of Done
@@ -88,4 +88,12 @@ documentation:
 - 증거: TASK-74#D2 — install.sh `cp "$REPO_DIR"/hooks/*.py`가 conftest.py와 새 테스트도 설치본에 복사 → 설치본 옆 테스트도 격리됨. conftest.py는 settings.hooks.json에 등록되지 않아 런타임 영향 없음. install.sh 수정 불필요
 
 - 증거: TASK-74#D3 — source-header DRAFT-3에 이 저장소 분 완료 기록(source-header 625e3da)
+
+- 증거: TASK-74#5 — 유저가 사람 터미널(Claude 밖, 사람 키 환경)에서 `uvx --with pytest-xdist pytest -q -n auto -p no:cacheprovider` 실행, Touch ID 요청 없음(2026-11-06 유저 보고)
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+테스트의 git 하위 프로세스를 사용자 git 설정에서 격리했다. hooks/conftest.py의 autouse 픽스처가 GIT_CONFIG_GLOBAL을 빈 파일로, GIT_CONFIG_NOSYSTEM=1로 두고 Claude Code가 넣는 GIT_CONFIG_COUNT/KEY_n/VALUE_n · GIT_CONFIG_PARAMETERS를 지운다(commit-tool child_env GF-125 · source-header GitCase와 같은 관례). 이전에는 테스트 커밋마다 전역 commit.gpgsign과 AI 서명 키를 물려받아 Secretive에 실제 서명을 요청했고(실행당 약 60건), Secretive 4.0.0의 쇼트 리드 결함 때문에 병렬 부하에서 1~3개가 무작위로 실패해 이 저장소 커밋이 절반쯤 막혔다. 이제 5회 연속 2453 passed, Secretive 서명 요청 0, 사람 터미널에서 Touch ID 없음, 커버리지 100%. 훅 본체는 바꾸지 않았다. 남은 것: test_require_implementation_plan의 자체 키 서명이 에이전트에 키 목록 조회(실행당 27건)를 하는 것은 범위 밖으로 남김.
+<!-- SECTION:FINAL_SUMMARY:END -->
