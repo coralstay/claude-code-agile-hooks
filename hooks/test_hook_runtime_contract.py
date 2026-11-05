@@ -98,6 +98,8 @@ def hook_files():
         f.removesuffix(".py")
         for f in os.listdir(HOOKS_DIR)
         if f.endswith(".py") and not f.startswith("test_")
+        # TASK-74: conftest.py is pytest's test-git isolation, not a hook
+        and f != "conftest.py"
     )
 
 
