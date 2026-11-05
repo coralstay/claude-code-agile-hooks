@@ -95,17 +95,39 @@ def keys(tmp_path_factory):
         pub = (directory / f"{name}.pub").read_text().split()
         lines.append(f"{principal} {pub[0]} {pub[1]}\n")
     allowed.write_text("".join(lines))
-    return {"human": human, "ai": ai, "stranger": stranger, "allowed": allowed}
+    fingerprint = subprocess.run(
+        ["ssh-keygen", "-lf", str(directory / "human.pub")],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()[1]
+    return {
+        "human": human,
+        "ai": ai,
+        "stranger": stranger,
+        "allowed": allowed,
+        "human_fp": fingerprint,
+    }
 
 
 @pytest.fixture
 def project(tmp_path, monkeypatch, keys):
     """A real git repo with backlog/config.yml, isolated from the user's git
-    config."""
+    config. TASK-72: $HOME/.ssh/allowed_signers is the keys' allowed
+    signers file and the hook's human-signers (next to its __file__, here a
+    tmp dir) pins the human key."""
     gitconfig = tmp_path / "gitconfig"
     gitconfig.write_text("")
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(gitconfig))
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    home = tmp_path / "home"
+    (home / ".ssh").mkdir(parents=True)
+    (home / ".ssh" / "allowed_signers").write_text(keys["allowed"].read_text())
+    monkeypatch.setenv("HOME", str(home))
+    hookdir = tmp_path / "installed"
+    hookdir.mkdir()
+    (hookdir / "human-signers").write_text(keys["human_fp"] + "\n")
+    monkeypatch.setattr(rip, "__file__", str(hookdir / "require_implementation_plan.py"))
     root = tmp_path / "repo"
     root.mkdir()
     git(root, "init", "-q", "-b", "main")
@@ -440,67 +462,26 @@ def test_start_denied_when_signature_is_not_valid(project, monkeypatch, capsys):
 
 
 def test_start_denied_when_signed_by_ai_key(project, monkeypatch, capsys):
-    """TASK-58#5: a valid signature whose principal is not in humanSigners
-    (here the AI key's `ai-claude-code`) is not a human approval."""
+    """TASK-58#5: a valid signature by a key whose fingerprint is not pinned
+    (here the AI key) is not a human approval (TASK-72: the verdict moved
+    from humanSigners principals to pinned fingerprints, see
+    test_human_signature.py)."""
     project.task(make_card(**TASK))
     project.approve(key="ai")
     assert run_main(monkeypatch, project.path, START) == 2
     err = capsys.readouterr().err
-    assert "사람이 아닌 서명자" in err
-    assert "%GS = ai-claude-code" in err
-    assert "humanSigners" in err
+    assert "사람 키가 아닌 키의 서명" in err
+    assert "%GK = SHA256:" in err
 
 
-def test_signer_listed_in_human_signers_passes(project, monkeypatch):
-    """TASK-58#5: any principal in the list counts."""
-    project.config({"humanSigners": ["someone-else", "ai-claude-code"]})
-    project.task(make_card(**TASK))
-    project.approve(key="ai")
-    assert run_main(monkeypatch, project.path, START) == 0
-
-
-def test_signer_not_listed_in_human_signers_is_denied(project, monkeypatch, capsys):
-    """TASK-58#5"""
-    project.config({"humanSigners": ["someone-else"]})
-    project.task(make_card(**TASK))
-    project.approve()
-    assert run_main(monkeypatch, project.path, START) == 2
-    assert "%GS = human" in capsys.readouterr().err
-
-
-@pytest.mark.parametrize(
-    "config",
-    [
-        {},
-        {"humanSigners": []},
-        {"humanSigners": None},
-        {"humanSigners": "human"},
-        {"humanSigners": ["human", 3]},
-        {"humanSigners": [""]},
-        ["human"],
-        "not json",
-        None,
-    ],
-    ids=["missing", "empty", "null", "string", "non-string", "blank", "not-object", "bad-json", "no-file"],
-)
-def test_start_denied_without_human_signers(project, monkeypatch, capsys, config):
-    """TASK-58#5: no usable humanSigners = deny with setup guidance, even
-    when a human-signed approval exists."""
-    project.config(config)
-    project.task(make_card(**TASK))
-    project.approve()
-    assert run_main(monkeypatch, project.path, START) == 2
-    err = capsys.readouterr().err
-    assert "humanSigners" in err
-    assert "~/.ssh/allowed_signers" in err
-    assert "gpg.ssh.allowedSignersFile" in err
-    assert APPROVAL_COMMAND in err
-
-
-def test_human_signers_read_from_legacy_config(project, monkeypatch):
-    """TASK-58#5: legacy .claude-rails.json is read like the other hooks."""
+def test_legacy_config_with_human_signers_gets_the_note(project, monkeypatch, capsys):
+    """TASK-58#5: legacy .claude-rails.json is read like the other hooks
+    (only for the 'humanSigners is no longer used' note since TASK-72)."""
     project.config({"humanSigners": ["human"]}, name=".claude-rails.json")
     project.task(make_card(**TASK))
+    project.approve(key="ai")
+    assert run_main(monkeypatch, project.path, START) == 2
+    assert "humanSigners는 더 이상 판정에 쓰지 않습니다" in capsys.readouterr().err
     project.approve()
     assert run_main(monkeypatch, project.path, START) == 0
 
@@ -557,7 +538,7 @@ def test_unborn_head_has_no_approval(tmp_path, monkeypatch):
     """TASK-58#5: a repo without commits can't hold a plan approval."""
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "none"))
     git(tmp_path, "init", "-q")
-    assert rip.approval_status(str(tmp_path), "TASK-58", ["human"]) == ("missing", None)
+    assert rip.approval_status(str(tmp_path), "TASK-58", {"SHA256:x"}) == ("missing", None)
 
 
 def test_promote_does_not_need_approval(project, monkeypatch):
