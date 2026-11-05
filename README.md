@@ -324,8 +324,12 @@ git commit --allow-empty -S -m "Plan-Approved: <ID>"   # 예: git commit --allow
 훅은 HEAD에서 닿는 커밋 중 제목이 정확히 `Plan-Approved: <ID>`인 커밋을 찾고, 그중 하나라도
 `git log --format=%G?`가 `G`(유효한 서명)이고 서명 키 지문(`%GK`)이 사람 키 지문 목록에 있어야
 통과시킵니다. 서명자 principal(`%GS`)과 프로젝트 설정의 `humanSigners`는 판정에 쓰지 않습니다
-(설정에 남아 있으면 '더 이상 쓰지 않음'만 안내합니다). 서명은 저장소 · 전역 git 설정과 무관하게
-`-c gpg.ssh.allowedSignersFile=$HOME/.ssh/allowed_signers`로 검증합니다. 승인 커밋이 없을 때,
+(설정에 남아 있으면 '더 이상 쓰지 않음'만 안내합니다). 서명은 저장소 · 전역 git 설정과 환경 변수
+설정(`GIT_CONFIG_COUNT` · `GIT_CONFIG_PARAMETERS`)과 무관하게
+`-c gpg.ssh.allowedSignersFile=$HOME/.ssh/allowed_signers`로 검증하고, 검증 프로그램도
+`-c gpg.ssh.program=ssh-keygen -c gpg.program=gpg -c gpg.x509.program=gpgsm`으로 고정합니다(훅
+프로세스의 PATH에서 찾음). 가짜 검증 프로그램이 '사람 지문으로 유효한 서명'을 지어내도 통과하지
+않고, gpg · gpgsm이 없으면 그 형식의 서명은 유효하지 않은 것으로 거부됩니다. 승인 커밋이 없을 때,
 서명이 유효하지 않을 때(`%G?` ≠ `G`), 지문 목록에 없는 키가 서명했을 때(그 `%GK`를 보여 줌)를 구분해
 안내합니다. 훅은 계획 승인 커밋을 만들지 않고, Claude도 만들지 않습니다 — 유저에게 리뷰와 계획 승인을
 요청합니다.
@@ -358,7 +362,8 @@ echo 'SHA256:AbC…xyz' >> ~/.claude/hooks/claude-code-agile-hooks/human-signers
 
 `~/.ssh/allowed_signers`, 프로젝트 설정, `.git/config`는 에이전트가 고칠 수 있는 파일이지만, 판정은
 서명 키 지문으로 하므로 AI 키를 `human` principal로 올리거나, `humanSigners`에 AI principal을
-넣거나, 저장소 로컬 `gpg.ssh.allowedSignersFile`을 가짜 파일로 바꿔도 통과하지 않습니다.
+넣거나, 저장소 로컬 `gpg.ssh.allowedSignersFile`을 가짜 파일로 바꾸거나, `gpg.ssh.program` ·
+`gpg.program` · `gpg.x509.program`을 가짜 프로그램으로 바꿔도 통과하지 않습니다.
 
 backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 않으므로 In Progress
 검사가 두 번째 방어선입니다. 다만 MCP·웹 UI로 상태를 바꾸는 것 자체와 `bash -c`·`eval` 같은

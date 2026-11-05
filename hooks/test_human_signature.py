@@ -368,6 +368,122 @@ def test_comments_blank_lines_and_several_fingerprints_are_allowed(env, monkeypa
     assert run_main(monkeypatch, env.path) == 0
 
 
+def write_fake(path, body):
+    path.write_text("#!/bin/sh\n" + body)
+    path.chmod(0o755)
+    return str(path)
+
+
+@pytest.fixture
+def fakes(tmp_path, keys):
+    """Fake verification programs that fabricate 'good signature by the
+    human key' for whatever they are handed: one speaking ssh-keygen -Y,
+    one speaking gpg/gpgsm --status-fd."""
+    fp = keys["human"]["fp"]
+    ssh = write_fake(
+        tmp_path / "fake-ssh-keygen",
+        'case "$*" in *find-principals*) echo human; exit 0;; esac\n'
+        "cat >/dev/null\n"
+        f"echo 'Good \"git\" signature for human with ED25519 key {fp}'\n",
+    )
+    gpg = write_fake(
+        tmp_path / "fake-gpg",
+        "cat >/dev/null\n"
+        f"printf '[GNUPG:] NEWSIG\\n[GNUPG:] GOODSIG {fp} human\\n"
+        f"[GNUPG:] VALIDSIG {fp}\\n[GNUPG:] TRUST_ULTIMATE\\n'\n",
+    )
+    return {"ssh": ssh, "gpg": gpg}
+
+
+def forge_approval(env, armor):
+    """An AI-made Plan-Approved commit carrying a junk signature block with
+    `armor` (git picks the verifier by the armor, not by gpg.format), put
+    on HEAD the way `hash-object` + `update-ref` lets anyone do."""
+    tree = git(env.path, "rev-parse", "HEAD^{tree}").strip()
+    parent = git(env.path, "rev-parse", "HEAD").strip()
+    body = (
+        f"tree {tree}\nparent {parent}\n"
+        "author t <t@e> 1 +0000\ncommitter t <t@e> 1 +0000\n"
+        f"gpgsig -----BEGIN {armor}-----\n \n AAAA\n -----END {armor}-----\n"
+        "\nPlan-Approved: TASK-58\n"
+    )
+    sha = subprocess.run(
+        ["git", "-C", str(env.path), "hash-object", "-t", "commit", "-w", "--stdin"],
+        input=body, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    git(env.path, "update-ref", "HEAD", sha)
+
+
+def inject(env, monkeypatch, tmp_path, channel, pairs):
+    """Set git config `pairs` through one channel git reads."""
+    if channel == "local":
+        for key, value in pairs:
+            git(env.path, "config", key, value)
+    elif channel == "global":
+        path = tmp_path / "attacker-gitconfig"
+        for key, value in pairs:
+            git(env.path, "config", "--file", str(path), key, value)
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(path))
+    elif channel == "env-count":
+        monkeypatch.setenv("GIT_CONFIG_COUNT", str(len(pairs)))
+        for n, (key, value) in enumerate(pairs):
+            monkeypatch.setenv(f"GIT_CONFIG_KEY_{n}", key)
+            monkeypatch.setenv(f"GIT_CONFIG_VALUE_{n}", value)
+    else:
+        monkeypatch.setenv(
+            "GIT_CONFIG_PARAMETERS", " ".join(f"'{k}'='{v}'" for k, v in pairs)
+        )
+
+
+CHANNELS = ["local", "global", "env-count", "env-parameters"]
+# (program key, fake, gpg.format set alongside, how the AI approval is made)
+FAKE_PROGRAMS = [
+    ("gpg.ssh.program", "ssh", None, "ai-ssh-key"),
+    ("gpg.program", "gpg", "openpgp", "PGP SIGNATURE"),
+    ("gpg.openpgp.program", "gpg", "openpgp", "PGP SIGNATURE"),
+    ("gpg.x509.program", "gpg", "x509", "SIGNED MESSAGE"),
+]
+
+
+@pytest.mark.parametrize("channel", CHANNELS)
+@pytest.mark.parametrize(
+    "key, fake, fmt, made", FAKE_PROGRAMS, ids=[p[0] for p in FAKE_PROGRAMS]
+)
+def test_fake_verification_program_cannot_make_ai_approval_human(
+    env, monkeypatch, tmp_path, keys, fakes, channel, key, fake, fmt, made
+):
+    """TASK-72#7 TASK-72#B6: a fake verification program injected through
+    repo-local, global or environment-variable config makes plain git report
+    'G + pinned human fingerprint + human' for an AI-made approval (checked
+    first), yet the hook still denies - it pins the programs itself."""
+    if made == "ai-ssh-key":
+        env.approve(key="ai")
+    else:
+        forge_approval(env, made)
+    pairs = [(key, fakes[fake])] + ([("gpg.format", fmt)] if fmt else [])
+    inject(env, monkeypatch, tmp_path, channel, pairs)
+    assert env.verdict() == f"G|{keys['human']['fp']}|human"
+    assert run_main(monkeypatch, env.path) == 2
+
+
+@pytest.mark.parametrize("channel", CHANNELS)
+def test_real_human_approval_passes_despite_fake_programs(
+    env, monkeypatch, tmp_path, fakes, channel
+):
+    """TASK-72#7 TASK-72#B6: with a rejecting fake ssh program and the gpg
+    fakes injected, plain git no longer says G for a real human signature,
+    but the hook's pinned real ssh-keygen still verifies it."""
+    env.approve()
+    pairs = [
+        ("gpg.ssh.program", write_fake(tmp_path / "reject", "exit 1\n")),
+        ("gpg.program", fakes["gpg"]),
+        ("gpg.x509.program", fakes["gpg"]),
+    ]
+    inject(env, monkeypatch, tmp_path, channel, pairs)
+    assert not env.verdict().startswith("G|")
+    assert run_main(monkeypatch, env.path) == 0
+
+
 def run_hook_file(hook, cwd):
     """Run a copy of the hook as the harness would, `python3 <path>`."""
     payload = {"cwd": str(cwd), "tool_name": "Bash", "tool_input": {"command": START}}

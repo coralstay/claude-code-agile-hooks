@@ -68,7 +68,10 @@ AI principal added to `humanSigners`. A config that still has
 that reads signatures passes
 `-c gpg.ssh.allowedSignersFile=$HOME/.ssh/allowed_signers`, so repo-local,
 global or environment-variable git config can't point verification at
-another file. The deny tells apart: no approval commit, signature not valid
+another file, and pins the verification programs
+(`-c gpg.ssh.program=ssh-keygen -c gpg.program=gpg -c gpg.x509.program=gpgsm`,
+found on the hook's PATH), so a fake program set in config can't fabricate
+a good signature by a pinned fingerprint. The deny tells apart: no approval commit, signature not valid
 (`%G?` other than G), and a valid signature by a key that is not pinned
 (its `%GK` shown). The emptiness of the commit is not checked, and the
 hook never creates an approval commit.
@@ -390,7 +393,9 @@ def deny(message):
 def git_log(cwd, *args):
     """stdout of `git log` in `cwd` (signature lines off), None on failure.
     TASK-72: signatures are always verified against
-    $HOME/.ssh/allowed_signers, whatever repo, global or env config says."""
+    $HOME/.ssh/allowed_signers with the real verification programs,
+    whatever repo, global or env config says (command-line -c wins over all
+    of them, GIT_CONFIG_COUNT and GIT_CONFIG_PARAMETERS included)."""
     allowed = os.path.join(os.path.expanduser("~"), ".ssh", "allowed_signers")
     result = subprocess.run(
         [
@@ -399,6 +404,20 @@ def git_log(cwd, *args):
             "log.showSignature=false",
             "-c",
             f"gpg.ssh.allowedSignersFile={allowed}",
+            # TASK-72 B6: a fake verifier set in config can print "good
+            # signature by <human fingerprint>" for any commit. git picks
+            # the verifier by the signature's armor, not gpg.format, so all
+            # three are pinned (gpg.program also overrides its alias
+            # gpg.openpgp.program). The names are bare and found on PATH on
+            # purpose: the hook process's PATH comes from the Claude Code
+            # environment, which repo config can't change. A missing gpg or
+            # gpgsm makes verification fail (not G), so it fails closed.
+            "-c",
+            "gpg.ssh.program=ssh-keygen",
+            "-c",
+            "gpg.program=gpg",
+            "-c",
+            "gpg.x509.program=gpgsm",
             "-C",
             cwd,
             "log",
