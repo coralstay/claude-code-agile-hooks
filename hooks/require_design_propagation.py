@@ -130,7 +130,7 @@ def markdown_lines(text):
     out = []
     in_fence = False
     for line in text.split("\n"):
-        if FENCE_RE.match(line):
+        if FENCE_RE.match(line):  # ---- 1
             in_fence = not in_fence
             out.append((line, 0, ""))
             continue
@@ -183,14 +183,14 @@ def parse_table(text):
     a broken map must not silently turn the check off."""
     block = table_block(text)
     if block is None:
-        return None
+        return None  # ---- 2
     table_lines = []
     for line in block:
         if line.strip().startswith("|"):
             table_lines.append(line.strip())
         elif table_lines:
             break
-    if len(table_lines) < 3:
+    if len(table_lines) < 3:  # ---- 3
         raise TableError("표가 없거나 머리 · 구분 줄 뒤에 행이 없습니다")
     header = split_row(table_lines[0])
     components = header[2:]
@@ -230,7 +230,7 @@ def chapter_matches(chapter, relpath):
         return relpath == "design/00-문서-정보.md"
     m = NUMBERED_RE.match(chapter)
     if m:
-        pattern = rf"design/{m.group(1)}-[^/]+/{m.group(2)}-[^/]+\.md"
+        pattern = rf"design/{m.group(1)}-[^/]+/{m.group(2)}-[^/]+\.md"  # ---- 4
         return re.fullmatch(pattern, relpath) is not None
     name = chapter[len("부록 ") :].replace(" ", "-")
     return relpath == f"design/부록-{name}.md"
@@ -328,7 +328,7 @@ def done_targets(command):
     try:
         tokens = tokenize(stripped)
     except ValueError:
-        return [m.group(1) for m in DONE_FALLBACK_RE.finditer(stripped)]
+        return [m.group(1) for m in DONE_FALLBACK_RE.finditer(stripped)]  # ---- 5
     targets = [segment_done_target(s) for s in split_segments(tokens)]
     return [t for t in targets if t is not None]
 
@@ -366,7 +366,7 @@ def find_task_branch(root, targets):
     branch; (branch, ID) or None."""
     head = (git_out(root, "symbolic-ref", "--short", "-q", "HEAD") or "").strip()
     refs = git_out(root, "for-each-ref", "--format=%(refname:short)", "refs/heads/task/")
-    branches = [head] + (refs or "").split()
+    branches = [head] + (refs or "").split()  # ---- 6
     for branch in branches:
         if not branch.startswith("task/"):
             continue
@@ -388,7 +388,7 @@ def base_refs(root):
     candidates.extend(BASE_CANDIDATES)
     found = []
     for ref in candidates:
-        if ref not in found and git_out(root, "rev-parse", "--verify", "-q", ref) is not None:
+        if ref not in found and git_out(root, "rev-parse", "--verify", "-q", ref) is not None:  # ---- 7
             found.append(ref)
     return found
 
@@ -396,7 +396,7 @@ def base_refs(root):
 def branch_log(root, branch, bases, *args, paths=()):
     """`git log` of the task branch's own commits (not reachable from any
     base)."""
-    return git_out(root, "log", *args, branch, "--not", *bases, "--", *paths) or ""
+    return git_out(root, "log", *args, branch, "--not", *bases, "--", *paths) or ""  # ---- 8
 
 
 # --- which rows a commit touches ---
@@ -438,7 +438,7 @@ def changed_sections(old_text, new_text, diff):
 def scope_matches(scope, title):
     if title is None:
         return False
-    tail = r"(?!\d)" if scope.startswith("§") else r"(?![A-Za-z0-9])"
+    tail = r"(?!\d)" if scope.startswith("§") else r"(?![A-Za-z0-9])"  # ---- 9
     return re.match(re.escape(scope) + tail, title) is not None
 
 
@@ -450,7 +450,7 @@ def rows_hit(rows, chapter, title):
     specific = [
         r for r in of_chapter if r["scope"] != WHOLE and scope_matches(r["scope"], title)
     ]
-    if not specific:
+    if not specific:  # ---- 10
         return of_chapter
     return specific + [r for r in of_chapter if r["scope"] == WHOLE]
 
@@ -472,7 +472,7 @@ def commit_rows(root, sha, rows):
             continue
         diff = git_out(
             root, "diff-tree", "--root", "--no-renames", "--no-ext-diff", "-p",
-            "-U0", "--no-color", sha, "--", f":(literal){path}",
+            "-U0", "--no-color", sha, "--", f":(literal){path}",  # ---- 11
         ) or ""
         titles = changed_sections(show(root, f"{sha}^:{path}"), show(root, f"{sha}:{path}"), diff)
         for chapter in matched:
@@ -526,7 +526,7 @@ def has_refs_commit(path, task_id):
         path, "log", "--all", "-i", f"--grep={REFS_REPO}", "--format=%B%x00"
     ) or ""
     id_re = re.compile(
-        r"(?<![A-Za-z0-9-])" + re.escape(task_id) + r"(?![A-Za-z0-9]|\.\d)",
+        r"(?<![A-Za-z0-9-])" + re.escape(task_id) + r"(?![A-Za-z0-9]|\.\d)",  # ---- 12
         re.IGNORECASE,
     )
     return any(id_re.search(m.group(1)) for m in REFS_RE.finditer(out))
@@ -575,7 +575,7 @@ def check(root, targets, table):
     branch, task_id = found
     task_id = task_id.upper()
     bases = base_refs(root)
-    if not bases:
+    if not bases:  # ---- 13
         return
     shas = branch_log(
         root, branch, bases, "--no-merges", "--format=%H", paths=("design/",)
@@ -607,20 +607,20 @@ def main():
     if data.get("tool_name") != "Bash" or not isinstance(tool_input, dict):
         sys.exit(0)
     # cheap parse first: most Bash lines leave before any subprocess
-    targets = done_targets(tool_input.get("command") or "")
+    targets = done_targets(tool_input.get("command") or "")  # ---- 14
     if not targets:
         sys.exit(0)
     root = repo_root(data.get("cwd") or "")
     if root is None:
         sys.exit(0)
     doc = os.path.join(root, DOC_PATH)
-    if not os.path.isfile(doc):
+    if not os.path.isfile(doc):  # ---- 15
         sys.exit(0)
     with open(doc, errors="replace") as f:
         text = f.read()
     try:
         table = parse_table(text)
-    except TableError as exc:
+    except TableError as exc:  # ---- 16
         deny(f"{TAG} {DOC_PATH}의 장 대응표를 읽을 수 없습니다: {exc}")
     if table is None:
         sys.exit(0)
@@ -630,3 +630,50 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 펜스 코드 블록 안의 ## 는 제목이 아니다
+#   설명: 코드 블록 예시에 들어 있는 `## ` 줄을 제목으로 읽으면 변경 줄이 엉뚱한 절에 배치되고 장 대응표 파싱도 깨진다. 그래서 펜스 안은 level 0 일반 줄로 보고한다.
+#   개념: fenced code block
+# 2 표 헤딩 부재는 통과(None)
+#   설명: 컴포넌트 저장소의 자체 00 문서에는 `## 문서 계층 > ### 장 대응표`가 없다. None을 돌려 main이 통과시키게 해서 최상위 저장소에만 이 검사가 적용되게 한다. 헤딩은 있는데 표가 깨진 경우와 구분되는 점이 핵심이다.
+#   관련: design/00-문서-정보.md, TASK-63, decision-15
+# 3 깨진 표는 TableError로 fail-closed
+#   설명: 헤딩은 있는데 표가 없거나 행이 없으면 예외를 낸다. main이 이를 Done 차단으로 바꾼다. 깨진 대응표가 검사를 조용히 꺼 버리면 전파 누락을 영영 못 잡기 때문이다.
+#   개념: fail-closed
+# 4 최상위 장 표기를 design/ 경로로 번역
+#   설명: N.MM 표기는 design/N-*/MM-*.md 로 푼다. 장 대응표를 코드에 하드코딩하지 않고 매 실행마다 문서에서 읽는 것이 TASK-63의 핵심 결정이라, 번역 규칙도 표 위에 적힌 파싱 규칙과 같아야 한다.
+#   관련: design/00-문서-정보.md, decision-15
+# 5 따옴표 불균형 시 텍스트 매칭으로 대체(fail-closed)
+#   설명: 토큰화가 실패하면 명령 위치를 알 수 없다. 이 훅은 게이트이므로 정규식으로 `backlog task edit <ID> -s done` 문구를 찾아 Done 시도로 간주한다. 불필요한 검사는 복구 가능하고 건너뛴 검사는 복구할 수 없다.
+#   관련: hooks/require_test_first.py (같은 파서 사본, dedup_drift_guard.REGISTRY가 동일성 보장)
+#   개념: fail-closed
+# 6 현재 브랜치를 먼저 본다
+#   설명: 같은 ID의 task 브랜치가 여럿일 수 있으므로 현재 브랜치를 우선해 사용자가 실제로 작업 중인 범위를 검사한다. 대상 ID는 TASK-16, task-16, 16 어느 표기든 same_task로 맞춘다.
+# 7 존재하는 기준 ref만 사용
+#   설명: origin/HEAD, main, master, origin/main, origin/master 중 실제로 있는 것만 쓴다. 낡은 로컬 main이든 낡은 원격 main이든 하나만 쓰면 이미 병합된 작업이 범위에 끌려오거나 빠지므로 존재하는 모두를 제외 기준으로 삼는다.
+# 8 태스크 브랜치 고유 커밋 범위
+#   설명: 어느 기준 ref에서도 도달할 수 없는 커밋만 이 태스크의 커밋으로 센다. paths는 design/ 로 한정해 비설계 커밋을 건너뛴다.
+# 9 범위 접두어의 단어 경계
+#   설명: §1 이 §10 에, RAIL 이 RAILS 에 걸리면 엉뚱한 행이 영향받는 것으로 계산된다. §n 은 뒤에 숫자가, 영역 접두어는 뒤에 영숫자가 오지 않아야 일치로 본다.
+# 10 표에 없는 절의 변경은 장의 모든 행에 해당
+#   설명: 장 머리, `## 원천`, 목록에 없는 `## ` 절의 변경은 어느 컴포넌트에 영향 가는지 알 수 없으므로 그 장의 모든 행에 닿은 것으로 본다. 과소 판정으로 전파 누락을 놓치는 쪽보다 과대 판정이 안전하다.
+#   개념: 보수적 판정
+# 11 경로를 literal pathspec으로 고정
+#   설명: design/ 파일명에 *, ? 같은 pathspec 마법 문자가 있어도 해당 파일만 diff하도록 :(literal)을 붙인다. 파일명은 -z로 받아 한글·특수문자가 인용 부호로 깨지는 것도 막는다.
+# 12 Refs 줄의 ID는 단어 경계로 일치
+#   설명: TASK-1 이 TASK-16 이나 TASK-1.1 로 오인되면 다른 카드의 전파 증거가 이 카드의 증거로 인정된다. 앞뒤 영숫자와 `.숫자`를 제외해 정확히 같은 ID만 인정한다.
+# 13 기준 ref가 없으면 통과(fail-open)
+#   설명: 범위를 정할 기준이 없으면 어느 커밋이 이 태스크 것인지 알 수 없다. 이 경우만 검사를 포기하고 통과시킨다.
+#   개념: fail-open
+# 14 값싼 파싱 먼저
+#   설명: 모든 Bash 호출에 등록돼 있으므로 대부분의 줄은 서브프로세스 없이 여기서 빠져나가야 한다. git 호출은 Done 시도가 확인된 뒤에만 한다.
+#   관련: TASK-39
+# 15 00 문서가 없는 저장소는 통과
+#   설명: 최상위 design/00-문서-정보.md 가 있는 저장소에서만 적용된다. 다른 저장소의 Done 이동은 이 규칙의 대상이 아니다.
+#   개념: fail-open
+# 16 표가 깨지면 Done을 거부
+#   설명: 읽을 수 없는 대응표의 원인 줄을 메시지에 담아 deny한다. 깨진 대응표가 검사를 끄지 않게 하는 마지막 관문이다.
+#   관련: TASK-63, RAIL-024, decision-15
+#   개념: fail-closed

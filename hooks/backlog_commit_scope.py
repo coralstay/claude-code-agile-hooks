@@ -213,7 +213,7 @@ def command_runs_git(command, subcommand):
     try:
         tokens = tokenize(stripped)
     except ValueError:
-        return subcommand in stripped
+        return subcommand in stripped  # ---- 1
     for segment in split_segments(tokens):
         j = git_subcommand_index(segment)
         if j is not None and segment[j] == subcommand:
@@ -235,7 +235,7 @@ def is_backlog_project(cwd):
 def parse_name_status(raw):
     """Parses `git diff --name-status -z` output into
     [(status_letter, path, new_path_or_None), ...]."""
-    fields = raw.split("\0")
+    fields = raw.split("\0")  # ---- 2
     entries = []
     i = 0
     while i < len(fields):
@@ -264,7 +264,7 @@ def staged_entries(cwd, env=None):
         env=env,
     )
     if result.returncode != 0:
-        return None
+        return None  # ---- 3
     return parse_name_status(result.stdout)
 
 
@@ -310,7 +310,7 @@ def status_transitions(cwd, entries, env=None):
         status = frontmatter_status(read_blob(cwd, ":" + staged, env))
         if status not in TRANSITION_STATUSES:
             continue
-        if frontmatter_status(read_blob(cwd, "HEAD:" + path)) != status:
+        if frontmatter_status(read_blob(cwd, "HEAD:" + path)) != status:  # ---- 4
             found.append(staged)
     return found
 
@@ -357,9 +357,7 @@ def staging_plan(command):
     """Returns (list_of_git_add_arg_lists, commit_all) describing what the
     command stages before its commit, or None when it can't be simulated
     safely (fall back to checking the real index)."""
-    # TASK-39: the same segments command_runs_git() judges - heredoc bodies
-    # dropped, continuations joined, git found in command position
-    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")  # ---- 5
     try:
         tokens = tokenize(stripped)
     except ValueError:
@@ -368,7 +366,7 @@ def staging_plan(command):
     adds = []
     for segment in split_segments(tokens):
         head = command_head(segment)
-        if head < len(segment) and segment[head] in ("cd", "pushd", "popd"):
+        if head < len(segment) and segment[head] in ("cd", "pushd", "popd"):  # ---- 6
             return None
         j = git_subcommand_index(segment)
         if j is None:
@@ -376,7 +374,7 @@ def staging_plan(command):
         sub, args = segment[j], segment[j + 1 :]
         if sub not in ("add", "commit"):
             continue
-        if j != head + 1 or any(t.startswith("GIT_") for t in segment[:head]):
+        if j != head + 1 or any(t.startswith("GIT_") for t in segment[:head]):  # ---- 7
             # global flags (`git -C x ...`) or `GIT_*=` env may point at
             # another repo/index: only the commit itself is fine
             if sub == "commit":
@@ -384,7 +382,7 @@ def staging_plan(command):
             return None
         if sub == "add":
             # shell expansions/redirections can't be replayed faithfully
-            if any(ch in a for a in args for ch in "$`<>"):
+            if any(ch in a for a in args for ch in "$`<>"):  # ---- 8
                 return None
             adds.append(args)
         else:  # sub == "commit" (only add/commit get past the check above)
@@ -411,11 +409,8 @@ def simulated_index(cwd, adds, commit_all):
     with tempfile.TemporaryDirectory() as tmp:
         temp_index = os.path.join(tmp, "index")
         if os.path.isfile(real_index):
-            # copy2 keeps the mtime: git compares content only for entries
-            # not older than the index file ("racy"), and a fresh mtime on
-            # the copy would hide a same-size edit made in that second
-            shutil.copy2(real_index, temp_index)
-        env = dict(os.environ, GIT_INDEX_FILE=temp_index)
+            shutil.copy2(real_index, temp_index)  # ---- 9
+        env = dict(os.environ, GIT_INDEX_FILE=temp_index)  # ---- 10
         steps = [["git", "add", *args] for args in adds]
         if commit_all:
             steps.append(["git", "add", "-u"])
@@ -515,7 +510,7 @@ def dependencies_changed(cwd, path, new_path, env=None):
 
     before = deps_at(f"HEAD:{path}")
     after = deps_at(f":{new_path}")
-    return before is not None and after is not None and before != after
+    return before is not None and after is not None and before != after  # ---- 11
 
 
 # --- policy -----------------------------------------------------------------
@@ -557,9 +552,7 @@ def check_scope(entries, transitions=(), deps_changed=None):
     new_drafts = [
         e for e in entries if e[0] in ("A", "C") and (e[2] or e[1]).startswith(DRAFTS)
     ]
-    if len(new_drafts) >= 2:
-        # TASK-59#1: one draft per commit, so each draft has its own point
-        # in history (draft 1장 → 커밋)
+    if len(new_drafts) >= 2:  # ---- 12
         return (
             "[claude-code-agile-hooks] 드래프트 생성 커밋에는 새 드래프트 한 장만 담는다 — "
             "스테이징에 새 드래프트가 여러 개 있습니다:\n"
@@ -583,7 +576,7 @@ def check_scope(entries, transitions=(), deps_changed=None):
     renames = [e for e in entries if is_promotion_rename(e)]
     deleted_drafts = [e for e in entries if e[0] == "D" and e[1].startswith(DRAFTS)]
     added_tasks = [e for e in entries if e[0] == "A" and e[1].startswith(TASKS)]
-    if renames or (deleted_drafts and added_tasks):
+    if renames or (deleted_drafts and added_tasks):  # ---- 13
         offenders = [
             e
             for e in entries
@@ -601,7 +594,7 @@ def check_scope(entries, transitions=(), deps_changed=None):
             )
 
     if transitions:
-        offenders = [e for e in entries if (e[2] or e[1]) != transitions[0]]
+        offenders = [e for e in entries if (e[2] or e[1]) != transitions[0]]  # ---- 14
         if len(transitions) > 1 or offenders:
             listed = "\n".join(f"  - {p} (상태 전환)" for p in transitions)
             return (
@@ -613,7 +606,7 @@ def check_scope(entries, transitions=(), deps_changed=None):
                 "'git restore --staged <path>'로 내린 뒤 별도 커밋으로 나누세요."
             )
 
-    if any(WORK_ORDER in entry_paths(e) for e in entries):
+    if any(WORK_ORDER in entry_paths(e) for e in entries):  # ---- 15
         offenders = [
             e
             for e in entries
@@ -665,7 +658,7 @@ def main():
     cwd = data.get("cwd", "")
     command = (data.get("tool_input") or {}).get("command", "")
 
-    if not command_runs_git(command, "commit"):
+    if not command_runs_git(command, "commit"):  # ---- 16
         sys.exit(0)
     if not has_command("git"):
         sys.exit(0)
@@ -673,7 +666,7 @@ def main():
         sys.exit(0)
 
     plan = staging_plan(command)
-    if plan and (plan[0] or plan[1]):
+    if plan and (plan[0] or plan[1]):  # ---- 17
         with simulated_index(cwd, plan[0], plan[1]) as env:
             message = scope_message(cwd, env) if env else None
     else:
@@ -685,3 +678,56 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 토큰화 실패 시 fail-closed
+#   설명: 따옴표 불균형으로 토큰화가 안 되면 명령 위치를 구분할 수 없다. 부분 문자열이 있으면 커밋으로 보고 실제 인덱스를 검사한다. 인덱스를 한 번 더 읽는 것은 무해하고, 건너뛴 범위 검사는 복구할 수 없다.
+#   관련: hooks/pre_commit_check.py, hooks/dedup_drift_guard.py
+#   개념: fail-closed
+# 2 git -z 출력을 NUL로 파싱
+#   설명: --name-status -z 는 경로를 NUL로 구분해 공백·한글·개행이 든 경로도 인용 없이 안전하게 받는다. R/C 상태는 경로가 둘이라 필드 개수가 다르다는 점이 파서의 핵심이다.
+#   개념: NUL 구분, rename detection
+# 3 인덱스를 못 읽으면 검사 포기
+#   설명: git diff --cached 가 실패하면 None을 돌려 main이 deny하지 않고 통과시킨다. 읽을 수 없는 인덱스로 추측해 막는 것보다 훅이 길을 막지 않는 쪽을 택한 fail-open 결정이다.
+#   개념: fail-open
+# 4 상태 전환은 HEAD와 비교
+#   설명: 스테이징된 blob의 status 가 In Progress/Done 이어도 HEAD에서도 같으면 전환이 아니다. 제목이 바뀌어 경로가 달라질 수 있으므로 HEAD 쪽은 옛 경로(path)로 읽어 이름 변경을 따라간다. 새 파일은 HEAD에 없으므로 None과 비교돼 전환으로 잡힌다.
+#   관련: TASK-59#2
+# 5 검출과 같은 세그먼트로 재생
+#   설명: TASK-39: command_runs_git() 이 판단하는 것과 같은 세그먼트를 쓴다. 히어독 본문을 버리고 줄 이음을 합치고 명령 위치의 git만 찾는다. 그래야 검출과 시뮬레이션이 어긋나 echo git add 같은 텍스트가 재생되는 일이 없다.
+#   관련: TASK-39, TASK-34
+# 6 cd/pushd 가 있으면 시뮬레이션 포기
+#   설명: 작업 디렉터리가 바뀌면 이후 git add 가 다른 저장소를 가리킨다. 안전하게 재생할 수 없으므로 None을 돌려 실제 인덱스를 그대로 검사하게 한다.
+# 7 전역 플래그·GIT_ 환경은 재생 불가
+#   설명: git -C x add 나 GIT_DIR= 같은 지정은 다른 저장소·인덱스를 가리킬 수 있다. add 라면 시뮬레이션을 포기하고, commit 이라면 앞선 add 만 재생하고 -a 는 무시한다.
+#   관련: hooks/pre_commit_check.py (git -C 는 cwd 인덱스를 본다는 알려진 한계)
+# 8 셸 확장은 충실히 재생할 수 없다
+#   설명: $VAR, 백틱, 리디렉션이 든 인자는 훅 시점에 값을 알 수 없다. 틀린 파일을 스테이징한 것으로 시뮬레이션하면 오탐·미탐이 생기므로 시뮬레이션 자체를 포기한다.
+# 9 인덱스 복사본의 mtime 보존
+#   설명: git은 인덱스 파일보다 오래되지 않은 항목(racy)만 내용을 비교한다. 복사본의 mtime이 새로 찍히면 같은 초 안에 한 같은 크기의 편집이 가려진다. copy2로 mtime을 유지해 이를 막는다.
+#   개념: racy git, GIT_INDEX_FILE
+# 10 실제 인덱스는 건드리지 않는다
+#   설명: PreToolUse 는 Bash 명령보다 먼저 돌아 인덱스가 명령 실행 전 상태다. 같은 줄의 git add / commit -a 를 임시 복사본 인덱스에 재생해 일반적인 경우를 닫는다. 실제 인덱스를 바꾸면 훅 부작용이 되기 때문에 반드시 복사본만 쓴다.
+#   개념: GIT_INDEX_FILE
+# 11 의존 변경 판정은 양쪽 모두 있을 때만
+#   설명: 한쪽 파일이 없거나 task id 가 없으면 의존 변경이 아니다. 신규·삭제 태스크가 작업 순서 커밋에 섞여 들어오는 것을 막기 위한 규칙(TASK-60)과 맞물린다.
+#   관련: TASK-60, scripts/work_order.py
+# 12 드래프트는 한 커밋에 한 장
+#   설명: TASK-59#1: 히스토리에서 각 드래프트(드래프트 1장 → 커밋)가 자기 지점을 갖게 한다.
+#   관련: TASK-59
+# 13 승격 커밋 판정: 이름 변경 또는 삭제+추가
+#   설명: git의 rename 감지가 놓치는 경우를 위해, 드래프트 삭제와 태스크 추가가 함께 있으면 승격으로 본다. 승격 직후의 --add-ref, --doc 편집과 다른 태스크 파일 수정은 허용하고 코드·문서·설정은 거부한다.
+#   관련: TASK-29
+# 14 상태 전환 커밋은 그 태스크 파일만
+#   설명: 전환 태스크 파일(이름 변경 포함) 외의 경로가 있거나 전환 파일이 둘 이상이면 거부한다. 읽는 것은 워크트리가 아니라 스테이징된 blob이다.
+#   관련: TASK-59#2
+# 15 작업 순서 커밋은 의존 변경과만 함께
+#   설명: 의존을 정리하고 작업 순서를 다시 만드는 일이 한 묶음의 커밋이 되게 한다. dependencies 프런트매터가 HEAD와 달라진 태스크 파일만 허용한다.
+#   관련: TASK-60, backlog/work-order.md
+# 16 커밋이 아니면 바로 통과
+#   설명: if 필터 없이 모든 Bash 호출에 등록돼 있다(절대경로·환경변수 접두 커밋을 놓치지 않기 위해). 따라서 커밋이 아닌 줄은 파싱 직후 빠져나가 비용을 한 번의 짧은 파싱으로 제한한다.
+#   관련: TASK-39
+# 17 시뮬레이션이 필요한 경우만 임시 인덱스 사용
+#   설명: 같은 줄에 앞선 add 나 commit -a 가 없으면 재생할 단계가 없으므로 실제 인덱스를 바로 검사한다. 이 훅은 PreToolUse 이지 git pre-commit 이 아니라서 터미널·GUI 커밋은 보지 못하는 점은 알려진 한계다(TASK-29).
+#   관련: TASK-29

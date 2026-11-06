@@ -54,7 +54,7 @@ PROTECTED_PATH_PATTERNS = [
     r"(^|/)\.claude/settings\.json$",
 ]
 
-PROTECTED_RE = re.compile("|".join(f"(?:{p})" for p in PROTECTED_PATH_PATTERNS))
+PROTECTED_RE = re.compile("|".join(f"(?:{p})" for p in PROTECTED_PATH_PATTERNS))  # ---- 1
 
 # Same patterns without the trailing end-of-string anchor, so a protected
 # path is still recognized when it's embedded mid-string rather than being
@@ -68,7 +68,7 @@ PROTECTED_RE_LOOSE = re.compile("|".join(f"(?:{p})" for p in _LOOSE_PATTERNS))
 # expansion, which may still produce the hooks dir itself). Not `-`, `_`,
 # `.` or a word character - `.claude/hooks-logs` and `.claude/hooksx` are
 # different directories (TASK-48).
-_COMPONENT_END = r"(?=$|[/\s'\"`;&|()<>,:\[\]{}*?$])"
+_COMPONENT_END = r"(?=$|[/\s'\"`;&|()<>,:\[\]{}*?$])"  # ---- 2
 
 # Mentions inside code/free text that PROTECTED_RE_LOOSE misses: a relative
 # path right after a quote (`open('.claude/settings.json')`), the hooks dir
@@ -340,7 +340,7 @@ def _path_forms(path):
     """The path as written and with `..`/`.` collapsed, so
     `~/.claude/hooks-logs/../hooks/x` is judged as `~/.claude/hooks/x`."""
     expanded = os.path.expanduser(path).replace("\\", "/")
-    return expanded, os.path.normpath(expanded)
+    return expanded, os.path.normpath(expanded)  # ---- 3
 
 
 def is_protected_path(path):
@@ -353,7 +353,7 @@ def is_protected_target(token):
     """A protected file, or a protected directory a file could be put into."""
     if is_protected_path(token):
         return True
-    return any(PROTECTED_DIR_RE.search(form) for form in _path_forms(token or ""))
+    return any(PROTECTED_DIR_RE.search(form) for form in _path_forms(token or ""))  # ---- 4
 
 
 def mentions_protected(text):
@@ -527,7 +527,7 @@ def effective_head(words):
             unsure = pos
 
     while i < len(words):
-        j = i + command_head(words[i:])
+        j = i + command_head(words[i:])  # ---- 5
         # command_head skips wrapper flags one token at a time, so for
         # `sudo -u root rm` it lands on `root`: re-skip them with arity.
         end = j
@@ -678,7 +678,7 @@ def python_code_writes(code):
     try:
         tree = ast.parse(code)
     except (SyntaxError, ValueError):
-        return True
+        return True  # ---- 6
 
     call_funcs = set()
     for node in ast.walk(tree):
@@ -781,7 +781,7 @@ def segment_targets_protected(words, redirs, docs, command, depth):
         if inner and recurse(inner):
             return True
 
-    h, under_xargs, unsure = effective_head(words)
+    h, under_xargs, unsure = effective_head(words)  # ---- 7
     if unsure is not None:
         # An unknown runner/wrapper flag may have taken an argument, so the
         # real command could be any later word: block if the rest mentions
@@ -862,7 +862,7 @@ def segment_targets_protected(words, redirs, docs, command, depth):
         if kind == "code":
             if any(mentions_protected(w) for w in pre + rest):
                 return True
-            return mentions_protected(code) and python_code_writes(code)
+            return mentions_protected(code) and python_code_writes(code)  # ---- 8
 
         def analyze(text, quoted):
             if (
@@ -878,9 +878,7 @@ def segment_targets_protected(words, redirs, docs, command, depth):
     if verb in OPAQUE_INTERPRETERS:
         return any_mention()
 
-    # Any other command: a heredoc body is stdin data, but it may still end
-    # up executed (piped to a shell, saved and run) - scan it as shell.
-    return any(recurse(text) for text, _ in docs)
+    return any(recurse(text) for text, _ in docs)  # ---- 9
 
 
 def bash_targets_protected_config(command, _depth=0):
@@ -888,20 +886,20 @@ def bash_targets_protected_config(command, _depth=0):
     protected paths (cat/cmp/jq/grep, python that only reads) pass."""
     if not command:
         return False
-    if _depth > MAX_DEPTH:
+    if _depth > MAX_DEPTH:  # ---- 10
         return mentions_protected(command)
 
     stripped, bodies = extract_heredocs(command)
     # bash joins backslash-newline continuations before parsing words
     stripped = stripped.replace("\\\n", "")
 
-    if legacy_rules(stripped, interpreters=False):
+    if legacy_rules(stripped, interpreters=False):  # ---- 11
         return True
 
     try:
         tokens = tokenize(stripped)
     except ValueError:
-        return legacy_rules(command)
+        return legacy_rules(command)  # ---- 12
 
     parsed = []
     k = 0
@@ -926,9 +924,7 @@ def bash_targets_protected_config(command, _depth=0):
             i += 1
         parsed.append((words, redirs, docs))
 
-    if k != len(bodies):
-        # a `<<` the tokenizer didn't see (e.g. inside "$(cat <<'EOF' ...)"):
-        # bodies can't be attributed to commands - use the legacy rules.
+    if k != len(bodies):  # ---- 13
         return legacy_rules(command)
 
     return any(
@@ -943,7 +939,7 @@ def deny(message):
 
 
 def main():
-    if os.environ.get("CONFIG_GUARD_ALLOW") == "true":
+    if os.environ.get("CONFIG_GUARD_ALLOW") == "true":  # ---- 14
         sys.exit(0)
 
     try:
@@ -956,12 +952,12 @@ def main():
 
     if tool_name in ("Edit", "Write"):
         path = tool_input.get("file_path", "")
-        if is_protected_path(path):
+        if is_protected_path(path):  # ---- 15
             deny(f"[config-guard] 자기 자신의 훅/설정 파일 수정은 금지됩니다: {path}")
 
     elif tool_name == "Bash":
         command = tool_input.get("command", "")
-        if bash_targets_protected_config(command):
+        if bash_targets_protected_config(command):  # ---- 16
             deny(
                 f"[config-guard] 훅/설정 파일을 변경하는 명령으로 보여 차단되었습니다: {command}"
             )
@@ -971,3 +967,54 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 보호 경로 패턴의 단일 출처
+#   설명: ~/.claude/settings*.json, .claude/hooks/, .mcp.json, 플러그인 매니페스트가 보호 대상이다. 에이전트가 자기 가드레일을 고쳐 훅을 끄지 못하게 하는 것이 이 훅의 목적이다. 패턴은 끝 앵커($)가 있는 엄격형이고, 문자열 중간 언급용 느슨한 변형이 따로 파생된다.
+#   관련: TASK-3
+#   개념: who guards the guards
+# 2 경로 구성요소의 끝 경계
+#   설명: .claude/hooks-logs 나 .claude/hooksx 는 다른 디렉터리다. 구성요소는 문자열 끝, /, 공백, 따옴표, 셸·코드 구분자(글롭·브레이스·$ 확장 포함)에서만 끝난다고 보고, -, _, ., 단어 문자가 이어지면 보호 경로가 아니다. 글롭·$ 확장은 hooks 디렉터리 자신을 만들어 낼 수 있어 끝으로 쳐서 보수적으로 막는다.
+#   관련: TASK-48
+# 3 원문 경로와 정규화한 경로를 모두 판정
+#   설명: ~/.claude/hooks-logs/../hooks/x 같은 .. 우회를 .claude/hooks/x 로 접어서 본다. 원문도 함께 보는 것은 정규화가 오히려 보호 경로를 가려 버릴 가능성을 없애기 위해서다.
+#   관련: TASK-48
+#   개념: 경로 정규화
+# 4 보호 디렉터리 자체도 대상
+#   설명: cp x ~/.claude/hooks 나 rm -rf ~/.claude 처럼 파일이 아니라 디렉터리를 대상으로 삼아도 보호 파일을 바꾸거나 지울 수 있다. 쓰기 대상으로는 디렉터리까지 보호 대상으로 본다.
+# 5 래퍼 플래그를 인자 개수까지 다시 건너뛴다
+#   설명: command_head 는 래퍼 플래그를 한 토큰씩 건너뛰어 sudo -u root rm 에서 root 에 멈춘다. 그래서 래퍼 플래그를 인자 개수 표(WRAPPER_FLAGS)로 다시 건너뛰어 실제 명령(rm)을 찾는다. 알 수 없는 플래그는 unsure 로 기록해 보수 규칙으로 넘긴다.
+#   관련: TASK-47, hooks/dedup_drift_guard.py
+# 6 파싱할 수 없는 파이썬은 쓰기로 간주
+#   설명: open(p, 'w') 의 대상은 정적으로 풀 수 없다. 문법 오류 등으로 AST를 못 만들면 쓰기가 있다고 보고 막는다. 호출 쪽은 코드가 보호 경로를 언급할 때만 이 함수를 묻는다.
+#   관련: TASK-35
+#   개념: fail-closed, 정적 분석 한계
+# 7 알 수 없는 래퍼 플래그는 보수 규칙으로
+#   설명: 알려지지 않은 러너·래퍼 플래그는 뒤따르는 인자를 먹었을 수 있어 진짜 명령이 어느 단어인지 알 수 없다. 나머지에 보호 경로 언급이 있고 쓰기 가능한 명령 이름이 있으면 막는다.
+#   관련: TASK-47
+# 8 python -c 는 AST로 읽기/쓰기 구분
+#   설명: 보호 경로를 읽기만 하는 코드(open(p), json.load, read_text)는 통과시키고, 보호 경로 언급과 쓰기 프리미티브가 함께 있으면 막는다. 문자열 규칙만 쓰던 TASK-35 이전에는 읽기까지 오차단했다.
+#   관련: TASK-35
+# 9 그 밖의 명령의 히어독 본문도 셸로 스캔
+#   설명: 그 밖의 명령에서 히어독 본문은 stdin 데이터지만, 셸로 파이프하거나 저장해 실행될 수 있다. 그래서 셸 텍스트로 다시 스캔한다.
+# 10 재귀 깊이 초과 시 단순 언급 규칙
+#   설명: bash -c, eval, $(...) 가 중첩되는 재귀를 MAX_DEPTH 로 끊는다. 한도를 넘으면 더 파고들지 않고 보호 경로가 언급되기만 해도 막는다(fail-closed).
+# 11 TASK-35 이전 규칙을 먼저 백스톱으로
+#   설명: 인터프리터 규칙을 뺀 옛 문자열 규칙(리디렉션·변경 동사 인자)을 먼저 적용한다. 새 구문 분석이 놓친 단순한 경우를 막아 주는 안전망이다.
+#   관련: TASK-35
+# 12 토큰화 실패 시 옛 규칙으로 폴백
+#   설명: 따옴표 불균형 등으로 토큰화되지 않으면 인터프리터 + 보호 경로가 줄 어디에든 있으면 막는 TASK-35 이전 문자열 규칙을 그대로 적용한다.
+#   관련: TASK-35
+#   개념: fail-closed
+# 13 히어독 본문을 명령에 귀속시킬 수 없는 경우
+#   설명: 토큰화기가 보지 못한 << (예: "$(cat <<'EOF' ...)" 안)가 있으면 본문을 명령에 귀속시킬 수 없다. 이 경우에는 옛 규칙을 쓴다.
+# 14 한 호출 한정 우회
+#   설명: 의도한 설정 변경을 위해 CONFIG_GUARD_ALLOW=true 환경변수로 한 번의 호출에 한해 이 훅을 건너뛴다. 사람이 환경을 직접 설정해 실행하는 경로를 위한 출구다.
+# 15 없는 보호 파일을 만드는 것도 변경
+#   설명: CVE-2026-25725는 아직 없던 settings.json 에 훅을 주입해 샌드박스를 탈출했다. 그래서 Edit/Write 는 기존 파일 수정뿐 아니라 생성도 막는다. 읽기는 항상 통과한다.
+#   관련: 모듈 독스트링 (CHAINDROP 웜, CVE-2026-25725)
+# 16 Bash 명령은 쓰기 대상 여부로 판정
+#   설명: 보호 경로가 리디렉션 대상이거나 변경 동사의 인자이거나 불투명한 인터프리터·다운로더 근처에 있으면 막는다. 문자열 매칭이지 시스템 호출 강제가 아니므로 난독화된 경로는 새어 나갈 수 있다(decision-1).
+#   관련: decision-1
+#   개념: 문자열 매칭 한계
