@@ -6,11 +6,16 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-11-06T01:07:00Z'
-updated_date: '2026-11-06T01:08:00Z'
+updated_date: '2026-11-06T04:36:00Z'
 labels:
   - security
   - workflow
 dependencies: []
+references:
+  - TASK-67(분리 원본)
+  - 'TASK-72 DoD #3(우회 실측)'
+documentation:
+  - ~/.claude/plans/giggly-kindling-snowglobe.md
 ---
 
 ## Description
