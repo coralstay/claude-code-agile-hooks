@@ -4,10 +4,11 @@ title: pre_commit_check의 fail-closed 테스트 타임아웃을 저장소로 �
 status: To Do
 assignee: []
 created_date: '2026-10-29T12:17:00Z'
-updated_date: '2026-11-06T04:38:00Z'
+updated_date: '2026-11-06T04:39:00Z'
 labels:
   - hooks
-dependencies: []
+dependencies:
+  - TASK-75
 documentation:
   - >-
     https://github.com/coralstay/coralstay-software-factory/tree/task/task-19/design
