@@ -52,7 +52,7 @@ def has_active_task(cwd):
         capture_output=True,
         text=True,
     )
-    return "No tasks found." not in (result.stdout or "")
+    return "No tasks found." not in (result.stdout or "")  # ---- 1
 
 
 def is_dirty(cwd):
@@ -66,12 +66,12 @@ def background_tasks_running(data):
     """True if the Stop payload says background work is still running.
     The field's shape isn't documented, so any non-empty list/dict counts."""
     tasks = data.get("background_tasks")
-    return isinstance(tasks, (list, dict)) and len(tasks) > 0
+    return isinstance(tasks, (list, dict)) and len(tasks) > 0  # ---- 2
 
 
 def deny(message):
     print(message, file=sys.stderr)
-    sys.exit(2)
+    sys.exit(2)  # ---- 3
 
 
 def main():
@@ -102,3 +102,14 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 In Progress 태스크가 있을 때만 적용
+#   설명: backlog CLI 출력 문구에 기대는 판정이다. 활성 태스크가 없으면 커밋을 강제할 이유가 없어 통과한다.
+#   관련: hooks/dedup_drift_guard.py (이 함수는 훅마다 복사돼 REGISTRY로 일치를 검증한다)
+# 2 백그라운드 작업이 있으면 통과
+#   설명: background_tasks 필드의 모양이 문서화돼 있지 않아 비어 있지 않은 list/dict면 모두 실행 중으로 본다. 더러운 작업 트리가 아직 도는 서브에이전트의 것일 수 있어, 막으면 메인 에이전트가 기다리기만 한다.
+#   관련: hooks/context_flags.py, TASK-31
+# 3 exit 2로 턴 종료를 막는다
+#   설명: Stop 훅이 stderr 메시지와 함께 exit 2를 내면 Claude가 멈추지 못하고 커밋부터 마무리한다. stop_hook_active는 일부러 통과 조건에서 뺐다. 커밋은 늘 Claude가 할 수 있으므로 반복 차단이 곧 강제다.

@@ -27,7 +27,7 @@ import shutil
 import sys
 from datetime import datetime, timezone
 
-BACKUP_DIR = os.path.expanduser("~/.claude/hooks-logs/transcript_backups")
+BACKUP_DIR = os.path.expanduser("~/.claude/hooks-logs/transcript_backups")  # ---- 1
 
 
 def backup_transcript(transcript_path, session_id):
@@ -36,7 +36,7 @@ def backup_transcript(transcript_path, session_id):
     os.makedirs(BACKUP_DIR, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     dest = os.path.join(BACKUP_DIR, f"{session_id}-{stamp}.jsonl")
-    shutil.copyfile(transcript_path, dest)
+    shutil.copyfile(transcript_path, dest)  # ---- 2
     return dest
 
 
@@ -47,9 +47,19 @@ def main():
         sys.exit(0)
     data = data if isinstance(data, dict) else {}
 
-    backup_transcript(data.get("transcript_path"), data.get("session_id") or "unknown")
+    backup_transcript(data.get("transcript_path"), data.get("session_id") or "unknown")  # ---- 3
     sys.exit(0)
 
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 백업 위치
+#   설명: 파일 이름은 `<session_id>-<UTC 시각>.jsonl`이다. 압축이 요약에서 버리는 내용을 나중에 원문으로 다시 읽기 위한 보관소다.
+#   관련: hooks/recap_archive.py (recap 보관), backlog draft-5·6 (같은 초 덮어쓰기, session_id의 경로 구분자)
+# 2 바이트 그대로 복사
+#   설명: 내용을 해석하거나 줄이지 않고 원본 바이트를 복사한다. 같은 초에 두 번 백업하면 덮어쓰고, session_id에 경로 구분자가 있으면 백업 폴더 밖에 쓰는 알려진 한계가 있다(draft-5, draft-6).
+# 3 압축을 절대 막지 않는다
+#   설명: 트랜스크립트가 없거나 못 읽어도 조용히 건너뛰고 항상 exit 0이다. PreCompact 훅이 압축 자체를 막으면 세션이 멈추기 때문이다.

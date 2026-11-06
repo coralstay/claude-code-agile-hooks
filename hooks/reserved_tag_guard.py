@@ -35,7 +35,7 @@ import json
 import re
 import sys
 
-RESERVED_TAGS = (
+RESERVED_TAGS = (  # ---- 1
     "bash-input",
     "bash-stdout",
     "bash-stderr",
@@ -50,9 +50,7 @@ RESERVED_TAGS = (
     "user-prompt-submit-hook",
 )
 
-# <tag>, </tag>, < tag attr="x" >, <tag/>, case-insensitive. The lookahead
-# keeps `<bash-inputs>` / `<command-name-x>` from matching.
-_TAG_RE = re.compile(
+_TAG_RE = re.compile(  # ---- 2
     r"<\s*/?\s*("
     + "|".join(re.escape(t) for t in RESERVED_TAGS)
     + r")(?=[\s/>])[^<>]*>",
@@ -65,7 +63,7 @@ _TAG_RE = re.compile(
 _FENCE_OPEN_RE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
 
 
-def strip_fenced_blocks(text):
+def strip_fenced_blocks(text):  # ---- 3
     """Drop every line inside a fenced code block (fence lines included).
     An unclosed fence runs to the end of the text."""
     kept = []
@@ -91,7 +89,7 @@ def strip_fenced_blocks(text):
     return "\n".join(kept)
 
 
-def strip_inline_code(text):
+def strip_inline_code(text):  # ---- 4
     """Remove inline code spans: a run of N backticks closed by the next run
     of exactly N backticks. An unmatched run is literal text."""
     out = []
@@ -153,10 +151,10 @@ def main():
     if not isinstance(data, dict):
         sys.exit(0)
 
-    if data.get("stop_hook_active"):
+    if data.get("stop_hook_active"):  # ---- 5
         sys.exit(0)
 
-    message = data.get("last_assistant_message")
+    message = data.get("last_assistant_message")  # ---- 6
     if not isinstance(message, str):
         sys.exit(0)
 
@@ -165,7 +163,7 @@ def main():
         sys.exit(0)
 
     # Backticked so the feedback itself never shows a bare reserved tag.
-    listed = ", ".join(f"`<{t}>`" for t in tags)
+    listed = ", ".join(f"`<{t}>`" for t in tags)  # ---- 7
     deny(
         f"[claude-code-agile-hooks] 직전 응답에 하네스 예약 태그가 들어 있습니다: {listed}\n"
         "이 태그들은 하네스가 사용자가 직접 실행한 명령·출력이나 시스템 주입 메시지를 "
@@ -179,3 +177,24 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 하네스 예약 태그 목록
+#   설명: 이 태그들은 트랜스크립트에서 '사용자가 실행했다'를 나타내는 유일한 표식이다. 어시스턴트가 직접 내보내면(제안 명령을 그리려는 선의라도) 다른 가드와 사람 검토자가 믿는 신뢰 경계가 위조된다.
+#   관련: TASK-30
+#   개념: 신뢰 경계: 누가 실행했는지에 대한 기록을 믿을 수 있는 선
+# 2 태그 모양 매칭
+#   설명: `<tag>`·`</tag>`·`< tag attr="x" >`·`<tag/>`를 대소문자 무관하게 잡는다. 뒤따르는 lookahead가 `<bash-inputs>`나 `<command-name-x>` 같은 비슷한 이름을 걸러 낸다.
+# 3 펜스 코드블록은 무시
+#   설명: ``` 또는 ~~~ 펜스 안은 검사 대상에서 뺀다. 닫히지 않은 펜스는 글 끝까지 이어진다. 백틱 펜스의 정보 문자열에 백틱이 있으면 펜스가 아니다(CommonMark).
+#   개념: CommonMark 펜스 코드블록
+# 4 인라인 코드 스팬은 무시
+#   설명: N개의 백틱 열이 정확히 N개의 백틱 열로 닫힐 때까지가 코드 스팬이다. 짝이 없는 열은 일반 글자로 둔다. 그래서 태그를 코드로 감싸 설명하는 것은 허용된다.
+# 5 교정 턴은 반복 차단하지 않는다
+#   설명: stop_hook_active이면 통과시켜 교정 턴이 무한히 거부되는 루프를 막는다. block_stop_if_dirty와 달리 여기서는 교정이 어시스턴트 메시지에 달려 있어 루프 위험이 실제로 있다.
+#   관련: hooks/block_stop_if_dirty.py
+# 6 마지막 메시지만 검사
+#   설명: Stop 페이로드의 last_assistant_message만 본다. 트랜스크립트는 파싱하지 않아 싸고, 모든 프로젝트에 적용된다(backlog 프로젝트 한정이 아님).
+# 7 피드백에도 맨 태그를 쓰지 않는다
+#   설명: 거부 메시지 자체가 예약 태그를 맨 모양으로 내보내면 같은 위조가 되므로 백틱으로 감싸 보여 준다.
