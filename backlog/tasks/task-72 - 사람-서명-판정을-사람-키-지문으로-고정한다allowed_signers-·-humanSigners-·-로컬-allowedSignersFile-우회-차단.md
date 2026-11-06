@@ -3,10 +3,10 @@ id: TASK-72
 title: >-
   사람 서명 판정을 사람 키 지문으로 고정한다(allowed_signers · humanSigners · 로컬
   allowedSignersFile 우회 차단)
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-05T18:54:00Z'
-updated_date: '2026-11-06T00:33:00Z'
+updated_date: '2026-11-06T00:36:00Z'
 labels:
   - security
   - workflow
