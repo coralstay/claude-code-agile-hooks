@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-05T18:54:00Z'
-updated_date: '2026-11-05T23:47:00Z'
+updated_date: '2026-11-06T00:33:00Z'
 labels:
   - security
   - workflow
@@ -55,7 +55,7 @@ documentation:
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
 - [x] #2 [수동 검증] README · CLAUDE.md.snippet · install.sh 안내에 지문 목록 파일과 만드는 방법을 반영한다
-- [ ] #3 [수동 검증] 설치 후 실제 저장소에서 사람 키 Plan-Approved는 통과하고 AI 키 서명은 거부됨을 확인한다
+- [x] #3 [수동 검증] 설치 후 실제 저장소에서 사람 키 Plan-Approved는 통과하고 AI 키 서명은 거부됨을 확인한다
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -94,4 +94,13 @@ documentation:
 - 증거: TASK-72#D1 — 메인 세션 `coverageCommand`: require_implementation_plan.py 100%, TOTAL 5598 stmts · 2318 branches 100%, 2509 passed
 - 증거: TASK-72#D2 — README.md(human-signers 4곳, ssh-keygen -lf 예시 L343), CLAUDE.md.snippet L51, install.sh L73(파일이 없거나 비면 안내, 만들지 않음)
 - 남은 것(범위 밖, 기록): config_guard 매처는 Bash|Edit|Write라 MultiEdit 같은 다른 편집 도구는 못 봄. 이미 설치된 ~/.claude/CLAUDE.md는 마커 블록이 있어 새 안내 문구가 반영되지 않음(블록 삭제 후 재설치 필요). 이름으로 고정한 ssh-keygen · gpg · gpgsm은 훅 프로세스 PATH를 믿는다(코드 주석). revocationFile · minTrustLevel은 사람 서명을 막을 수만 있고 위조는 못 함. TASK-73이 서명 헬퍼를 복제할 때 dedup REGISTRY 등록
+
+- 증거: TASK-72#D3 — 유저가 install.sh 실행 + human-signers에 사람 서명 키 지문 1줄(`ssh-keygen -lf ~/.ssh/secretive_git_signing.pub`와 일치) 작성, 설치본 4개 파일이 브랜치와 동일(`cmp`). 실전: (1) ~/githubs 아래 임시 backlog 프로젝트에 AI 서명 Plan-Approved + humanSigners에 ai-claude-code 넣고 `backlog task edit TASK-1 -s "In Progress"` → 설치된 훅이 거부(%GK = SHA256:ve62…, ai-claude-code 지문, humanSigners 미사용 안내) (2) 이 저장소 TASK-72(사람 서명 ddf02d7)에서 같은 전환 → 통과
+- 발견(범위 밖): 처음엔 /tmp에서 시도했는데 세션 cwd가 ~/githubs로 되돌아가 훅이 backlog 프로젝트가 아니라고 보고 검사 없이 통과시켰다 — 훅이 명령의 대상이 아니라 세션 cwd로 판정하는 문제(TASK-67)라 'cd <다른 저장소> && backlog task edit … -s In Progress'로 승인 검사를 건너뛸 수 있다
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+사람 서명 판정을 사람 키 지문으로 고정했다. Plan-Approved 커밋은 %G? = G이고 서명 키 지문(%GK)이 설치된 훅 옆의 human-signers 목록에 있어야 승인으로 본다. principal 이름과 프로젝트 설정 humanSigners는 더 이상 판정에 쓰지 않는다. 서명을 읽는 git 호출은 allowedSignersFile(/Users/flynn_macpro/.ssh/allowed_signers)과 검증 프로그램(gpg.ssh.program=ssh-keygen, gpg.program=gpg, gpg.x509.program=gpgsm)을 -c로 고정해, 저장소 · 전역 · 환경 변수 설정으로 판정을 바꾸거나 지어낼 수 없다(구현 중 발견한 가짜 검증 프로그램 우회를 유저 결정으로 AC #7에 추가 · 재승인). 지문 목록이 없거나 틀리면 거부(fail-closed)하고 만드는 방법을 안내한다. 커버리지 100%, 설치 후 실전에서 AI 서명 거부 · 사람 서명 통과 확인. 남은 것: 세션 cwd 기준 판정으로 'cd 다른 저장소 &&'가 검사를 건너뜀(TASK-67), config_guard가 MultiEdit 같은 다른 편집 도구를 보지 않음, 기존 ~/.claude/CLAUDE.md 안내 블록은 재설치로 갱신되지 않음.
+<!-- SECTION:FINAL_SUMMARY:END -->
