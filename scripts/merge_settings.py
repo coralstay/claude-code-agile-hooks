@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: merge_settings
+# description: settings.hooks.json을 ~/.claude/settings.json에 다른 도구의 훅을 지우지 않고 더하는 스크립트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Additive merge of settings.hooks.json into ~/.claude/settings.json (used by install.sh).
 
 Usage: merge_settings.py <settings.json> <settings.hooks.json>

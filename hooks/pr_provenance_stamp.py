@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: pr_provenance_stamp
+# description: gh pr create 때 프롬프트 수·테스트 실행·에이전트 작성 파일 수를 PR 본문에 찍는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, if: Bash(gh pr create*))
 Stamps a provenance receipt (prompt count, tests run, agent-authored file
 count) into the PR body when Claude runs `gh pr create`. Ported from

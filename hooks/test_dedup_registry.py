@@ -1,3 +1,12 @@
+# ---
+# title: test_dedup_registry
+# description: 복붙된 is_backlog_project 같은 함수가 훅 사이에서 어긋나지 않았는지 확인하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Drift-prevention test for `is_backlog_project()`.
 
 The hooks below (originally five) are each fully self-contained (no shared imports, by

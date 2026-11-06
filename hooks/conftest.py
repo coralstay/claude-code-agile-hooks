@@ -1,3 +1,12 @@
+# ---
+# title: conftest
+# description: 테스트의 git 하위 프로세스를 사용자 전역·시스템·환경 변수 git 설정에서 격리하는 pytest 설정
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """TASK-74: keep every git child process of the test suite away from the
 user's git configuration.
 

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: pre_push_coverage_check
+# description: push 전에 설정된 커버리지 명령을 돌려 실제 리포트를 보이고 실패하면 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 Coverage gate (opt-in, and mandatory for detected languages since TASK-62 -
 see below): if the project's .claude-code-agile-hooks.json (or the legacy

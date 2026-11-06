@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: session_logger
+# description: 세션의 프롬프트·파일·bash 명령을 JSONL로 영구 기록하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart + UserPromptSubmit + PostToolUse + SessionEnd
 Writes a durable JSONL log of everything that happens in a session: cwd, git
 branch, every prompt submitted, every file touched, every bash command run

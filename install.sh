@@ -1,4 +1,13 @@
 #!/bin/bash
+# ---
+# title: install
+# description: 훅 스크립트를 ~/.claude/hooks로 복사하고 설정을 병합하는 설치 스크립트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # Installs claude-code-agile-hooks globally: copies hook scripts to ~/.claude/hooks/claude-code-agile-hooks,
 # merges settings.hooks.json into ~/.claude/settings.json additively via
 # scripts/merge_settings.py (other tools' hooks are kept, nothing is duplicated), and

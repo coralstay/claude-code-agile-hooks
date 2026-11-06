@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: pipeline_trace
+# description: 플랜 모드부터 승격까지 작업 파이프라인을 세션별로 기록하고 플랜 기록 없는 편집을 경고하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """UserPromptSubmit + PostToolUse + Stop
 TASK-32: observe-and-record (never block) the work pipeline
 "plan mode -> human review -> auto mode -> draft -> verify -> commit ->

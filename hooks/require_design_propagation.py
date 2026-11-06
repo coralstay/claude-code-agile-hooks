@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_design_propagation
+# description: 최상위 설계 문서 변경이 컴포넌트 설계 문서에 전파되기 전에는 Done을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-63 (decision-15, RAIL-024): a change to the top-level design/ must be
 propagated to the affected component design/ before the top-level task

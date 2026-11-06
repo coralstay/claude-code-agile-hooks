@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: permission_auto_allow
+# description: 읽기 전용 도구·명령의 권한 요청을 자동 허용하는 PermissionRequest 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PermissionRequest
 Auto-allow permission requests for read-only tools and commands, so Claude
 Code doesn't stop to ask about calls that cannot change anything.

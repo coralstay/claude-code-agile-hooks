@@ -1,3 +1,12 @@
+# ---
+# title: test_require_design_propagation
+# description: require_design_propagation.py 훅의 동작과 경계 조건을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """TASK-63: require_design_propagation.py - a top-level design/ change must
 be propagated to the affected component design/ before the top-level task
 moves to Done (decision-15).

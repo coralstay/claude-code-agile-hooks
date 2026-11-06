@@ -1,3 +1,12 @@
+# ---
+# title: test_require_stage_committed
+# description: require_stage_committed.py 훅의 동작과 경계 조건을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """TASK-59#3: require_stage_committed.py - a backlog stage command
 (draft create / draft promote / task edit -s "In Progress" | Done) is denied
 while backlog/ has uncommitted changes."""

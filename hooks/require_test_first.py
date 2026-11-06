@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_test_first
+# description: AC 단위로 테스트를 먼저 쓰도록 소스 편집과 Done 전환을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Edit|Write, and Bash with no `if` filter)
 TASK-56: test first, one acceptance criterion at a time (AC-level TDD),
 and the tests cover the card's business rules too (RAIL-019).

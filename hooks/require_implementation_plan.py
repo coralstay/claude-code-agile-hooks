@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_implementation_plan
+# description: 구현 계획이 없는 draft의 승격과 태스크 착수를 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-58: no promotion or start without an implementation plan.
 

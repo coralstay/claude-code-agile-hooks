@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: pre_compact_backup
+# description: 컨텍스트 압축 직전에 세션 트랜스크립트를 바이트 그대로 백업하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreCompact
 Back up the full session transcript right before compaction discards
 context, so whatever the summary leaves out can still be read later.

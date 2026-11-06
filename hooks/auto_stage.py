@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: auto_stage
+# description: Claude가 수정한 파일을 PostToolUse에서 자동으로 git add 하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PostToolUse (matcher: Edit|Write)
 Automatically `git add` files Claude modifies, so `git status` always shows
 exactly what Claude touched. Ported from karanb192/claude-code-hooks'

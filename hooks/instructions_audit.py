@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: instructions_audit
+# description: CLAUDE.md·규칙 파일의 숨은 유니코드와 적대적 지시를 로드 시점에 검사하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """InstructionsLoaded (matcher: any) + UserPromptSubmit + PreToolUse
 Audit CLAUDE.md / .claude/rules/*.md content as it loads and lock the
 session on hidden or hostile directives: invisible-Unicode smuggling

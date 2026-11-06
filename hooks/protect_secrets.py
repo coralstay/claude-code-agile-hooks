@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: protect_secrets
+# description: .env·SSH 키·클라우드 자격 증명 같은 비밀 파일의 읽기·수정·유출을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Read|Edit|Write|Bash)
 Prevent reading, modifying, or exfiltrating secret files (.env, SSH keys,
 cloud credentials, keystores). Ported from karanb192/claude-code-hooks'

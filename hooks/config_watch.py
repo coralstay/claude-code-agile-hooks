@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: config_watch
+# description: 세션 중 설정 변경을 눈에 띄게 알리거나 차단하는 ConfigChange 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """ConfigChange (matcher: user_settings|project_settings|local_settings|policy_settings|skills)
 Make every mid-session config change loudly visible (default) or block it
 outright with CONFIG_WATCH_BLOCK=true. Catches out-of-band settings.json

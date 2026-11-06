@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_draft_first
+# description: backlog task create를 막고 draft 생성 후 승격하는 흐름으로 안내하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash)
 TASK-29 (A): in a backlog.md project, new work must enter as a draft
 (`backlog draft create`) and only become a task through

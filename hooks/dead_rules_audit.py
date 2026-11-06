@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: dead_rules_audit
+# description: CLAUDE.md 규칙을 Claude가 지키는지 무시하는지 집계해 훅으로 승격할 규칙을 알리는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart + PostToolUse(Edit|Write) + SessionEnd
 CLAUDE.md compliance scorecard: tallies which rules Claude actually follows
 vs. ignores as it edits, and flags chronically-ignored rules to promote into

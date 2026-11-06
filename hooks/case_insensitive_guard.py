@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: case_insensitive_guard
+# description: 대소문자 비구분 파일시스템에서 rm -rf가 다른 대소문자 경로까지 지우는 것을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash)
 Stop `rm -rf content` from destroying `Content` on a case-insensitive
 filesystem (APFS default on macOS, exFAT, NTFS). Ported from

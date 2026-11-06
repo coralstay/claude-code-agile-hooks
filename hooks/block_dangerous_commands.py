@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: block_dangerous_commands
+# description: 치명적이거나 위험도 높은 셸 명령을 실행 전에 막는 PreToolUse 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash)
 Block catastrophic/high-risk shell commands before they run. Ported from
 karanb192/claude-code-hooks' block-dangerous-commands plugin (MIT license),

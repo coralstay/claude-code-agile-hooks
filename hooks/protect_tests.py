@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: protect_tests
+# description: 테스트 파일 삭제·이름 변경·skip/xfail 비활성화로 가짜 통과를 만드는 것을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash|Edit|Write)
 Stop "fake green": block deleting a test file, renaming a test file away
 from a test-looking name, or disabling tests via skip/xfail decorators

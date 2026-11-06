@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: dedup_drift_guard
+# description: 훅 사이에 복붙된 함수가 어긋나지 않았는지 REGISTRY로 사후 검증하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, if: Bash(git *))
 The 27 hooks in this repo are deliberately self-contained (no shared
 imports between hook files - see require_active_task.py's module

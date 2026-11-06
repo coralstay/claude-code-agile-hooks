@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: pre_commit_check
+# description: 커밋이 task/<ID> 브랜치에서만 되게 하고 설정된 테스트가 통과해야 커밋을 허용하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 Phase 3-1 + 3-4: commits must happen on a task/<ID> branch, and (if the
 project opted in via .claude-code-agile-hooks.json, or the legacy .claude-rails.json)

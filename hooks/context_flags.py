@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: context_flags
+# description: 세션 상태를 세션별 플래그 파일에 기록해 다른 훅이 읽게 하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart + PreCompact + Stop
 TASK-31 "context flags": hooks can't add fields to Claude Code's own hook
 payload, so this hook keeps a tiny per-session flag file that other hooks

@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: bounty_board
+# description: TODO/FIXME/HACK 부채를 나이에 따라 커지는 XP 현상금으로 매기는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart + PostToolUse(Edit|Write)
 Prices a repo's TODO/FIXME/HACK debt as aging XP bounties: a marker's value
 grows the longer it sits unaddressed, and clearing one (removing the line

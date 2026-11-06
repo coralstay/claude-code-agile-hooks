@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: block_stop_if_dirty
+# description: 태스크 진행 중 커밋하지 않은 변경이 있으면 턴 종료(Stop)를 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Stop
 Phase 3-4b: don't let Claude end its turn with uncommitted changes while a
 task is In Progress - forces the small-commit loop to actually finish.

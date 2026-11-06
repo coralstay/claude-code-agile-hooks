@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_active_task
+# description: backlog 프로젝트에서 In Progress 태스크를 읽기 전에는 Edit/Write를 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Edit|Write)
 Phase 1.8 + Phase 3-0: don't let Claude edit files in a backlog.md project
 unless a task is In Progress and its content has actually been read this

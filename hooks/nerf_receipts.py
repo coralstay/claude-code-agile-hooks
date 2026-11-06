@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: nerf_receipts
+# description: 모델 버전별 실패율·수정 반복·토큰을 기록해 모델 교체 뒤의 변화를 알리는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PostToolUse + PostToolUseFailure + Stop
 Personal flight recorder: records failure rate, edit churn, and tokens/task
 by model version, flagging real shifts when the model changes. Ported from

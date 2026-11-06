@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: session_start
+# description: backlog 프로젝트에서 세션 시작 시 워크플로 안내와 무결성 문제를 알려 주는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart: if cwd is a backlog.md project, brief Claude with the
 official workflow guide and surface any integrity issues. Cannot block
 (SessionStart doesn't support it) - this is context injection only.

@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: dead_end_registry
+# description: 시도했다 되돌린 접근과 이유를 기억해 같은 막다른 길로 다시 들어가기 전에 경고하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """UserPromptSubmit + PreToolUse(Edit|Write)
 Remembers approaches that were tried and reverted (with a reason), and warns
 before retrying the same dead end. Ported from karanb192/claude-code-hooks'

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: recap_archive
+# description: Claude Code 세션 recap(away_summary)을 트랜스크립트 정리 주기 밖으로 영구 보관하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart + SessionEnd
 TASK-44: keep Claude Code's session recaps beyond the transcript cleanup.
 

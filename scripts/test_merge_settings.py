@@ -1,3 +1,12 @@
+# ---
+# title: test_merge_settings
+# description: merge_settings.py의 가산 병합 동작을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Tests for scripts/merge_settings.py (install.sh's settings.json hooks merge).
 
 Run from the repo root together with the hook tests: `uvx pytest -q hooks scripts`.

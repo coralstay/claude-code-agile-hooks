@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: pre_git_safety_check
+# description: 브랜치를 보는 git 안전 규칙과 파괴적 gh CLI 명령 차단을 맡는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-37: registered without `if: Bash(git *)` on purpose - that permission-rule
 filter matches the command text, so `/usr/bin/git push origin main` would never

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_work_order
+# description: 작업 순서 파일(work-order.md)이 최신이 아니면 승격·착수를 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash)
 TASK-60: in a backlog.md project, every promotion is followed by tidying
 dependencies (`backlog task edit <ID> --dep ...`) and regenerating the work

@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: config_guard
+# description: 에이전트가 자기 가드레일 설정 파일(settings·hooks·.mcp.json)을 건드리는 것을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash|Edit|Write)
 "Who guards the guards": block the agent from tampering with its own
 guardrail configuration (~/.claude/settings.json, ~/.claude/hooks/,

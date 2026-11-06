@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_coverage_on_done
+# description: 태스크를 Done으로 옮길 때도 커버리지 게이트를 돌리는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-62: the coverage gate also runs when a task is moved to Done, not only
 before a push (pre_push_coverage_check.py). Same nature as that hook, so it

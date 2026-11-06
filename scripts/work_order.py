@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: work_order
+# description: 열린 태스크의 병렬·순차 작업 순서를 backlog/work-order.md로 쓰는 스크립트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """TASK-60: writes backlog/work-order.md - the order in which the open
 tasks of a backlog.md project can be worked on.
 

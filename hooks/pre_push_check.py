@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: pre_push_check
+# description: 태스크가 Done이고 최종 요약이 있을 때만 task 브랜치 push를 허용하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 Phase 4.3: only push a task/<ID> branch once that task is Done and carries
 a final summary.

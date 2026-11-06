@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: reserved_tag_guard
+# description: 어시스턴트 최종 메시지에 하네스 예약 태그가 있으면 턴 종료를 막는 Stop 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Stop
 TASK-30: block the turn from ending when the assistant's own final message
 contains harness-reserved tags (the ones Claude Code uses to mark output the

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_stage_committed
+# description: 카드 생애주기의 이전 단계가 커밋되기 전에는 다음 단계 명령을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash)
 TASK-59#3: in a backlog.md project every card lifecycle stage lands as its
 own commit - draft 1장 → 커밋 → 승격 → 커밋 → In Progress → 커밋 → 작업 →

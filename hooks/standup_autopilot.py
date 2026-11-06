@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: standup_autopilot
+# description: 세션 로그에서 하루 스탠드업을 만들고 어제 남은 항목을 다음 세션에 다시 알리는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """SessionStart(startup) + Stop + SessionEnd
 Writes a daily standup from what the agent actually did across sessions:
 captures files touched, bash commands run, and tasks worked on from

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_test_layout
+# description: 테스트 파일이 요약 헤더, AC/DoD 테스트, 커버리지 보충 테스트 순서를 지키게 하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Edit|Write)
 TASK-61: test files keep a fixed layout - summary header, then the tests
 written from the card's AC/DoD, then the tests that only fill coverage.

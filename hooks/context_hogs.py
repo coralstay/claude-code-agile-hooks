@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: context_hogs
+# description: 도구 결과의 대략적인 토큰 비용을 파일별로 집계해 컨텍스트 소모 순위를 만드는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PostToolUse (matcher: Read|Grep|Glob|Bash)
 Per-file context-cost leaderboard: attributes each tool result's approximate
 token cost to the file(s) it loaded, so you can see which files cost the

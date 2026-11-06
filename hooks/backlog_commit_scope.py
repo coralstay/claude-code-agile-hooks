@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: backlog_commit_scope
+# description: draft 생성·승격 커밋이 각자 단독 커밋이 되도록 git commit을 검사하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-29 (B): in a backlog.md project, "draft created" and "draft promoted"
 must each land as their own commit, so history shows when something became
