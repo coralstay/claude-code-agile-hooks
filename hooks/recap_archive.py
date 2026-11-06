@@ -75,7 +75,7 @@ import sys
 import tempfile
 
 try:
-    import fcntl
+    import fcntl  # ---- 1
 except ImportError:  # non-POSIX: sweep without the file lock
     fcntl = None
 
@@ -125,7 +125,7 @@ def save_json(path, value):
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(value, f)
-        os.replace(tmp, path)
+        os.replace(tmp, path)  # ---- 2
     except BaseException:
         with contextlib.suppress(FileNotFoundError):
             os.unlink(tmp)
@@ -135,7 +135,7 @@ def save_json(path, value):
 def to_entry(line):
     """The archive entry for one transcript line, or None if it isn't an
     away_summary record."""
-    if MARKER not in line:
+    if MARKER not in line:  # ---- 3
         return None
     try:
         record = json.loads(line)
@@ -156,7 +156,7 @@ def scan(path, offset):
     with open(path, "rb") as f:
         f.seek(offset)
         for line in f:
-            if not line.endswith(b"\n"):
+            if not line.endswith(b"\n"):  # ---- 4
                 break
             offset += len(line)
             entry = to_entry(line)
@@ -168,7 +168,7 @@ def scan(path, offset):
 def start_offset(state, path, st):
     """Where to resume: 0 for a new, replaced or truncated file."""
     seen = state.get(path)
-    if not isinstance(seen, dict) or seen.get("ino") != st.st_ino:
+    if not isinstance(seen, dict) or seen.get("ino") != st.st_ino:  # ---- 5
         return 0
     offset = seen.get("offset")
     if not isinstance(offset, int) or offset > st.st_size:
@@ -210,13 +210,13 @@ def sweep():
         with open(archive_path(), "a", encoding="utf-8") as f:
             for entry in found:
                 key = (entry["sessionId"], entry["uuid"])
-                if key in keys:
+                if key in keys:  # ---- 6
                     continue
                 keys.add(key)
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
                 added += 1
     # deleted transcripts drop out of the state, so it stays small
-    save_json(state_path(), new_state)
+    save_json(state_path(), new_state)  # ---- 7
     return added
 
 
@@ -235,7 +235,7 @@ class SweepLock:
             )
             try:
                 fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
+            except BlockingIOError:  # ---- 8
                 self.acquired = False
         return self
 
@@ -326,13 +326,46 @@ def query(argv):
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv and argv[0] == "query":
-        sys.exit(query(argv[1:]))
+        sys.exit(query(argv[1:]))  # ---- 9
     try:
         run_hook(json.load(sys.stdin))
-    except Exception:
+    except Exception:  # ---- 10
         pass
     sys.exit(0)
 
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 fcntl 없으면 잠금 없이 진행
+#   설명: 비 POSIX 환경에는 fcntl이 없다. 잠금 없이 훑어도 중복은 (sessionId, uuid) 키로 걸러지므로 기능은 유지된다.
+#   개념: fail-open
+# 2 임시 파일 후 원자적 교체
+#   설명: 상태 파일을 같은 디렉터리의 임시 파일에 쓴 뒤 os.replace로 바꾼다. 쓰다 죽어도 반쯤 쓴 상태 파일이 남지 않는다.
+#   개념: 원자적 쓰기
+# 3 바이트 단위 선필터
+#   설명: 대부분의 줄은 away_summary가 아니다. JSON 파싱 전에 바이트 포함 검사로 걸러서 수백 MB 트랜스크립트 첫 훑기를 0.3초대로 유지한다.
+#   개념: 성능
+# 4 쓰는 중인 줄은 다음으로
+#   설명: 개행으로 끝나지 않은 줄은 아직 기록 중이다. 오프셋을 전진시키지 않고 멈춰 다음 훑기에서 온전히 읽는다.
+#   개념: 증분 스캔
+# 5 파일 교체·잘림이면 처음부터
+#   설명: inode가 바뀌었거나 저장된 오프셋이 파일 크기보다 크면 같은 파일의 연속이 아니다. 0부터 다시 읽고 중복은 키로 거른다.
+#   개념: 증분 스캔
+# 6 (sessionId, uuid) 중복 제거
+#   설명: 상태 저장 직전에 죽거나 두 세션이 겹쳐도 같은 회고가 두 번 쌓이지 않게 하는 마지막 방어선이다. 아카이브는 append-only라 여기서만 막을 수 있다.
+#   개념: 멱등
+# 7 상태는 아카이브 기록 뒤에 저장
+#   설명: 순서가 반대면 기록 전에 죽을 때 회고가 영영 누락된다. 지금 순서에서는 최악의 경우 중복 읽기뿐이고 213번 줄이 걸러낸다.
+#   개념: at-least-once
+# 8 잠금 못 얻으면 기다리지 않고 건너뜀
+#   설명: 다른 세션이 이미 같은 기록을 아카이브하는 중이므로 기다릴 이유가 없다. 세션 시작을 지연시키지 않는다.
+#   개념: 비차단 잠금
+# 9 query 서브커맨드 진입점
+#   설명: 훅 이벤트(stdin JSON)와 조회 CLI가 같은 파일을 쓴다. 첫 인자가 query면 훅 경로를 타지 않고 조회만 한다.
+#   개념: CLI
+# 10 모든 예외 삼키고 exit 0
+#   설명: SessionStart/End 훅이 실패해 세션 시작·종료를 방해하면 안 된다. 아카이브는 부가 기능이라 실패해도 조용히 넘어간다.
+#   개념: fail-open

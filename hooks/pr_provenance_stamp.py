@@ -42,7 +42,7 @@ import shlex
 import sys
 from datetime import datetime, timezone
 
-GH_PR_CREATE_RE = re.compile(r"\bgh\s+pr\s+create\b")
+GH_PR_CREATE_RE = re.compile(r"\bgh\s+pr\s+create\b")  # ---- 1
 
 
 def count_session_prompts(session_id):
@@ -76,7 +76,7 @@ def inject_receipt_into_command(command, receipt):
     a --body with just the receipt. Returns the rewritten command string."""
     try:
         tokens = shlex.split(command)
-    except ValueError:
+    except ValueError:  # ---- 2
         return command
 
     for i, tok in enumerate(tokens):
@@ -88,10 +88,10 @@ def inject_receipt_into_command(command, receipt):
             return shlex.join(tokens)
 
     # No --body given at all: add one.
-    return shlex.join(tokens + ["--body", receipt])
+    return shlex.join(tokens + ["--body", receipt])  # ---- 3
 
 
-class UnsafeCommand(Exception):
+class UnsafeCommand(Exception):  # ---- 4
     """The command uses shell syntax we can't split with certainty."""
 
 
@@ -144,7 +144,7 @@ def split_top_level_segments(command):
         if c == "$":
             nxt = command[i + 1] if i + 1 < n else ""
             if nxt in ("(", "{", "'", '"'):
-                raise UnsafeCommand("$" + nxt)
+                raise UnsafeCommand("$" + nxt)  # ---- 5
             safe = False  # plain $VAR: shlex.join would single-quote it
             i += 1
             at_word_start = False
@@ -234,7 +234,7 @@ def stamp_command(command, receipt):
         if is_pr_create_tokens(tokens):
             matches.append((start, end, safe, tokens))
 
-    if len(matches) != 1:
+    if len(matches) != 1:  # ---- 6
         return None
     start, end, safe, tokens = matches[0]
     if not safe:
@@ -247,13 +247,13 @@ def stamp_command(command, receipt):
     lead = original[: len(original) - len(original.lstrip(" \t"))]
     trail = original[len(lead) + len(stripped) :]
     new_segment = inject_receipt_into_command(stripped, receipt)
-    return command[:start] + lead + new_segment + trail + command[end:]
+    return command[:start] + lead + new_segment + trail + command[end:]  # ---- 7
 
 
 def main():
     try:
         data = json.load(sys.stdin)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError:  # ---- 8
         sys.exit(0)
 
     tool_input = data.get("tool_input") or {}
@@ -268,12 +268,12 @@ def main():
 
     # updatedInput replaces the whole input object, so carry every other
     # field of tool_input forward unchanged alongside the new command.
-    updated_input = {**tool_input, "command": new_command}
+    updated_input = {**tool_input, "command": new_command}  # ---- 9
 
     payload = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
+            "permissionDecision": "allow",  # ---- 10
             "updatedInput": updated_input,
         }
     }
@@ -283,3 +283,35 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 gh pr create 사전 필터
+#   설명: 값싼 정규식으로 대부분의 Bash 명령을 먼저 걸러낸다. 실제 명령 위치 판정은 stamp_command가 따로 한다.
+#   개념: 프리필터
+# 2 토큰화 실패면 원문 그대로
+#   설명: shlex가 못 쪼개는 명령은 건드리지 않는다. 스탬프가 빠지는 쪽이 명령을 깨뜨리는 쪽보다 낫다.
+#   개념: fail-open
+# 3 --body가 없으면 새로 추가
+#   설명: 기존 본문에 이어 붙일 곳이 없으면 영수증만 담은 --body를 덧붙인다.
+# 4 안전하지 않은 명령 신호용 예외
+#   설명: 따옴표 추적 스캔이 경계를 틀리게 잡을 수 있는 구문(치환, heredoc, 괄호 등)을 만나면 던진다. 호출자가 이를 받아 아무것도 고치지 않는다.
+#   개념: fail-safe
+# 5 $( ${ $' $" 는 즉시 포기
+#   설명: 명령 치환·확장은 구간 경계를 정적 스캔으로 알 수 없다. 단순 $VAR와 달리 구간만 안전하지 않게 표시하는 정도로는 부족해서 전체를 포기한다.
+#   개념: 보수적 판정
+# 6 PR 생성 구간이 정확히 하나일 때만
+#   설명: 0개면 대상이 아니고, 2개 이상이면 어느 쪽에 스탬프할지 알 수 없다. 모호하면 건드리지 않는다.
+#   개념: fail-closed
+# 7 해당 구간만 교체하고 나머지는 그대로
+#   설명: 앞뒤 공백까지 보존해서 연산자·파이프·다른 명령의 의미를 바꾸지 않는다.
+#   개념: 바이트 보존
+# 8 입력 JSON이 깨지면 통과
+#   설명: 훅 입력을 못 읽어도 사용자의 gh 명령은 그대로 실행된다.
+#   개념: fail-open
+# 9 updatedInput은 입력 전체를 대체
+#   설명: command만 담아 보내면 tool_input의 다른 필드가 사라진다. 나머지 필드를 모두 복사해 새 command만 바꾼다.
+#   관련: Claude Code 훅 updatedInput 규약
+# 10 permissionDecision allow
+#   설명: updatedInput은 허용 결정과 함께 와야 적용된다. 본문만 고치는 훅이므로 다른 권한 판단은 건드리지 않는 취지다.
+#   개념: PreToolUse 출력
