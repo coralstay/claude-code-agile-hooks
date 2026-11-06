@@ -43,7 +43,7 @@ import os
 import shlex
 import sys
 
-REGISTRY = {
+REGISTRY = {  # ---- 1
     "is_backlog_project": [
         "require_active_task.py",
         "pre_commit_check.py",
@@ -275,7 +275,7 @@ REGISTRY = {
     # 의도된 차이로 보이므로 REGISTRY에 등록하지 않는다.
 }
 
-FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+FLAGS_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}  # ---- 2
 
 
 # TASK-39: once copied into four hooks; the other three now use the
@@ -288,7 +288,7 @@ def command_invokes_git_subcommand(command, subcommand):
     try:
         tokens = shlex.split(command)
     except ValueError:
-        return subcommand in command
+        return subcommand in command  # ---- 3
 
     i = 0
     while i < len(tokens):
@@ -314,7 +314,7 @@ def command_invokes_git_subcommand(command, subcommand):
 def valid_registry(value):
     """True if `value` has REGISTRY's shape: dict of str -> list of
     non-empty str."""
-    return isinstance(value, dict) and all(
+    return isinstance(value, dict) and all(  # ---- 4
         isinstance(name, str)
         and isinstance(files, list)
         and all(isinstance(f, str) and f for f in files)
@@ -340,7 +340,7 @@ def load_repo_registry(hooks_dir):
     path = os.path.join(hooks_dir, "dedup_drift_guard.py")
     try:
         with open(path) as f:
-            tree = ast.parse(f.read(), filename=path)
+            tree = ast.parse(f.read(), filename=path)  # ---- 5
     except (OSError, SyntaxError, ValueError):
         return None
     value_node = None
@@ -351,11 +351,11 @@ def load_repo_registry(hooks_dir):
             and isinstance(node.targets[0], ast.Name)
             and node.targets[0].id == "REGISTRY"
         ):
-            value_node = node.value
+            value_node = node.value  # ---- 6
     if value_node is None:
         return None
     try:
-        value = ast.literal_eval(value_node)
+        value = ast.literal_eval(value_node)  # ---- 7
     except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
         return None
     return value if valid_registry(value) else None
@@ -366,7 +366,7 @@ def registry_files_present(hooks_dir, registry=REGISTRY):
     any file the REGISTRY references is missing, this isn't that repo -
     stay quiet."""
     all_files = {f for files in registry.values() for f in files}
-    return all(os.path.isfile(os.path.join(hooks_dir, f)) for f in all_files)
+    return all(os.path.isfile(os.path.join(hooks_dir, f)) for f in all_files)  # ---- 8
 
 
 def function_ast_dump(path, function_name):
@@ -381,7 +381,7 @@ def function_ast_dump(path, function_name):
         return None
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == function_name:
-            return ast.dump(node, annotate_fields=False, include_attributes=False)
+            return ast.dump(node, annotate_fields=False, include_attributes=False)  # ---- 9
     return None
 
 
@@ -405,7 +405,7 @@ def find_drift(hooks_dir, registry=REGISTRY):
                 f"함수 없음): {', '.join(sorted(missing))}"
             )
 
-        if len(set(present.values())) > 1:
+        if len(set(present.values())) > 1:  # ---- 10
             baseline_file = next(iter(present))
             baseline_dump = present[baseline_file]
             mismatched = [
@@ -434,14 +434,14 @@ def main():
     cwd = data.get("cwd", "")
     command = (data.get("tool_input") or {}).get("command", "")
 
-    if not command_invokes_git_subcommand(command, "commit"):
+    if not command_invokes_git_subcommand(command, "commit"):  # ---- 11
         sys.exit(0)
 
     hooks_dir = os.path.join(cwd, "hooks")
     registry = load_repo_registry(hooks_dir)
     if registry is None:
         registry = REGISTRY
-    if not registry_files_present(hooks_dir, registry):
+    if not registry_files_present(hooks_dir, registry):  # ---- 12
         sys.exit(0)
 
     problems = find_drift(hooks_dir, registry)
@@ -456,3 +456,42 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ======== 노트 ========
+# 1 복붙 함수 REGISTRY
+#   설명: 함수 이름 → 그 함수가 AST까지 같아야 하는 훅 파일 목록이다. 훅끼리 import하지 않는 설계(자립)의 대가로 생기는 복붙 어긋남을, 이 표 하나로 기계가 검사하게 만든다.
+#   관련: hooks/test_dedup_registry.py, decision-2, decision-3
+#   개념: SSOT 보완, 자립 훅
+# 2 값을 받는 git 전역 플래그
+#   설명: `git -C <path> commit`처럼 서브커맨드 앞에 값 인자가 오는 플래그는 값까지 건너뛰어야 한다. 빠뜨리면 `-C /path`의 경로를 서브커맨드로 오인한다.
+# 3 토큰화 실패 시 부분 문자열 폴백
+#   설명: 따옴표가 안 닫힌 명령은 구조를 알 수 없어 단순 포함 검사로 대신한다. 이 훅은 드리프트 탐지기이고 보안 통제가 아니므로 과검사(싼 읽기 전용)가 안전한 쪽이다.
+#   관련: TASK-39
+# 4 레포 REGISTRY 모양 검증
+#   설명: 리터럴로 읽은 값이 dict[str, list[비어 있지 않은 str]]일 때만 쓴다. 모양이 틀린 값을 쓰면 이후 순회에서 예외가 나므로 사용 불가(None)로 돌려 내장 REGISTRY로 폴백한다.
+#   관련: TASK-40
+# 5 레포 파일을 실행하지 않고 파싱만
+#   설명: 검사 대상 레포의 hooks/dedup_drift_guard.py를 import하지 않고 ast로만 읽는다. 검사 대상이 임의 코드를 실행하게 두지 않는 자립 설계(decision-3)의 보안 근거다.
+#   관련: decision-3
+#   개념: 데이터로만 읽기
+# 6 마지막 REGISTRY 대입이 이긴다
+#   설명: 최상위에 REGISTRY 대입이 여러 번이면 파이썬 의미대로 마지막 값을 쓰도록 덮어쓴다.
+# 7 literal_eval로 평가
+#   설명: 리터럴만 허용하는 평가라 호출 · 이름 참조가 있으면 실패한다. 어떤 예외든 None으로 돌려 내장 REGISTRY를 쓴다(실패해도 커밋을 막지 않는다).
+#   관련: TASK-40
+#   개념: literal_eval
+# 8 자기 레포 자가 판별
+#   설명: REGISTRY가 가리키는 파일이 하나라도 없으면 이 레포가 아니다. 다른 프로젝트의 커밋에서는 조용히 있도록(fail-open) 하는 안전장치다.
+#   개념: fail-open
+# 9 정규화한 AST로 비교
+#   설명: 주석 · 공백 · 줄 번호(include_attributes=False)를 빼고 구조만 덤프해 문서화 편집은 허용하고 동작 차이는 잡아낸다. 소스 헤더 본문 노트 표식도 주석이라 이 비교에 영향이 없다.
+#   개념: AST 정규화
+# 10 어긋남 판정
+#   설명: 덤프 문자열이 한 종류를 넘으면 사본끼리 다르다는 뜻이다. 첫 파일을 기준으로 삼아 다른 파일 목록을 보고한다.
+# 11 커밋일 때만 검사
+#   설명: 설정에서 `if: Bash(git *)` 필터를 의도적으로 유지하므로 git 명령만 들어온다. 그 안에서도 commit이 아니면 즉시 종료한다.
+#   관련: TASK-46, hooks/test_hook_registration_contract.py
+#   개념: 훅 필터
+# 12 다른 레포에서는 조용히 통과
+#   설명: REGISTRY의 파일이 없으면 이 도구 레포가 아니므로 아무것도 막지 않는다. 설치된 훅이 모든 프로젝트의 커밋에 걸려 있기 때문에 필요한 자가 가드다.
+#   개념: fail-open
