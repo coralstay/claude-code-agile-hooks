@@ -35,6 +35,7 @@ updated_date: '2026-11-06'
   - `hooks/protect_tests.py`
   - `hooks/session_logger.py`
   - `hooks/standup_autopilot.py`
+  - `hooks/test_protect_secrets.py` (포팅이 아니라 원본의 delegation-sink 테스트 시나리오를 본떠 pytest로 새로 쓴 테스트; 입력 문자열 일부가 같다)
 
 ```text
 MIT License

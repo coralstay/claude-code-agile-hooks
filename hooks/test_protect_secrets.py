@@ -4,6 +4,7 @@
 # authors: [coralstay]
 # license: AGPL-3.0-only
 # status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
 # created_date: '2026-11-06'
 # updated_date: '2026-11-06'
 # ---
@@ -88,7 +89,7 @@ def test_bash_targets_protected_file_direct():
     assert ps.bash_targets_protected_file("") is False
 
 
-# --- delegation-sink (upstream SINK_CLI/SINK_HOST regression cases) ---
+# --- delegation-sink (원본 karanb192/claude-code-hooks의 SINK_CLI/SINK_HOST 테스트를 본뜬 케이스; 포팅이 아니라 pytest로 새로 쓴 것) ---
 
 
 def test_blocks_bash_secret_file_into_model_cli(monkeypatch):
