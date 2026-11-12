@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: merge_settings
+# description: settings.hooks.json을 ~/.claude/settings.json에 다른 도구의 훅을 지우지 않고 더하는 스크립트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Additive merge of settings.hooks.json into ~/.claude/settings.json (used by install.sh).
 
 Usage: merge_settings.py <settings.json> <settings.hooks.json>
@@ -62,7 +71,7 @@ def is_legacy_copy(installed_command, repo_command, home):
         return False
     if not isinstance(repo_command, str):
         return False
-    renamed = _canonical(installed_command, home).replace(LEGACY_DIR, CURRENT_DIR)
+    renamed = _canonical(installed_command, home).replace(LEGACY_DIR, CURRENT_DIR)  # ---- 1
     return renamed == _canonical(repo_command, home)
 
 
@@ -80,7 +89,7 @@ def _migrate_legacy(inst_groups, matcher, hook, has_current, home):
         return False, False
     keep = None
     if not has_current:
-        keep = next((gi for gi in legacy if gi[0].get("matcher") == matcher), None)
+        keep = next((gi for gi in legacy if gi[0].get("matcher") == matcher), None)  # ---- 2
     emptied = []
     for g, i in reversed(legacy):
         if keep is not None and g is keep[0] and i == keep[1]:
@@ -89,7 +98,7 @@ def _migrate_legacy(inst_groups, matcher, hook, has_current, home):
             del g["hooks"][i]
             if not g["hooks"]:
                 emptied.append(g)
-    inst_groups[:] = [g for g in inst_groups if not any(g is e for e in emptied)]
+    inst_groups[:] = [g for g in inst_groups if not any(g is e for e in emptied)]  # ---- 3
     return True, keep is not None
 
 
@@ -100,7 +109,7 @@ def merge_hooks(settings, repo_hooks, home=None):
     home defaults to the current user's home dir (for spotting expanded paths)."""
     if home is None:
         home = os.path.expanduser("~")
-    merged = copy.deepcopy(settings)
+    merged = copy.deepcopy(settings)  # ---- 4
     installed = merged.setdefault("hooks", {})
     changes = []
     for event, groups in repo_hooks.items():
@@ -134,7 +143,7 @@ def merge_hooks(settings, repo_hooks, home=None):
                 )
                 if existing is not None:
                     g, i = existing
-                    if g["hooks"][i] != hook:
+                    if g["hooks"][i] != hook:  # ---- 5
                         g["hooks"][i] = copy.deepcopy(hook)
                         changes.append((event, matcher, command, "updated"))
                     continue
@@ -166,7 +175,7 @@ def main(argv):
     if os.path.exists(settings_path):
         try:
             settings = _load(settings_path)
-        except ValueError as e:
+        except ValueError as e:  # ---- 6
             print(
                 f"오류: {settings_path}가 올바른 JSON이 아닙니다 ({e}). 변경하지 않았습니다.",
                 file=sys.stderr,
@@ -190,7 +199,7 @@ def main(argv):
     os.makedirs(directory, exist_ok=True)
     if os.path.exists(settings_path):
         backup = f"{settings_path}.bak.{int(time.time())}"
-        shutil.copy2(settings_path, backup)
+        shutil.copy2(settings_path, backup)  # ---- 7
         print(f"    기존 설정 백업: {backup}")
 
     fd, tmp = tempfile.mkstemp(dir=directory, prefix=".settings.", suffix=".tmp")
@@ -198,11 +207,11 @@ def main(argv):
         with os.fdopen(fd, "w") as f:
             json.dump(merged, f, indent=2, ensure_ascii=False)
             f.write("\n")
-        if _load(tmp) != merged:
+        if _load(tmp) != merged:  # ---- 8
             raise ValueError("temp file did not round-trip")
         if os.path.exists(settings_path):
             shutil.copymode(settings_path, tmp)
-        os.replace(tmp, settings_path)
+        os.replace(tmp, settings_path)  # ---- 9
     except BaseException:
         with contextlib.suppress(FileNotFoundError):
             os.unlink(tmp)
@@ -222,3 +231,33 @@ def main(argv):
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
+
+
+# ======== 노트 ========
+# 1 옛 경로를 새 경로로 읽어 비교
+#   설명: 설치된 명령의 `claude-rails/` 를 `claude-code-agile-hooks/` 로 바꿔 저장소 명령과 정확히 같아질 때만 옛 사본으로 본다. 대응물이 없는 옛 명령과 다른 도구의 훅은 건드리지 않는다.
+#   관련: TASK-54
+#   개념: 마이그레이션
+# 2 같은 matcher의 첫 옛 항목만 제자리 교체
+#   설명: 이미 새 명령이 있으면 교체 없이 옛 사본을 모두 지운다. 없으면 같은 matcher의 첫 옛 사본을 저장소 항목으로 바꿔 훅이 두 경로에서 두 번 돌지 않게 한다.
+#   관련: TASK-54
+# 3 비어 버린 그룹 제거
+#   설명: 옛 사본을 지우고 hooks 목록이 빈 그룹은 버린다. 같은 리스트 객체를 슬라이스 대입으로 고쳐 호출자가 든 참조가 유지된다.
+# 4 입력은 복사본에서 병합
+#   설명: settings를 깊은 복사한 뒤 고친다. 호출자의 원본이 변하지 않아 변경 여부(changes)로 쓰기 여부를 안전하게 판단할 수 있다.
+#   개념: 순수 함수
+# 5 같은 명령인데 다른 필드면 교체
+#   설명: 저장소가 `if`나 `timeout`을 바꿔도 설치본에 퍼지게 하는 경로다. 명령 문자열이 설치 디렉터리를 가리키므로 저장소가 SSOT다. 같으면 아무것도 하지 않아 재실행이 멱등이다.
+#   관련: install.sh
+#   개념: 멱등, SSOT
+# 6 기존 JSON이 깨졌으면 중단
+#   설명: 사용자의 settings.json을 파싱하지 못하면 아무것도 쓰지 않고 1로 끝낸다. 잘못 덮어써 다른 도구의 설정까지 잃는 것보다 설치 실패가 낫다.
+#   개념: fail-closed
+# 7 쓰기 전 타임스탬프 백업
+#   설명: 변경이 있을 때만 `.bak.<epoch>` 로 복사한다. 병합이 잘못돼도 되돌릴 수 있다.
+# 8 임시 파일을 다시 읽어 왕복 검증
+#   설명: 디스크에 쓴 JSON이 병합 결과와 같은지 확인한 뒤에야 교체한다. 불일치면 예외로 임시 파일을 지우고 원본을 건드리지 않는다.
+#   개념: 검증 후 교체
+# 9 원자적 교체
+#   설명: 같은 디렉터리의 임시 파일을 os.replace로 바꿔 중간 상태의 settings.json이 보이지 않게 한다. 직전 줄에서 원본 파일 권한을 복사해 유지한다.
+#   개념: 원자적 쓰기

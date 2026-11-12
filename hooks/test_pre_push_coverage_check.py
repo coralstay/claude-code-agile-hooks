@@ -1,3 +1,12 @@
+# ---
+# title: test_pre_push_coverage_check
+# description: pre_push_coverage_check.py 훅의 동작과 경계 조건을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 import io
 import json
 import os

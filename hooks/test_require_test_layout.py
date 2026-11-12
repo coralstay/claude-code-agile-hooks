@@ -1,3 +1,12 @@
+# ---
+# title: test_require_test_layout
+# description: require_test_layout.py 훅의 동작과 경계 조건을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # TASK-61: 테스트 파일 구조(헤더 → AC/DoD → Coverage)를 강제하는 require_test_layout.py
 import io
 import json

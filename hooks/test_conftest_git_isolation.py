@@ -1,3 +1,12 @@
+# ---
+# title: test_conftest_git_isolation
+# description: conftest의 git 설정 격리가 서명 설정 오염을 실제로 막는지 내부 pytest 세션으로 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # TASK-74: hooks/conftest.py가 테스트의 git 하위 프로세스를 사용자 전역 · 시스템 · 환경 변수 git 설정에서 격리한다
 #
 # The outer test pollutes the environment the way a real signing setup does

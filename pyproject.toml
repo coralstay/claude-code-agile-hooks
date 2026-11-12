@@ -1,3 +1,12 @@
+# ---
+# title: pyproject
+# description: pytest 수집 경로와 분기 커버리지 100% 기준을 정하는 프로젝트 설정
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 [tool.pytest.ini_options]
 testpaths = ["hooks", "scripts"]
 

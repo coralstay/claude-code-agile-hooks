@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: protect_tests
+# description: 테스트 파일 삭제·이름 변경·skip/xfail 비활성화로 가짜 통과를 만드는 것을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash|Edit|Write)
 Stop "fake green": block deleting a test file, renaming a test file away
 from a test-looking name, or disabling tests via skip/xfail decorators
@@ -13,11 +23,11 @@ import re
 import shlex
 import sys
 
-TEST_FILE_RE = re.compile(
+TEST_FILE_RE = re.compile(  # ---- 1
     r"(^|/)(test_[^/]+\.py|[^/]+_test\.py|[^/]+\.test\.[jt]sx?|[^/]+\.spec\.[jt]sx?)$"
 )
 
-SKIP_DECORATOR_RE = re.compile(
+SKIP_DECORATOR_RE = re.compile(  # ---- 2
     r"@pytest\.mark\.skip|@pytest\.mark\.xfail|\bpytest\.skip\(|test\.skip\(|it\.skip\(|describe\.skip\("
 )
 
@@ -42,7 +52,7 @@ def check_bash(command):
         tokens = command.split()
 
     basenames = [os.path.basename(t) for t in tokens]
-    is_delete = any(b in ("rm", "unlink") for b in basenames)
+    is_delete = any(b in ("rm", "unlink") for b in basenames)  # ---- 3
     is_rename = "mv" in basenames
 
     if not (is_delete or is_rename):
@@ -67,7 +77,7 @@ def check_write_or_edit(tool_name, tool_input):
     if tool_name == "Write":
         content = tool_input.get("content", "")
     else:  # Edit
-        content = tool_input.get("new_string", "")
+        content = tool_input.get("new_string", "")  # ---- 4
 
     if SKIP_DECORATOR_RE.search(content):
         deny(
@@ -94,3 +104,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 테스트 파일 이름 규칙
+#   설명: test_*.py, *_test.py, *.test.js/ts(x), *.spec.js/ts(x)를 테스트 파일로 본다. 이름을 바꿔 테스트가 아닌 척하는 우회(mv)는 check_bash가 대상 경로가 테스트 이름일 때 막는다.
+#   개념: 가짜 통과(fake green): 코드를 고치지 않고 테스트를 지우거나 끄는 것
+# 2 비활성화 표식
+#   설명: pytest의 skip·xfail, JS의 test.skip·it.skip·describe.skip이 새로 써넣는 내용에 들어 있으면 테스트를 고치는 대신 끄는 것으로 본다.
+# 3 삭제·이름 변경 명령 판정
+#   설명: basename 비교라 `/bin/rm` 같은 절대 경로 호출도 잡는다. 삭제는 rm·unlink, 이름 변경은 mv다.
+# 4 Edit은 바뀌는 조각만 검사
+#   설명: Write는 전체 content를, Edit은 새로 들어가는 new_string만 검사한다. 기존에 있던 skip 데코레이터는 문제 삼지 않는다.

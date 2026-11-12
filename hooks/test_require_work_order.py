@@ -1,3 +1,12 @@
+# ---
+# title: test_require_work_order
+# description: require_work_order.py 훅의 동작과 경계 조건을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Tests for require_work_order.py (TASK-60#2): the next stage command
 (`backlog draft promote`, `backlog task edit <ID> -s "In Progress"`) is
 denied while backlog/work-order.md is missing or doesn't match the current

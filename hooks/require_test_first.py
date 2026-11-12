@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_test_first
+# description: AC 단위로 테스트를 먼저 쓰도록 소스 편집과 Done 전환을 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Edit|Write, and Bash with no `if` filter)
 TASK-56: test first, one acceptance criterion at a time (AC-level TDD),
 and the tests cover the card's business rules too (RAIL-019).
@@ -86,7 +95,7 @@ WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
 ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 BACKLOG_EXECUTABLES = {"backlog", "backlog.md"}
-DONE_FALLBACK_RE = re.compile(
+DONE_FALLBACK_RE = re.compile(  # ---- 1
     r"(?:^|[;&|(\s])(?:\S*/)?backlog(?:\.md)?\s+tasks?\s+edit\s+(\S+)"
     r".*?(?:^|\s)(?:-s|--status)(?:=|\s+)['\"]?done\b",
     re.IGNORECASE | re.DOTALL,
@@ -124,7 +133,7 @@ def is_outside_project(path, cwd):
         return False
     root = os.path.realpath(cwd)
     target = os.path.realpath(os.path.join(cwd, path))
-    return os.path.commonpath([root, target]) != root
+    return os.path.commonpath([root, target]) != root  # ---- 2
 
 
 def current_branch(cwd):
@@ -173,7 +182,7 @@ def load_test_first(cwd):
         with open(path) as f:
             config = json.load(f)
     except (OSError, ValueError) as exc:
-        raise ConfigError(f"{os.path.basename(path)}을(를) 읽을 수 없습니다: {exc}")
+        raise ConfigError(f"{os.path.basename(path)}을(를) 읽을 수 없습니다: {exc}")  # ---- 3
     block = config.get("testFirst") if isinstance(config, dict) else None
     if block is None:
         return None
@@ -207,7 +216,7 @@ def strip_heredoc_bodies(command):
 
 
 def tokenize(command):
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>\n")
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()<>\n")  # ---- 4
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -217,7 +226,7 @@ def tokenize(command):
 def split_segments(tokens):
     segments = [[]]
     for tok in tokens:
-        if tok and set(tok) <= SEPARATOR_CHARS:
+        if tok and set(tok) <= SEPARATOR_CHARS:  # ---- 5
             segments.append([])
         else:
             segments[-1].append(tok)
@@ -279,7 +288,7 @@ def done_targets(command):
     try:
         tokens = tokenize(stripped)
     except ValueError:
-        return [m.group(1) for m in DONE_FALLBACK_RE.finditer(stripped)]
+        return [m.group(1) for m in DONE_FALLBACK_RE.finditer(stripped)]  # ---- 6
     targets = [segment_done_target(s) for s in split_segments(tokens)]
     return [t for t in targets if t is not None]
 
@@ -352,7 +361,7 @@ def iter_test_files(cwd, test_globs):
 def missing_markers(cwd, test_globs, markers):
     """Markers (in the given order) that no test file contains."""
     patterns = {
-        m: re.compile(r"(?<![A-Za-z0-9-])" + re.escape(m) + r"(?!\d)") for m in markers
+        m: re.compile(r"(?<![A-Za-z0-9-])" + re.escape(m) + r"(?!\d)") for m in markers  # ---- 7
     }
     remaining = list(markers)
     for path in iter_test_files(cwd, test_globs):
@@ -375,7 +384,7 @@ def card_sections(text):
     i = 0
     while i < len(lines):
         m = SECTION_RE.match(lines[i])
-        if m and i + 1 < len(lines) and re.match(r"^-{10,}$", lines[i + 1]):
+        if m and i + 1 < len(lines) and re.match(r"^-{10,}$", lines[i + 1]):  # ---- 8
             name = m.group(1)
             sections[name] = []
             i += 2
@@ -409,7 +418,7 @@ def parse_card(text):
         if m:
             card["acs"].append((int(m.group(2)), m.group(1) != " ", m.group(3)))
     # TASK-61: Definition of Done items use the same checkbox lines as ACs
-    for line in sections.get("Definition of Done", "").split("\n"):
+    for line in sections.get("Definition of Done", "").split("\n"):  # ---- 9
         m = AC_RE.match(line.strip())
         if m:
             card["dod"].append((int(m.group(2)), m.group(1) != " ", m.group(3)))
@@ -484,7 +493,7 @@ def check_edit(cwd, path, source_globs, test_globs, card):
         return
     target = os.path.realpath(os.path.join(cwd, path))
     rel = os.path.relpath(target, os.path.realpath(cwd)).replace(os.sep, "/")
-    if not matches_any(rel, source_globs) or matches_any(rel, test_globs):
+    if not matches_any(rel, source_globs) or matches_any(rel, test_globs):  # ---- 10
         return
     deny_if_rules_malformed(card)
     task_id = card["id"]
@@ -538,7 +547,7 @@ def main():
         path = tool_input.get("file_path") or ""
     elif tool_name == "Bash":
         # cheap parse first: most Bash lines leave before any subprocess
-        targets = done_targets(tool_input.get("command") or "")
+        targets = done_targets(tool_input.get("command") or "")  # ---- 11
         if not targets:
             sys.exit(0)
     else:
@@ -561,7 +570,7 @@ def main():
         sys.exit(0)
     branch_task = branch[len("task/") :]
     text = task_view(cwd, branch_task)
-    if text is None:
+    if text is None:  # ---- 12
         sys.exit(0)
     card = parse_card(text)
     card["id"] = card["id"] or branch_task
@@ -571,7 +580,7 @@ def main():
     if config_error is not None:
         # the opted-in project's config is broken: block, but keep the
         # config itself editable so it can be fixed
-        if os.path.basename(path) in CONFIG_NAMES:
+        if os.path.basename(path) in CONFIG_NAMES:  # ---- 13
             sys.exit(0)
         deny(f"{TAG} testFirst 설정 오류: {config_error}")
 
@@ -585,3 +594,46 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ======== 노트 ========
+# 1 Done 이동 텍스트 폴백 정규식
+#   설명: 따옴표가 안 닫혀 shlex가 못 쪼개는 줄에서도 `backlog task edit <ID> -s Done`을 놓치지 않으려는 마지막 그물이다. 훅이 게이트이므로 파싱 실패를 통과로 두지 않고 문자열 매칭으로 대신 막는다.
+#   관련: hooks/require_coverage_on_done.py (같은 정규식 복사본)
+#   개념: fail-closed 폴백
+# 2 프로젝트 밖 경로 판정
+#   설명: realpath를 양쪽에 적용한 뒤 commonpath를 비교한다. `..`나 프로젝트 안을 가리키는 심볼릭 링크로 소스 게이트를 우회하거나, 반대로 밖의 파일을 안으로 오판하는 것을 막는다.
+#   관련: hooks/dedup_drift_guard.py REGISTRY(is_outside_project 사본 4개)
+#   개념: realpath, 경로 탈출
+# 3 설정 오류는 fail-closed
+#   설명: testFirst를 켠 프로젝트의 설정이 깨졌다고 조용히 게이트를 끄면 TDD 강제가 사라진다. 그래서 예외를 올려 task 브랜치에서 deny로 이어지게 한다(설정 파일 자체의 편집만 예외).
+#   개념: fail-closed
+# 4 셸 명령 토큰화
+#   설명: punctuation_chars로 `;&|()<>`를 별도 토큰으로 떼어 낸다. 이 토크나이저 설정이 명령 위치 판정의 기반이라 사본들과 바이트 단위로 같아야 한다.
+#   관련: hooks/dedup_drift_guard.py REGISTRY(tokenize)
+#   개념: 토크나이저, 사본 동기화
+# 5 세그먼트 분리 판정
+#   설명: 토큰이 전부 구분자 문자로만 이뤄졌을 때만 새 세그먼트를 연다. `echo ... -s Done`처럼 다른 명령의 인자는 backlog 명령 위치로 보지 않기 위한 전제다.
+#   개념: 명령 위치
+# 6 따옴표 불균형이면 텍스트 매칭
+#   설명: shlex가 ValueError를 내는 줄은 구조를 알 수 없으므로 정규식으로 Done 이동을 추정해 게이트를 건다. 놓치는 것(우회)보다 잘못 막는 쪽이 낫다는 보수적 결정이다.
+#   개념: fail-closed 폴백
+# 7 표식 정확 일치 규칙
+#   설명: 표식 앞에 영문/숫자/`-`가 없고 뒤에 숫자가 없어야 센다. `AO-27#1`이 `AO-27#10`이나 `XAO-27#1`로 잘못 충족되는 것을 막는 핵심 불변식이다.
+#   개념: 경계 일치(lookaround)
+# 8 카드 절 헤더 인식
+#   설명: `Name:` 다음 줄이 대시 10개 이상일 때만 절 제목으로 본다. 설명 본문에 우연히 `Foo:` 줄이 있어도 절이 갈라지지 않게 한다.
+#   관련: backlog task view --plain 출력 형식
+# 9 DoD 항목 파싱
+#   설명: DoD는 AC와 같은 체크박스 줄이라 같은 정규식을 쓴다. DoD는 어느 AC에도 묶이지 않으므로 Edit 게이트는 보지 않고 Done 이동 때만 `<ID>#D<n>`을 요구한다.
+#   관련: TASK-61
+# 10 게이트 대상 파일 판정
+#   설명: sourceGlob에 맞고 testGlob에는 안 맞는 파일만 막는다. 테스트 · 문서 · 설정은 절대 막지 않아 테스트를 먼저 쓰는 길이 열려 있어야 한다는 불변식이다.
+#   개념: glob 게이트
+# 11 Bash는 싼 파싱으로 먼저 거름
+#   설명: 대부분의 Bash 호출은 Done 이동이 아니므로 서브프로세스(backlog, git)를 띄우기 전에 문자열 파싱만으로 종료한다. 모든 Bash 호출에 붙는 훅이라 지연 비용을 최소화하는 결정이다.
+# 12 카드를 못 읽으면 fail-open
+#   설명: `backlog task view`가 실패하면 판정 근거가 없으므로 통과시킨다. 반면 testFirst 설정이 깨진 경우는 의도적으로 막는다는 점과 대비된다.
+#   개념: fail-open
+# 13 깨진 설정 파일은 고칠 수 있게 허용
+#   설명: 설정이 깨져 모든 편집이 deny되는데 설정 파일 자체까지 막으면 복구할 방법이 없다. 설정 파일 편집만 예외로 열어 둔다.
+#   개념: 자기 잠금 방지

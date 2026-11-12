@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+# ---
+# title: pre_git_safety_check
+# description: 브랜치를 보는 git 안전 규칙과 파괴적 gh CLI 명령 차단을 맡는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# upstream: https://github.com/karanb192/claude-code-hooks
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-37: registered without `if: Bash(git *)` on purpose - that permission-rule
 filter matches the command text, so `/usr/bin/git push origin main` would never
@@ -237,7 +247,7 @@ def command_head(segment):
 def prepare(command):
     """Heredoc bodies dropped and backslash-newline continuations joined,
     the way bash sees the line before it splits words."""
-    return strip_heredoc_bodies(command).replace("\\\n", "")
+    return strip_heredoc_bodies(command).replace("\\\n", "")  # ---- 1
 
 
 def parse_segments(command):
@@ -273,7 +283,7 @@ def git_invocations(segments, subcommand):
     found = []
     for segment in segments:
         for k in range(command_head(segment), len(segment)):
-            if os.path.basename(segment[k]) != "git":
+            if os.path.basename(segment[k]) != "git":  # ---- 2
                 continue
             args = subcommand_args(segment, k, subcommand)
             if args is not None:
@@ -313,7 +323,7 @@ def run_git(cwd, global_opts, args):
     "user"-only; ext:: is already disabled by git's default policy.)"""
     if cwd is None:
         return None
-    env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0")  # ---- 3
     try:
         result = subprocess.run(
             ["git", *global_opts, *args],
@@ -363,7 +373,7 @@ def segments_with_cwd(tokens, cwd):
             continue
         if current:
             pairs.append((current, stack[-1]))
-            if tok.strip("()") not in ("|", "||", "&"):
+            if tok.strip("()") not in ("|", "||", "&"):  # ---- 4
                 stack[-1] = after_cd(current, stack[-1])
             current = []
         for ch in tok:
@@ -418,7 +428,7 @@ def parse_push_args(args):
             break
         if arg.startswith("--"):
             name, eq, value = arg[2:].partition("=")
-            if not eq and any(long_option_is(name, o) for o in PUSH_LONG_WITH_ARG):
+            if not eq and any(long_option_is(name, o) for o in PUSH_LONG_WITH_ARG):  # ---- 5
                 value = args[i] if i < len(args) else ""
                 i += 1
             if name.startswith("no-"):
@@ -461,7 +471,7 @@ class PushContext:
 
     def git(self, args):
         if self.opaque:
-            raise Unverifiable("git -c/--exec-path/GIT_* 환경변수가 붙은 push")
+            raise Unverifiable("git -c/--exec-path/GIT_* 환경변수가 붙은 push")  # ---- 6
         result = run_git(self.cwd, self.global_opts, args)
         if result is None:
             raise Unverifiable("git 실행 실패/시간 초과")
@@ -504,7 +514,7 @@ def branch_name(ref, ctx):
     if ref in ("HEAD", "@"):
         return {ctx.branch()} - {""}
     if "*" in ref:
-        return set(PROTECTED_BRANCHES)
+        return set(PROTECTED_BRANCHES)  # ---- 7
     return {ref}
 
 
@@ -534,7 +544,7 @@ def configured_push_targets(ctx, remote):
 
 def bare_push_targets(ctx, remote):
     """What `git push [<remote>]` without refspecs pushes, conservatively."""
-    if ctx.get(f"remote.{remote}.mirror", "false").lower() in TRUE_VALUES:
+    if ctx.get(f"remote.{remote}.mirror", "false").lower() in TRUE_VALUES:  # ---- 8
         return set(PROTECTED_BRANCHES), True
     targets, forced = configured_push_targets(ctx, remote)
     if targets:  # remote.<remote>.push replaces push.default
@@ -553,9 +563,7 @@ def bare_push_targets(ctx, remote):
     upstream = (
         {merge[len("refs/heads/") :]} if merge.startswith("refs/heads/") else set()
     )
-    # upstream/tracking push to the upstream; the branch itself is judged
-    # too so any mode git might add later stays covered
-    return {branch} | upstream, False
+    return {branch} | upstream, False  # ---- 9
 
 
 def push_remote(info, ctx):
@@ -600,7 +608,7 @@ def remote_urls(ctx, remote):
     """What to ls-remote so it sees where the push really goes: pushurls
     when set, every url when there are several, else the remote itself."""
     config = ctx.config()
-    if any(key.endswith(".pushinsteadof") for key in config):
+    if any(key.endswith(".pushinsteadof") for key in config):  # ---- 10
         raise Unverifiable(
             "url.*.pushInsteadOf 설정이 있어 push 대상 URL을 확정할 수 없음"
         )
@@ -614,12 +622,12 @@ def remote_lacks_branches(ctx, remote, branches):
     (exit code 2); False when one exists; Unverifiable otherwise."""
     patterns = [f"refs/heads/{b}" for b in sorted(branches)]
     for url in remote_urls(ctx, remote):
-        if url.startswith("-"):
+        if url.startswith("-"):  # ---- 11
             raise Unverifiable("옵션처럼 보이는 원격 이름")
         code, _ = ctx.git(["ls-remote", "--exit-code", "--heads", url, *patterns])
         if code == 0:
             return False
-        if code != 2:
+        if code != 2:  # ---- 12
             raise Unverifiable(f"git ls-remote 실패(exit {code})")
     return True
 
@@ -654,10 +662,10 @@ def judge_push(prefix, global_opts, args, cwd):
         names = "/".join(sorted(targets))
         if forced or deleted:
             return f"'{names}' 브랜치로 직접 push하는 것은 금지됩니다 (force·삭제는 최초 push여도 금지)"
-        if remote_lacks_branches(ctx, remote, targets):
+        if remote_lacks_branches(ctx, remote, targets):  # ---- 13
             return None  # first push: nothing on the remote to protect yet
         return f"'{names}' 브랜치로 직접 push하는 것은 금지됩니다 (원격에 이미 존재)"
-    except Unverifiable as exc:
+    except Unverifiable as exc:  # ---- 14
         return (
             f"push 대상이 main/master인지, 원격에 아직 없는지 확인할 수 없어({exc}) "
             "보수적으로 차단합니다"
@@ -787,7 +795,7 @@ def gh_api_reason(args):
 def check_gh_destructive(segments, command):
     for args in gh_invocations(segments):
         words, rest = gh_command_words(args)
-        if words in GH_DESTRUCTIVE:
+        if words in GH_DESTRUCTIVE:  # ---- 15
             noun, verb = words
             deny(f"[git-safety] 'gh {noun} {verb}' 계열 명령은 금지됩니다: {command}")
         if words[:1] == ("api",):
@@ -827,7 +835,7 @@ def main():
         sys.exit(0)
 
     try:
-        tokens = tokenize(prepare(command))
+        tokens = tokenize(prepare(command))  # ---- 16
     except ValueError:
         check_unparsable(command)
         check_gh_unparsable(command)
@@ -842,3 +850,61 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 bash가 단어를 나누기 전의 줄 모양으로 맞춤
+#   설명: 히어독 본문은 명령이 아니라 텍스트이므로 버리고, 백슬래시-개행은 bash처럼 먼저 이어 붙인다. 이 전처리를 빼면 줄 이은 git push origin main 이 토큰으로 갈라져 우회된다.
+#   관련: hooks/pre_push_check.py (TASK-34), hooks/dedup_drift_guard.py
+#   개념: 히어독, 라인 컨티뉴에이션
+# 2 명령 머리 이후의 인용 안 된 git 단어도 판정
+#   설명: xargs git push, timeout 60 git push, find -exec git ... 는 실제로 git을 실행한다. 실행기와 출력기(echo git push origin main)를 가르려면 끝이 없는 목록이 필요하므로, 일반 인자 경우는 오탐 차단이 나도 놓치지는 않게 한다. basename 비교라 /usr/bin/git 도 같은 규칙을 받는다.
+#   관련: TASK-37, decision-1
+#   개념: 보수적 판정
+# 3 push 판정용 git 질의는 프롬프트를 띄우지 않는다
+#   설명: 훅이 사용자 입력을 기다리며 멈추면 안 된다. 터미널 자격 증명 프롬프트를 끄고 stdin도 닫는다. GIT_PROTOCOL_FROM_USER=0 은 일부러 설정하지 않았다: file 프로토콜이 user 전용이라 로컬 경로 원격까지 막히기 때문이다(ext:: 는 git 기본 정책으로 이미 꺼져 있다).
+#   관련: TASK-38
+# 4 cd의 효과는 일부 구분자 너머로만 이어진다
+#   설명: cd 는 ; && 개행 너머로 이어지지만 | || & 너머로는 이어지지 않는다(서브셸·백그라운드). 닫는 괄호는 스택으로 되돌린다. 이 규칙이 틀리면 push가 실행될 디렉터리를 잘못 짚어 보호 브랜치 판정이 어긋난다.
+#   관련: TASK-38
+#   개념: 서브셸
+# 5 긴 옵션은 접두사로도 인식
+#   설명: git은 모호하지 않은 접두사를 긴 옵션으로 받는다(--forc 는 --force). 정확 일치만 보면 접두사 우회로 force 판정을 피할 수 있다.
+#   관련: TASK-38
+# 6 git 설정을 바꾸는 push는 질의하지 않고 차단
+#   설명: git -c, --config-env, --exec-path, GIT_* 환경 지정이 붙으면 사용자 제공 설정이 질의 과정에서 실행될 수 있다. 사람이 명령을 승인하기 전에는 그 설정을 돌리지 않겠다는 결정이며, 호출 쪽이 Unverifiable을 차단으로 바꾼다.
+#   관련: TASK-38
+#   개념: fail-closed
+# 7 와일드카드 refspec은 보호 브랜치 전부로 간주
+#   설명: refspec의 * 는 어느 브랜치에 닿을지 풀어 보지 않고 보수적으로 main/master에 닿는 것으로 본다.
+# 8 remote.<r>.mirror 가 켜져 있으면 모든 브랜치
+#   설명: 미러 push는 refspec 없이도 모든 ref를 덮어쓴다. force 로도 취급해(True) 최초 push 예외가 적용되지 않게 한다.
+#   관련: TASK-38
+# 9 upstream 모드와 미래 모드까지 덮는다
+#   설명: upstream/tracking 은 업스트림으로 push 하지만, 브랜치 자신도 함께 판정해 git이 나중에 추가할 수 있는 모드까지 덮는다.
+#   관련: TASK-38
+# 10 pushInsteadOf 가 있으면 대상 URL을 확정할 수 없다
+#   설명: url.*.pushInsteadOf 는 push URL을 바꿔 쓰므로 ls-remote 로 보는 곳과 실제 push 대상이 달라질 수 있다. 확정할 수 없으니 차단한다.
+#   관련: TASK-38
+#   개념: fail-closed
+# 11 옵션처럼 보이는 원격 이름 거부
+#   설명: -로 시작하는 원격 이름이 ls-remote 의 옵션으로 해석돼 의도하지 않은 동작을 할 수 있다(옵션 주입). 질의 전에 거부해 차단 쪽으로 보낸다.
+#   개념: 옵션 주입
+# 12 exit 2 만 '원격에 ref 없음'으로 인정
+#   설명: ls-remote --exit-code 의 2 는 ref 부재 증명이다. 0 은 이미 존재, 그 외(네트워크 오류, 알 수 없는 원격, 타임아웃)는 모두 확인 불가로 보고 차단한다. 최초 push 예외가 열리는 유일한 조건이다.
+#   관련: TASK-38
+#   개념: fail-closed, 최초 push 예외
+# 13 최초 push만 main/master 허용
+#   설명: 원격에 보호 브랜치가 아직 없을 때만 직접 push를 허용한다. force·삭제는 덮어쓸 것이 없어도 이유가 없으므로 최초 push여도 위에서 이미 차단했다.
+#   관련: TASK-38
+# 14 확인할 수 없으면 차단
+#   설명: 현재 브랜치를 못 읽거나 git 질의가 실패하면 push 대상이 보호 브랜치인지 알 수 없다. 사유를 담아 보수적으로 차단하며, 사용자는 명시적 refspec으로 다시 시도할 수 있다.
+#   관련: TASK-38
+#   개념: fail-closed
+# 15 (명사, 동사) 정확한 짝만 차단
+#   설명: gh pr list; git merge --ff-only x 처럼 세그먼트에 흩어진 단어와 gh pr view merge 는 통과시킨다. 옛 줄 전체 스캔이 이를 오차단했다. gh api 는 같은 작업을 REST·GraphQL 로 하는 경우를 따로 본다.
+#   관련: TASK-45
+# 16 해석 실패 시 보수적 폴백
+#   설명: 따옴표 불균형 등으로 토큰화가 실패하면 명령 위치와 텍스트를 구분할 수 없다. 이전 코드는 이 경우 git 명령 없음으로 보고 통과(fail-open)해서 git push origin main "x 가 새어 나갔다. 이제 git+push/branch+main/master 단어가 함께 있으면 차단하고, gh도 같은 방식으로 본다. 오차단은 따옴표를 고쳐 재시도하면 되지만 보호 브랜치로의 누락은 복구할 수 없다.
+#   관련: TASK-37 (AC3), TASK-45
+#   개념: fail-closed

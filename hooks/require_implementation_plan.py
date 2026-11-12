@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_implementation_plan
+# description: 구현 계획이 없는 draft의 승격과 태스크 착수를 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-58: no promotion or start without an implementation plan.
 
@@ -93,7 +102,7 @@ WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
 ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z0-9_.\-]+)\2")
 BACKLOG_EXECUTABLES = {"backlog", "backlog.md"}
-FALLBACK_HEAD = r"(?:^|[;&|(])\s*(?:\S*/)?backlog(?:\.md)?\s+"
+FALLBACK_HEAD = r"(?:^|[;&|(])\s*(?:\S*/)?backlog(?:\.md)?\s+"  # ---- 1
 PROMOTE_FALLBACK_RE = re.compile(
     FALLBACK_HEAD + r"drafts?\s+promote\s+([^\s'\"]+)", re.MULTILINE
 )
@@ -115,7 +124,7 @@ ITEM_RE = re.compile(r"^- \[[ xX]\] #\d+", re.MULTILINE)
 PLAN_RE = re.compile(
     r"<!-- SECTION:PLAN:BEGIN -->\n?(.*?)<!-- SECTION:PLAN:END -->", re.DOTALL
 )
-HUMAN_SIGNERS_FILE = "human-signers"
+HUMAN_SIGNERS_FILE = "human-signers"  # ---- 2
 # `ssh-keygen -lf` and git's %GK: "SHA256:" + 32 bytes as unpadded base64
 FINGERPRINT_RE = re.compile(r"SHA256:[A-Za-z0-9+/]{43}")
 
@@ -157,7 +166,7 @@ def fingerprint_path():
     """TASK-72: the pinned human key list sits next to this hook file
     (symlinks resolved), never anywhere else."""
     return os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), HUMAN_SIGNERS_FILE
+        os.path.dirname(os.path.realpath(__file__)), HUMAN_SIGNERS_FILE  # ---- 3
     )
 
 
@@ -177,7 +186,7 @@ def human_fingerprints():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        if not FINGERPRINT_RE.fullmatch(line):
+        if not FINGERPRINT_RE.fullmatch(line):  # ---- 4
             return None, (
                 f"의 {number}번째 줄 형식이 틀렸습니다: '{line}' "
                 "(한 줄에 SHA256:<base64> 지문 하나)"
@@ -262,7 +271,7 @@ def start_target(rest):
         elif not tok.startswith("-") and target is None:
             target = tok
         j += 1
-    if target is None or status is None or not is_in_progress(status):
+    if target is None or status is None or not is_in_progress(status):  # ---- 5
         return None
     return target
 
@@ -298,7 +307,7 @@ def gated_commands(command):
     """(kind, ID) for every gated backlog command in command position."""
     if not command:
         return []
-    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")  # ---- 6
     try:
         tokens = tokenize(stripped)
     except ValueError:
@@ -333,7 +342,7 @@ def find_card(cwd, folder, token):
                 text = f.read()
         except OSError:
             continue
-        m = ID_RE.search(text.split("\n---", 1)[0])
+        m = ID_RE.search(text.split("\n---", 1)[0])  # ---- 7
         if m and same_id(token, m.group(1)):
             return m.group(1), text
     return None
@@ -361,7 +370,7 @@ def soap_problems(plan):
     such line. Text before the first heading is allowed."""
     found = []  # (heading, body lines)
     for line in plan.split("\n"):
-        if line.rstrip() in SOAP_HEADINGS:
+        if line.rstrip() in SOAP_HEADINGS:  # ---- 8
             found.append((line.rstrip(), []))
         elif found:
             found[-1][1].append(line)
@@ -396,7 +405,7 @@ def git_log(cwd, *args):
     $HOME/.ssh/allowed_signers with the real verification programs,
     whatever repo, global or env config says (command-line -c wins over all
     of them, GIT_CONFIG_COUNT and GIT_CONFIG_PARAMETERS included)."""
-    allowed = os.path.join(os.path.expanduser("~"), ".ssh", "allowed_signers")
+    allowed = os.path.join(os.path.expanduser("~"), ".ssh", "allowed_signers")  # ---- 9
     result = subprocess.run(
         [
             "git",
@@ -413,7 +422,7 @@ def git_log(cwd, *args):
             # environment, which repo config can't change. A missing gpg or
             # gpgsm makes verification fail (not G), so it fails closed.
             "-c",
-            "gpg.ssh.program=ssh-keygen",
+            "gpg.ssh.program=ssh-keygen",  # ---- 10
             "-c",
             "gpg.program=gpg",
             "-c",
@@ -446,9 +455,9 @@ def approval_status(cwd, card_id, fingerprints):
             continue
         info = git_log(cwd, "-1", "--format=%G?%x00%GK", commit) or ""
         status, _, key = info.strip("\n").partition("\0")
-        if status != "G":
+        if status != "G":  # ---- 11
             problems.append(("invalid", status))
-        elif key in fingerprints:
+        elif key in fingerprints:  # ---- 12
             return ("approved", key)
         else:
             problems.append(("not_human", key))
@@ -540,11 +549,11 @@ def card_problems(card_id, text, edit):
 def check_card(cwd, kind, token):
     folder, edit = ("drafts", "draft") if kind == "promote" else ("tasks", "task")
     found = find_card(cwd, folder, token)
-    if found is None:
+    if found is None:  # ---- 13
         return
     card_id, text = found
     blocks = card_problems(card_id, text, edit)
-    if kind == "start":
+    if kind == "start":  # ---- 14
         approval = approval_problem(cwd, card_id)
         if approval is not None:
             blocks.append(approval)
@@ -577,3 +586,55 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ======== 노트 ========
+# 1 폴백 정규식의 명령 위치 접두
+#   설명: 텍스트 폴백도 줄 시작이나 구분자 뒤의 backlog만 잡는다. `echo "backlog draft promote 8"` 같은 인용 문구를 게이트하지 않으려는 장치다.
+#   개념: 명령 위치
+# 2 사람 키 지문 목록 파일명
+#   설명: 승인 서명을 낸 키가 사람 키인지는 이 파일의 SHA256 지문으로만 판정한다. 프로젝트 설정이나 ~/.ssh/allowed_signers는 에이전트가 쓸 수 있어 신뢰하지 않는다.
+#   관련: decision-14, TASK-72
+#   개념: 핀된 지문(pinning)
+# 3 지문 파일 위치는 훅 디렉터리로 고정
+#   설명: 환경변수나 프로젝트 설정으로 옮길 수 없고 realpath(__file__)의 디렉터리에만 둔다. 설치되면 config_guard.py가 지키는 훅 디렉터리라 에이전트가 지문을 바꿔치기할 수 없다.
+#   관련: hooks/config_guard.py
+#   개념: 신뢰 경계
+# 4 지문 목록은 한 줄이라도 틀리면 fail-closed
+#   설명: 형식이 틀린 줄이 하나라도 있으면 집합 전체를 버리고 안내와 함께 거부한다. 일부만 읽어 통과시키면 오타가 조용히 보안 구멍이 된다.
+#   관련: TASK-72
+#   개념: fail-closed
+# 5 In Progress 판정
+#   설명: 공백을 정규화하고 대소문자를 무시해 `-s "In  Progress"`처럼 변형해도 같은 상태로 본다. 인자 순서와 무관하게 첫 비옵션 단어를 task ID로 잡는 규칙은 require_test_first.py와 같다.
+#   관련: hooks/require_test_first.py
+# 6 백슬래시 줄바꿈 접합
+#   설명: bash는 단어 파싱 전에 `\`+개행을 이어 붙이므로 같은 순서로 처리한다. heredoc 본문에 적힌 예시 명령이 게이트되지 않도록 본문을 먼저 지운다.
+#   개념: heredoc
+# 7 frontmatter에서만 id를 읽음
+#   설명: `\n---` 앞(프론트매터)만 검색해 본문에 인용된 `id:` 줄에 속지 않는다. 카드를 backlog CLI 없이 파일에서 직접 읽는 이유는 CLI 의존 없이 훅을 자립시키기 위해서다.
+#   개념: frontmatter
+# 8 SOAP 예약 제목 판정
+#   설명: 줄 전체가 예약 제목과 정확히 같아야 한다(끝 공백만 무시). 대소문자나 제목 레벨을 정규화하지 않아 형식 흉내만 낸 계획이 통과하지 못한다.
+#   관련: TASK-58
+#   개념: SOAP
+# 9 서명 검증 파일 고정
+#   설명: 검증은 항상 $HOME/.ssh/allowed_signers로만 한다. `git -c`로 넘긴 값은 repo · 전역 · 환경변수 설정보다 우선하므로 설정으로 검증 파일을 바꿔치는 공격을 막는다.
+#   관련: TASK-72
+#   개념: 명령행 -c 우선순위
+# 10 검증 프로그램 고정
+#   설명: 설정에 가짜 검증기를 심으면 어떤 커밋에도 사람 지문의 정상 서명을 위조해 출력할 수 있다. ssh · gpg · gpgsm 세 프로그램을 모두 이름으로 고정하고, PATH는 Claude Code 환경에서 오므로 repo 설정이 못 바꾼다고 본다. gpg가 없으면 G가 아니어서 fail-closed다.
+#   관련: TASK-72 B6
+#   개념: 검증기 핀
+# 11 서명 유효성은 %G? == G만 인정
+#   설명: U(알 수 없는 서명자), B, E 등은 전부 무효로 취급한다. 서명이 없거나 allowed_signers에 없는 키의 커밋은 승인으로 보지 않는다.
+#   관련: TASK-72
+#   개념: 서명 상태 코드
+# 12 유효 서명 + 사람 지문 둘 다 필요
+#   설명: 서명이 유효해도 키 지문이 핀된 목록에 없으면 승인이 아니다. AI 키로 서명한 Plan-Approved 커밋이 통과하지 못하게 하는 마지막 관문이다.
+#   관련: decision-14
+#   개념: 사람 승인
+# 13 카드 파일이 없으면 통과
+#   설명: ID에 해당하는 카드가 없으면 backlog 자신이 오류를 내므로 훅은 끼어들지 않는다. 존재하지 않는 ID로 게이트가 오탐하는 것을 피한다.
+#   개념: fail-open
+# 14 승인 게이트는 착수에만 적용
+#   설명: draft promote는 계획만 요구하고, In Progress 전환에서만 사람 서명 승인을 추가로 요구한다. 계획 → 리뷰 → 계획 승인 순서를 강제하는 지점이다.
+#   관련: decision-14

@@ -1,3 +1,12 @@
+---
+title: THIRD_PARTY_NOTICES
+description: 포팅한 외부 MIT 코드의 출처와 저작권 고지를 모아 둔 문서
+authors: [coralstay]
+license: AGPL-3.0-only
+status: draft
+created_date: '2026-11-06'
+updated_date: '2026-11-06'
+---
 # Third-Party Notices
 
 이 저장소는 [GNU AGPL-3.0-only](./LICENSE)으로 배포되지만, 아래 파일은 다른 라이선스로 배포된 외부
@@ -26,6 +35,7 @@
   - `hooks/protect_tests.py`
   - `hooks/session_logger.py`
   - `hooks/standup_autopilot.py`
+  - `hooks/test_protect_secrets.py` (포팅이 아니라 원본의 delegation-sink 테스트 시나리오를 본떠 pytest로 새로 쓴 테스트; 입력 문자열 일부가 같다)
 
 ```text
 MIT License

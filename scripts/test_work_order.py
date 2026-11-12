@@ -1,3 +1,12 @@
+# ---
+# title: test_work_order
+# description: work_order.py의 단계 분류와 work-order.md 출력을 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """Tests for scripts/work_order.py (TASK-60#1).
 
 The script reads incomplete tasks' `dependencies` from backlog/tasks/*.md

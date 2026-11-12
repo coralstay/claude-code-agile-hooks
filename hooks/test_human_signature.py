@@ -1,3 +1,12 @@
+# ---
+# title: test_human_signature
+# description: 사람 서명 판정이 키 지문에 고정되는지 실제 git 저장소와 ssh 키로 검증하는 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # TASK-72: 사람 서명 판정을 사람 키 지문으로 고정한다(allowed_signers · humanSigners · 로컬 allowedSignersFile 우회 차단)
 #
 # Real git repos and throwaway ssh-keygen keys. Each test gets its own $HOME

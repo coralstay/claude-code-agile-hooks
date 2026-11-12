@@ -1,3 +1,12 @@
+# ---
+# title: test_hook_runtime_contract
+# description: 설치된 형태로 훅이 실제로 실행되는지 확인하는 런타임 계약 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """TASK-43: contract between settings.hooks.json and the hook files as
 Claude Code really runs them.
 

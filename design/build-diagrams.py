@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: build-diagrams
+# description: design/diagrams의 DOT·mermaid 원본을 SVG로 렌더하는 빌드 스크립트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """design/diagrams/*.dot (·.mmd) → design/diagrams/<이름>.svg 독립 SVG 렌더.
 
 표기 원칙 — DOT 우선:
@@ -30,7 +39,7 @@ ROOT = pathlib.Path(__file__).parent
 DIA = ROOT / "diagrams"
 BUILD_MARK = 'data-generated-by="design/build-diagrams.py"'
 
-TOKENS = {
+TOKENS = {  # ---- 1
     "#f00001": "var(--diagram-ink)",     "#f00002": "var(--diagram-muted)",
     "#f00003": "var(--diagram-line)",    "#f00004": "var(--diagram-surface)",
     "#f00005": "var(--diagram-surface-2)", "#f00006": "var(--diagram-accent)",
@@ -41,7 +50,7 @@ TOKENS = {
     "#f0000f": "var(--diagram-logger)",  "#f00010": "var(--diagram-logger-bg)",
 }
 # mermaid가 렌더한 SVG(시퀀스)는 일부 기본 팔레트를 하드코딩한다 — 같은 방식으로 토큰화한다.
-MERMAID_TOKENS = {
+MERMAID_TOKENS = {  # ---- 2
     "#262b34": "var(--diagram-ink)",      "#000000": "var(--diagram-ink)",
     "#f2f3f5": "var(--diagram-surface)",  "#eaeaea": "var(--diagram-surface-2)",
     "#9aa4b8": "var(--diagram-line)",     "#a8adb8": "var(--diagram-muted)",
@@ -51,7 +60,7 @@ MERMAID_TOKENS = {
 }
 # 토큰 값 — RFC(2026-09-26, git 이력)의 :root(--diagram-*)가 라이트,
 # 같은 문서의 다크 블록(--ink · --line · --accent · --role-* …)이 다크 값이다.
-LIGHT = {
+LIGHT = {  # ---- 3
     "ink": "#1a2330", "muted": "#51616c", "line": "#c9d3d8",
     "surface": "#ffffff", "surface-2": "#eaf0f2",
     "accent": "#0e7c86", "accent-bg": "#d8eeef", "accent-ink": "#08565d",
@@ -77,7 +86,7 @@ def theme_style() -> str:
 def tokenize(svg: str) -> str:
     for table in (TOKENS, MERMAID_TOKENS):
         for sentinel, var in table.items():
-            svg = svg.replace(sentinel, var).replace(sentinel.upper(), var)
+            svg = svg.replace(sentinel, var).replace(sentinel.upper(), var)  # ---- 4
     return svg
 
 
@@ -87,7 +96,7 @@ def finish(svg: str, name: str, mermaid: bool) -> str:
     svg = re.sub(r"<!DOCTYPE[^>]*>\s*", "", svg, flags=re.S)
     svg = re.sub(r"<!--.*?-->\s*", "", svg, flags=re.S)
     # Graphviz가 깔아두는 흰 배경 폴리곤 제거(투명 배경 유지)
-    svg = re.sub(r'<polygon fill="white"[^/]*/>\s*', "", svg)
+    svg = re.sub(r'<polygon fill="white"[^/]*/>\s*', "", svg)  # ---- 5
     svg = tokenize(svg)
     if not mermaid:
         svg = re.sub(r'font-family="[^"]*"', f"font-family='{FONT}'", svg)
@@ -106,7 +115,7 @@ def finish(svg: str, name: str, mermaid: bool) -> str:
         return tag.replace("<svg", f'<svg {BUILD_MARK} role="img" aria-label="{name}"', 1)
 
     svg = re.sub(r"<svg\b[^>]*>", fix_root, svg, count=1)
-    svg = re.sub(r"(<svg\b[^>]*>)", lambda m: m.group(1) + "\n" + theme_style(), svg, count=1)
+    svg = re.sub(r"(<svg\b[^>]*>)", lambda m: m.group(1) + "\n" + theme_style(), svg, count=1)  # ---- 6
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + svg.strip() + "\n"
 
 
@@ -124,7 +133,7 @@ def render_mmd(path: pathlib.Path) -> str | None:
                        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
         print(f"  {path.stem}: mermaid-cli 렌더 중…")
         r = subprocess.run(cmd, capture_output=True, text=True, env=env)
-        if r.returncode or not raw.exists():
+        if r.returncode or not raw.exists():  # ---- 7
             last = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else ""
             print(f"    ! mermaid-cli 실패 — {last}")
             return None
@@ -132,7 +141,7 @@ def render_mmd(path: pathlib.Path) -> str | None:
 
 
 def render_dot(path: pathlib.Path) -> str:
-    out = subprocess.run(["dot", "-Tsvg", str(path)], capture_output=True, text=True)
+    out = subprocess.run(["dot", "-Tsvg", str(path)], capture_output=True, text=True)  # ---- 8
     if out.returncode:
         sys.exit(f"dot 실패: {path}\n{out.stderr}")
     return finish(out.stdout, path.stem, mermaid=False)
@@ -153,7 +162,7 @@ def main() -> None:
                 if not target.exists():
                     sys.exit(f"mermaid-cli 실패, 대체할 SVG도 없다: {src}")
                 old = io.open(target, encoding="utf-8").read()
-                if BUILD_MARK in old:
+                if BUILD_MARK in old:  # ---- 9
                     print(f"    기존 {target.name}을 그대로 둔다")
                     written += 1
                     continue
@@ -167,3 +176,25 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# ======== 노트 ========
+# 1 센티넬 hex → CSS 변수 표
+#   설명: .dot에는 #f00001 같은 센티넬 색을 쓰고 빌드가 이 표로 var(--diagram-*)로 바꾼다. 그래야 SVG 하나가 문서의 라이트/다크 테마를 그대로 따라간다. 색을 추가하려면 여기와 LIGHT/DARK 양쪽에 넣어야 한다.
+#   개념: 센티넬 hex
+# 2 mermaid 하드코딩 색 표
+#   설명: mermaid-cli가 렌더한 SVG는 기본 팔레트를 직접 박아 넣으므로 같은 방식으로 토큰화해 테마를 따르게 한다. 값은 mermaid 출력에 실제로 나오는 hex와 따옴표 포함 문자열이다.
+#   관련: design/diagrams/mermaid-theme.json
+# 3 라이트/다크 토큰 값
+#   설명: LIGHT가 기본 :root 값이고 DARK가 prefers-color-scheme: dark에서 덮는 값이다. 두 표의 키가 같아야 한다. 값의 출처는 RFC(2026-09-26)의 --diagram-* 이다.
+# 4 센티넬 치환
+#   설명: Graphviz는 hex를 소문자나 대문자로 낼 수 있어 두 형태를 모두 치환한다. 한쪽만 하면 일부 색이 토큰화되지 않고 남아 다크 모드에서 어긋난다.
+# 5 흰 배경 폴리곤 제거
+#   설명: Graphviz가 그래프 전체에 깔아두는 흰 배경 polygon을 지워 SVG를 투명 배경으로 만든다. 남기면 다크 모드에서 흰 사각형이 뜬다.
+# 6 테마 <style> 삽입
+#   설명: 루트 <svg> 태그 바로 뒤에 한 번만(count=1) CSS 변수 정의를 넣는다. 변수 정의가 SVG 파일 안에 있어야 <img>로 불러도 테마가 따라간다.
+# 7 mermaid-cli 실패 판정
+#   설명: 종료 코드가 0이 아니거나 출력 파일이 없으면 실패로 보고 None을 돌려준다. npx와 로컬 Chrome에 의존하는 단계라 환경에 따라 자주 깨지므로, 호출자가 기존 SVG를 유지할지 판단한다.
+# 8 dot 렌더 호출
+#   설명: Graphviz dot을 -Tsvg로 돌려 stdout의 SVG를 받는다. 실패하면 stderr와 함께 즉시 종료한다. 잘못된 .dot을 조용히 넘기지 않기 위해서다.
+# 9 기존 SVG 유지 판정
+#   설명: mermaid-cli가 실패했을 때 기존 SVG에 이미 빌드 표식이 있으면 토큰화가 끝난 생성물이므로 그대로 둔다. 표식이 없으면 원시 mermaid 출력이라 다시 토큰화한다.

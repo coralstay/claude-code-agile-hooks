@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: pipeline_trace
+# description: 플랜 모드부터 승격까지 작업 파이프라인을 세션별로 기록하고 플랜 기록 없는 편집을 경고하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """UserPromptSubmit + PostToolUse + Stop
 TASK-32: observe-and-record (never block) the work pipeline
 "plan mode -> human review -> auto mode -> draft -> verify -> commit ->
@@ -55,7 +64,7 @@ import tempfile
 from datetime import datetime, timezone
 
 try:
-    import fcntl
+    import fcntl  # ---- 1
 except ImportError:  # non-POSIX: record without the file lock
     fcntl = None
 
@@ -76,13 +85,13 @@ WARNING = (
 
 
 def state_dir():
-    return os.environ.get("CC_PIPELINE_DIR") or os.path.expanduser(
+    return os.environ.get("CC_PIPELINE_DIR") or os.path.expanduser(  # ---- 2
         "~/.claude/hooks-logs/pipeline"
     )
 
 
 def state_path(session_id):
-    name = os.path.basename(str(session_id or "")) or "unknown"
+    name = os.path.basename(str(session_id or "")) or "unknown"  # ---- 3
     return os.path.join(state_dir(), f"{name}.json")
 
 
@@ -151,7 +160,7 @@ def segments_of(command):
     try:
         return split_segments(tokenize(strip_heredoc_bodies(command)))
     except ValueError:
-        return []
+        return []  # ---- 4
 
 
 def backlog_actions(command):
@@ -213,7 +222,7 @@ def is_project_edit(tool_input, cwd):
     rel = os.path.relpath(
         os.path.realpath(os.path.join(cwd, path)), os.path.realpath(cwd)
     ).replace(os.sep, "/")
-    return not rel.startswith(EXCLUDED_PREFIXES)
+    return not rel.startswith(EXCLUDED_PREFIXES)  # ---- 5
 
 
 def is_git_repo(cwd):
@@ -224,7 +233,7 @@ def is_git_repo(cwd):
             ["git", "-C", cwd, "rev-parse", "--is-inside-work-tree"],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=5,  # ---- 6
         )
     except (OSError, subprocess.SubprocessError):
         return False
@@ -245,11 +254,11 @@ def read_state(session_id):
 
 def write_state(session_id, st):
     path = state_path(session_id)
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")  # ---- 7
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(st, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
+        os.replace(tmp, path)  # ---- 8
     except BaseException:
         if os.path.exists(tmp):
             os.unlink(tmp)
@@ -257,7 +266,7 @@ def write_state(session_id, st):
 
 
 def has_plan(st):
-    return bool(st.get("plan_mode_seen") or st.get("plan_approved_count"))
+    return bool(st.get("plan_mode_seen") or st.get("plan_approved_count"))  # ---- 9
 
 
 def bump(st, key):
@@ -282,7 +291,7 @@ def plan_title(plan):
 def apply_event(st, data):
     """Mutates `st` for one hook event. Returns True if anything changed."""
     changed = False
-    if data.get("permission_mode") == "plan" and not st.get("plan_mode_seen"):
+    if data.get("permission_mode") == "plan" and not st.get("plan_mode_seen"):  # ---- 10
         mark_plan_mode(st)
         changed = True
 
@@ -324,7 +333,7 @@ def apply_event(st, data):
 
 
 def stop_warning(st, cwd):
-    if st.get("warned_at") or not st.get("project_edit_count") or has_plan(st):
+    if st.get("warned_at") or not st.get("project_edit_count") or has_plan(st):  # ---- 11
         return None
     if not is_git_repo(cwd):
         return None
@@ -340,7 +349,7 @@ class StateLock:
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         if fcntl is not None:
             self.fd = os.open(self.path, os.O_CREAT | os.O_RDWR, 0o600)
-            fcntl.flock(self.fd, fcntl.LOCK_EX)
+            fcntl.flock(self.fd, fcntl.LOCK_EX)  # ---- 12
         return self
 
     def __exit__(self, *exc):
@@ -373,10 +382,10 @@ def handle(data):
 
     # Cheap pre-check before touching the filesystem.
     probe = {}
-    if not apply_event(probe, data):
+    if not apply_event(probe, data):  # ---- 13
         return
     with StateLock(session_id):
-        st = read_state(session_id)
+        st = read_state(session_id)  # ---- 14
         apply_event(st, data)
         st["session_id"] = session_id or "unknown"
         st["updated_at"] = now()
@@ -388,10 +397,60 @@ def main():
         data = json.load(sys.stdin)
         if isinstance(data, dict):
             handle(data)
-    except Exception:
+    except Exception:  # ---- 15
         pass
     sys.exit(0)
 
 
 if __name__ == "__main__":
     main()
+
+# ======== 노트 ========
+# 1 POSIX 잠금 선택 의존
+#   설명: fcntl이 없는 플랫폼에서는 잠금 없이 기록만 한다. 훅은 관측 전용이라 잠금이 없어도 동작을 멈추지 않는다.
+#   개념: fail-open
+# 2 기록 위치 결정
+#   설명: 환경변수로 바꿀 수 있고 기본은 ~/.claude/hooks-logs/pipeline이다. 플래그 디렉터리(flags/)와 분리해 Stop에서 서로 같은 파일을 두고 경쟁하지 않게 했다.
+#   관련: hooks/context_flags.py, TASK-31
+#   개념: 경쟁 조건 회피
+# 3 세션 ID 경로 정화
+#   설명: 세션 ID가 `../x` 같은 값이어도 basename만 써서 기록 디렉터리 밖에 파일을 만들지 못하게 한다. 비어 있으면 unknown으로 모은다.
+#   개념: 경로 탈출 방지
+# 4 파싱 실패는 빈 결과
+#   설명: 따옴표가 불균형인 명령은 기록에서 조용히 제외한다. 이 훅은 관측 전용이라 오탐으로 세는 것보다 누락이 낫다.
+#   개념: fail-open
+# 5 backlog 문서는 구현이 아님
+#   설명: backlog/ 아래 편집은 계획 없이 한 구현으로 세지 않는다. 카드 작성 자체가 경고를 일으키지 않게 한다.
+#   관련: TASK-32
+# 6 git 호출 타임아웃
+#   설명: Stop 훅이 git 때문에 멈추지 않도록 5초로 제한한다. 시간 초과는 OSError 계열 예외로 처리되어 git 저장소가 아니라고 본다.
+#   개념: fail-open
+# 7 원자적 쓰기의 시작
+#   설명: 같은 디렉터리에 임시 파일을 만들어 쓴 뒤 교체한다. 읽는 쪽이 쓰다 만 JSON을 보는 일이 없게 한다.
+#   개념: 원자적 갱신
+# 8 교체는 원자적
+#   설명: 같은 파일시스템 안의 os.replace는 원자적이다. 예외가 나면 임시 파일을 지우고 다시 던져 찌꺼기를 남기지 않는다.
+#   개념: 원자적 갱신
+# 9 계획 기록의 정의
+#   설명: plan mode를 봤거나 ExitPlanMode 승인이 하나라도 있으면 계획이 있다고 본다. 승인 신호는 증거가 아니라 대리 지표라 기록만 하고 차단에 쓰지 않는다.
+#   관련: TASK-32, DRAFT-8
+#   개념: 대리 지표
+# 10 plan mode 감지
+#   설명: permission_mode가 실린 모든 이벤트에서 plan을 본다. PostToolUse가 승인된 ExitPlanMode에서만 발생하므로 이 신호가 plan mode 진입의 유일한 단서일 때가 있다.
+#   관련: TASK-32
+# 11 경고는 세션당 한 번
+#   설명: 이미 경고했거나, 편집이 없거나, 계획이 있으면 경고하지 않는다. 같은 세션에서 Stop마다 반복되는 잡음을 막는다.
+# 12 동시 PostToolUse의 카운트 손실 방지
+#   설명: 병렬 도구 호출이 같은 상태 파일을 읽고 쓰면 카운트가 덮어써진다. 배타 잠금으로 읽기-수정-쓰기를 직렬화한다.
+#   관련: TASK-32
+#   개념: flock, 읽기-수정-쓰기
+# 13 잠금 전 사전 검사
+#   설명: 빈 상태에 이벤트를 적용해 보아 기록할 게 없으면 잠금과 파일 입출력 없이 끝낸다. 대부분의 PostToolUse는 기록 대상이 아니다.
+#   개념: 조기 종료
+# 14 잠금 안에서 다시 읽기
+#   설명: 사전 검사 이후 다른 호출이 상태를 바꿨을 수 있으므로 잠금을 잡은 뒤 최신 상태를 다시 읽는다.
+#   개념: 읽기-수정-쓰기
+# 15 모든 예외를 삼키는 fail-open
+#   설명: 이 훅은 관측 전용이라 어떤 오류도 사용자의 작업을 막아서는 안 된다. 어떤 경우에도 exit 0이다.
+#   관련: TASK-32
+#   개념: fail-open

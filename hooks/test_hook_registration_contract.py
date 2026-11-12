@@ -1,3 +1,12 @@
+# ---
+# title: test_hook_registration_contract
+# description: 각 훅의 등록 방식(if 필터 등)이 훅이 다루는 명령과 맞는지 확인하는 계약 테스트
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """TASK-46: contract between settings.hooks.json's `if` filters and the
 commands each hook is built to act on.
 

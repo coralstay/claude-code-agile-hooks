@@ -1,3 +1,12 @@
+# ---
+# title: ci
+# description: 테스트와 분기 커버리지 100%를 검사하는 GitHub Actions CI 워크플로
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 # TASK-43: the same gate as the local pre-push coverageCommand
 # (.claude-code-agile-hooks.json) - the whole suite in parallel with branch coverage;
 # pyproject.toml's fail_under = 100 fails the job below 100%.

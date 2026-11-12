@@ -1,0 +1,1 @@
+{"include": ["**"], "exclude": ["**/README.md", "**/CHANGELOG.md", "backlog/**", ".opensource/**", "contents/**", "content_data/**", "**/node_modules/**", "**/.venv/**", "**/venv/**", "**/__pycache__/**", "**/opensource/**"]}

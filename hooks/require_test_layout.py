@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_test_layout
+# description: 테스트 파일이 요약 헤더, AC/DoD 테스트, 커버리지 보충 테스트 순서를 지키게 하는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Edit|Write)
 TASK-61: test files keep a fixed layout - summary header, then the tests
 written from the card's AC/DoD, then the tests that only fill coverage.
@@ -66,7 +75,7 @@ import re
 import sys
 
 TAG = "[claude-code-agile-hooks]"
-HASH, SLASH = "#", "//"
+HASH, SLASH = "#", "//"  # ---- 1
 LANGUAGES = {
     ".py": HASH,
     ".js": SLASH,
@@ -80,14 +89,14 @@ LANGUAGES = {
     ".cpp": SLASH,
     ".cxx": SLASH,
 }
-DEFAULT_TEST_NAME_RE = re.compile(
+DEFAULT_TEST_NAME_RE = re.compile(  # ---- 2
     r"^(?:test_[^/]*\.py|[^/]*_test\.py"
     r"|[^/]*\.(?:test|spec)\.(?:js|jsx|ts|tsx|mjs|cjs)"
     r"|[^/]*Tests?\.java"
     r"|[^/]*_test\.(?:cc|cpp|cxx)|test_[^/]*\.cpp)\Z"
 )
 TASK_LINE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*-\d+:\s+\S")
-MARKER_RE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z][A-Za-z0-9_]*-\d+#[BD]?\d+")
+MARKER_RE = re.compile(r"(?<![A-Za-z0-9_-])[A-Za-z][A-Za-z0-9_]*-\d+#[BD]?\d+")  # ---- 3
 AC_SECTION = "== AC/DoD =="
 COVERAGE_SECTION = "== Coverage =="
 
@@ -119,7 +128,7 @@ def is_outside_project(path, cwd):
         return False
     root = os.path.realpath(cwd)
     target = os.path.realpath(os.path.join(cwd, path))
-    return os.path.commonpath([root, target]) != root
+    return os.path.commonpath([root, target]) != root  # ---- 4
 
 
 def is_glob_list(value):
@@ -171,9 +180,9 @@ def load_test_globs(cwd):
         with open(path) as f:
             config = json.load(f)
     except (OSError, ValueError):
-        return None
+        return None  # ---- 5
     block = config.get("testFirst") if isinstance(config, dict) else None
-    if not isinstance(block, dict) or not is_glob_list(block.get("testGlobs")):
+    if not isinstance(block, dict) or not is_glob_list(block.get("testGlobs")):  # ---- 6
         return None
     return block["testGlobs"]
 
@@ -191,7 +200,7 @@ def comment_text(line, lang):
     """The text of a full-line comment, else None. Python: `#`; the others:
     `//`, `/*` (a trailing `*/` dropped) or a `*` continuation line."""
     s = line.strip()
-    prefixes = ("#",) if lang == HASH else ("//", "/*", "*")
+    prefixes = ("#",) if lang == HASH else ("//", "/*", "*")  # ---- 7
     for prefix in prefixes:
         if s.startswith(prefix):
             text = s[len(prefix) :]
@@ -237,7 +246,7 @@ def first_comment_block(lines, lang):
 
 def has_header(lines, lang):
     for text in first_comment_block(lines, lang):
-        if text in (AC_SECTION, COVERAGE_SECTION):
+        if text in (AC_SECTION, COVERAGE_SECTION):  # ---- 8
             return False
         if TASK_LINE_RE.match(text):
             return True
@@ -274,7 +283,7 @@ def layout_problems(text, lang):
         elif len(found) > 1:
             where = ", ".join(str(i + 1) for i in found)
             problems.append(f"'{c} {name}' 섹션 표식은 한 번만 있어야 합니다({where}번째 줄).")
-    if len(ac) == 1 and len(cov) == 1 and ac[0] > cov[0]:
+    if len(ac) == 1 and len(cov) == 1 and ac[0] > cov[0]:  # ---- 9
         problems.append(
             f"'{c} {AC_SECTION}' 섹션 표식이 '{c} {COVERAGE_SECTION}' 섹션 표식보다 앞에 "
             "있어야 합니다(AC/DoD 테스트 → 커버리지 테스트)."
@@ -283,7 +292,7 @@ def layout_problems(text, lang):
         stray = [
             f"{i + 1}번째 줄: {m}"
             for i, line in enumerate(lines)
-            if not ac[0] < i < cov[0]
+            if not ac[0] < i < cov[0]  # ---- 10
             for m in MARKER_RE.findall(line)
         ]
         if stray:
@@ -318,7 +327,7 @@ def hint(rel, lang):
         f"{TAG} {rel}은(는) 테스트 파일 구조 규약(헤더 → AC/DoD → Coverage)을 아직 따르지 "
         "않는 기존 파일이라 검사하지 않았습니다. 규약을 적용하려면:\n" + example(lang)
     )
-    print(
+    print(  # ---- 11
         json.dumps(
             {
                 "systemMessage": message,
@@ -350,9 +359,9 @@ def result_text(tool_name, tool_input, old):
     new_string = tool_input.get("new_string")
     if old is None or not isinstance(old_string, str) or not isinstance(new_string, str):
         return None
-    if not old_string or old_string not in old:
+    if not old_string or old_string not in old:  # ---- 12
         return None
-    count = -1 if tool_input.get("replace_all") else 1
+    count = -1 if tool_input.get("replace_all") else 1  # ---- 13
     return old.replace(old_string, new_string, count)
 
 
@@ -380,9 +389,9 @@ def main():
 
     old = read_file(target) if os.path.isfile(target) else None
     new = result_text(tool_name, tool_input, old)
-    if new is None:
+    if new is None:  # ---- 14
         sys.exit(0)
-    if old is not None and not adopted(old, lang) and not adopted(new, lang):
+    if old is not None and not adopted(old, lang) and not adopted(new, lang):  # ---- 15
         hint(rel, lang)
         sys.exit(0)
     problems = layout_problems(new, lang)
@@ -398,3 +407,52 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ======== 노트 ========
+# 1 주석 문법 두 종류
+#   설명: 언어를 `#` 계열과 `//` 계열 두 가지로만 나눠 주석 판정을 단순하게 유지한다. 블록 주석 `/* */`는 슬래시 계열의 헤더 처리에서만 따로 다룬다.
+# 2 기본 테스트 파일 이름 규칙
+#   설명: testGlobs가 없을 때 쓰는 언어별 관례(basename) 목록이다. 경로가 아니라 이름만 보므로 어느 디렉터리의 테스트든 같은 규약을 받는다.
+#   관련: TASK-61
+# 3 표식 정규식
+#   설명: `<ID>#<n>`, `#B<k>`, `#D<n>`을 코드 · 주석 어디서든 잡는다. 앞에 영문/숫자/`_`/`-`가 붙은 더 긴 식별자의 일부는 제외한다.
+#   관련: hooks/require_test_first.py
+# 4 프로젝트 밖 경로 판정
+#   설명: realpath로 심볼릭 링크와 `..`를 풀어 비교한다. 프로젝트 밖 파일은 검사하지 않는다.
+#   관련: hooks/dedup_drift_guard.py REGISTRY(is_outside_project)
+#   개념: realpath
+# 5 설정 오류는 이 훅이 알리지 않음
+#   설명: 설정을 못 읽으면 기본 파일명 규칙을 쓴다. 깨진 testFirst 블록을 보고하는 것은 require_test_first.py의 몫이라 이중으로 막지 않는다.
+#   관련: hooks/require_test_first.py
+#   개념: fail-open, 역할 분담
+# 6 잘 만든 testFirst 블록만 인정
+#   설명: 블록 형식이 틀리면 기본 이름 규칙으로 돌아간다. 두 훅이 testGlobs를 같은 의미로 읽도록 is_glob_list와 glob 헬퍼는 복사해 쓴다.
+#   관련: hooks/dedup_drift_guard.py REGISTRY(is_glob_list)
+# 7 전체 줄 주석만 주석으로 본다
+#   설명: 줄 시작이 접두사인 줄만 주석이다. 문자열 리터럴 안의 주석처럼 생긴 줄도 주석으로 세는 알려진 한계가 있다.
+#   개념: 줄 단위 파싱 한계
+# 8 섹션 표식 뒤의 요약은 헤더가 아님
+#   설명: 첫 주석 블록에서 `<ID>: 요약` 줄은 섹션 표식보다 앞에 있어야 헤더로 인정한다. 헤더가 섹션 아래로 밀려 있으면 규약 위반이다.
+# 9 섹션 순서 불변식
+#   설명: AC/DoD 구역이 Coverage 구역보다 앞에 있어야 한다. 커버리지만 채우는 테스트가 AC 테스트 위로 섞여 들어가 의도가 흐려지는 것을 막는다.
+#   관련: TASK-61
+# 10 표식은 두 섹션 사이에만
+#   설명: AC · 규칙 · DoD 표식이 구간 밖에 있으면 위반이다. 어떤 테스트가 카드에서 왔고 어떤 것이 커버리지 보충인지 파일 구조로 드러내려는 규칙이다.
+#   관련: TASK-61
+# 11 기존 파일에는 차단 없이 안내만
+#   설명: 규약을 아직 따르지 않는 기존 파일은 막지 않고 systemMessage와 additionalContext로 안내한다. 사용자에게는 보이고 모델에게도 전달되며 종료 코드는 0이다.
+#   관련: TASK-61
+#   개념: grandfathering
+# 12 실패할 Edit은 통과
+#   설명: 어차피 도구가 실패할 Edit은 결과 텍스트를 만들 수 없으므로 검사하지 않는다. 이 훅이 오류의 원인으로 오인되지 않게 하는 결정이다.
+#   개념: fail-open
+# 13 도구와 같은 치환 의미
+#   설명: replace_all이면 전부, 아니면 첫 번째만 바꾼 결과를 만들어 검사한다. 적용 후의 파일을 검사한다는 원칙의 구현이다.
+#   개념: 사후 상태 검사
+# 14 결과를 계산할 수 없으면 통과
+#   설명: Write의 content가 문자열이 아니거나 Edit이 실패할 상황이면 판정하지 않는다.
+#   개념: fail-open
+# 15 적용 범위 결정
+#   설명: 새 파일은 항상 검사하고, 기존 파일은 변경 전이나 후에 규약을 도입한 흔적이 있을 때만 검사한다. 도입한 파일이 규약을 조용히 버리는 것은 막고, 옛 파일은 건드리지 않는다.
+#   관련: TASK-61
+#   개념: 도입 여부(adopted)

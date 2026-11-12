@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# ---
+# title: require_work_order
+# description: 작업 순서 파일(work-order.md)이 최신이 아니면 승격·착수를 막는 훅
+# authors: [coralstay]
+# license: AGPL-3.0-only
+# status: draft
+# created_date: '2026-11-06'
+# updated_date: '2026-11-06'
+# ---
 """PreToolUse (matcher: Bash)
 TASK-60: in a backlog.md project, every promotion is followed by tidying
 dependencies (`backlog task edit <ID> --dep ...`) and regenerating the work
@@ -51,7 +60,7 @@ import sys
 TASKS_DIR = os.path.join("backlog", "tasks")
 WORK_ORDER = os.path.join("backlog", "work-order.md")
 KEY_RE = re.compile(r"^([A-Za-z_][\w-]*):\s*(.*)$")
-HASH_RE = re.compile(r"^<!-- work-order-hash: ([0-9a-f]{64}) -->$", re.MULTILINE)
+HASH_RE = re.compile(r"^<!-- work-order-hash: ([0-9a-f]{64}) -->$", re.MULTILINE)  # ---- 1
 NATURAL_RE = re.compile(r"(\d+)")
 SEPARATOR_CHARS = set(";&|()\n")
 WRAPPERS = {"env", "sudo", "command", "exec", "time", "nohup", "npx", "bunx"}
@@ -166,11 +175,11 @@ def segment_starts_stage(segment):
 def command_starts_stage(command):
     if not command:
         return False
-    stripped = strip_heredoc_bodies(command).replace("\\\n", "")
+    stripped = strip_heredoc_bodies(command).replace("\\\n", "")  # ---- 2
     try:
         tokens = tokenize(stripped)
     except ValueError:
-        return bool(
+        return bool(  # ---- 3
             PROMOTE_FALLBACK_RE.search(stripped)
             or IN_PROGRESS_FALLBACK_RE.search(stripped)
         )
@@ -244,7 +253,7 @@ def parse_task(text):
 
 def natural_key(task_id):
     """TASK-2 sorts before TASK-10."""
-    return [int(p) if p.isdigit() else p for p in NATURAL_RE.split(task_id)]
+    return [int(p) if p.isdigit() else p for p in NATURAL_RE.split(task_id)]  # ---- 4
 
 
 def read_tasks(cwd):
@@ -279,7 +288,7 @@ def input_hash(incomplete):
         f"{task_id}:{','.join(incomplete[task_id]['deps'])}"
         for task_id in sorted(incomplete, key=natural_key)
     ]
-    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()  # ---- 5
 
 
 def recorded_hash(cwd):
@@ -298,35 +307,35 @@ def work_order_script():
     here = os.path.dirname(os.path.abspath(__file__))
     sibling = os.path.join(here, "work_order.py")
     repo_copy = os.path.join(os.path.dirname(here), "scripts", "work_order.py")
-    if not os.path.isfile(sibling) and os.path.isfile(repo_copy):
+    if not os.path.isfile(sibling) and os.path.isfile(repo_copy):  # ---- 6
         return repo_copy
     return sibling
 
 
 def deny(message):
     print(message, file=sys.stderr)
-    sys.exit(2)
+    sys.exit(2)  # ---- 7
 
 
 def main():
     try:
         data = json.load(sys.stdin)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError:  # ---- 8
         data = {}
 
     cwd = data.get("cwd", "")
     command = (data.get("tool_input") or {}).get("command", "")
 
-    if not command_starts_stage(command):
+    if not command_starts_stage(command):  # ---- 9
         sys.exit(0)
     if not is_backlog_project(cwd):
         sys.exit(0)
 
     incomplete = incomplete_tasks(read_tasks(cwd))
     recorded = recorded_hash(cwd)
-    if recorded is None and not incomplete:
+    if recorded is None and not incomplete:  # ---- 10
         sys.exit(0)
-    if recorded == input_hash(incomplete):
+    if recorded == input_hash(incomplete):  # ---- 11
         sys.exit(0)
 
     problem = (
@@ -345,3 +354,44 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ======== 노트 ========
+# 1 해시 헤더 정규식
+#   설명: work-order.md 첫 줄의 `<!-- work-order-hash: <sha256> -->`만 신선도 판정 근거로 읽는다. 타임스탬프가 아니라 해시라서 제목·상태(Done 제외) 편집으로는 파일이 낡지 않는다.
+#   관련: scripts/work_order.py, TASK-60
+#   개념: 신선도 해시
+# 2 heredoc 본문 제거 후 토큰화
+#   설명: heredoc 본문 안에 적힌 `backlog draft promote` 같은 글자를 실제 명령으로 오인하지 않도록 본문을 먼저 버리고, 줄 끝 `\` 이음도 합친 다음 쪼갠다.
+#   관련: hooks/require_draft_first.py (같은 규칙)
+#   개념: 명령 위치 판정
+# 3 토큰화 실패 시 텍스트 매칭 대체
+#   설명: 따옴표가 안 닫히는 등 shlex가 실패하면 정규식으로 대신 판정한다. 이 훅은 관문이라 판정 불가일 때 통과시키지 않고 보수적으로(막는 쪽으로) 본다.
+#   개념: fail-closed
+# 4 자연 정렬 키
+#   설명: TASK-2가 TASK-10보다 앞에 오도록 숫자 조각을 int로 비교한다. 생성기와 해시 입력 순서가 한 글자라도 다르면 항상 낡은 것으로 판정되므로 scripts/work_order.py와 글자 그대로 같아야 한다.
+#   관련: scripts/work_order.py, dedup_drift_guard.REGISTRY
+#   개념: 드리프트 가드
+# 5 입력 해시 계산
+#   설명: 미완료 태스크 ID와 각 의존만 해시 입력으로 쓴다. Done 의존이나 없는 태스크 의존은 생성기와 같은 규칙으로 처리되어 해시에 영향이 없다.
+#   관련: scripts/work_order.py
+#   개념: 멱등
+# 6 설치본 우선, 저장소 사본 대체
+#   설명: install.sh가 훅 옆에 work_order.py를 복사하므로 형제 파일을 먼저 쓰고, 저장소 안에서 돌릴 때만 scripts/work_order.py를 안내 메시지에 쓴다.
+#   관련: install.sh
+# 7 exit 2로 거부
+#   설명: stderr 메시지와 함께 exit 2로 끝내면 Claude Code가 도구 호출을 막고 메시지를 모델에 되돌려 준다.
+#   개념: 훅 종료 코드
+# 8 JSON 파싱 실패는 통과
+#   설명: stdin이 깨져도 빈 데이터로 두고 아래 명령 판정에서 걸러져 exit 0이 된다. 입력 형식 오류로 사용자 작업을 막지 않는다.
+#   개념: fail-open
+# 9 관문 대상 명령만 검사
+#   설명: promote 또는 In Progress 전환이 아닌 모든 Bash 명령은 즉시 통과한다. 이 훅의 유일한 진입 조건이다.
+#   개념: 관문
+# 10 새 프로젝트는 통과
+#   설명: 파일도 미완료 태스크도 없으면 정렬할 것이 없으므로 통과한다. 파일 없이 미완료 태스크만 있으면 아래로 내려가 거부되어 최초 1회 생성을 강제한다.
+#   개념: 교착 방지
+# 11 해시 일치면 통과
+#   설명: 승격 자체는 승격 이전 상태로 판정하므로 파일이 최신이면 통과한다. 승격이 만든 태스크 때문에 낡아지면 다음 승격·착수가 생성기 실행을 기다리고, 생성기는 막히지 않아 교착이 없다.
+#   관련: TASK-60, hooks/backlog_commit_scope.py
+#   개념: 교착 방지
