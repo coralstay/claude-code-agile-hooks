@@ -6,7 +6,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """PreToolUse (matcher: Bash, if: Bash(git *))
 The 27 hooks in this repo are deliberately self-contained (no shared
@@ -58,6 +58,53 @@ REGISTRY = {  # ---- 1
         "require_work_order.py",
         "require_test_layout.py",
         "require_coverage_on_done.py",
+    ],
+    # TASK-75: is_backlog_project judges at the git top-level (project_root),
+    # so project_root sits in every file is_backlog_project does
+    "project_root": [
+        "require_active_task.py",
+        "pre_commit_check.py",
+        "pre_push_check.py",
+        "block_stop_if_dirty.py",
+        "session_start.py",
+        "require_draft_first.py",
+        "backlog_commit_scope.py",
+        "require_test_first.py",
+        "require_implementation_plan.py",
+        "require_stage_committed.py",
+        "require_work_order.py",
+        "require_test_layout.py",
+        "require_coverage_on_done.py",
+    ],
+    # TASK-75: the directory a command acts on (cd · git -C · BACKLOG_CWD)
+    # and the backlog projects its gated segments target
+    "command_target_dir": [
+        "pre_commit_check.py",
+        "pre_push_check.py",
+        "require_draft_first.py",
+        "require_implementation_plan.py",
+        "require_test_first.py",
+        "require_work_order.py",
+        "require_stage_committed.py",
+        "require_coverage_on_done.py",
+        "backlog_commit_scope.py",
+    ],
+    "target_roots": [
+        "pre_commit_check.py",
+        "pre_push_check.py",
+        "require_draft_first.py",
+        "require_implementation_plan.py",
+        "require_test_first.py",
+        "require_work_order.py",
+        "require_stage_committed.py",
+        "require_coverage_on_done.py",
+        "backlog_commit_scope.py",
+    ],
+    # TASK-75: Edit/Write gates judge the edited file's repository
+    "edit_target_root": [
+        "require_active_task.py",
+        "require_test_first.py",
+        "require_test_layout.py",
     ],
     "has_command": [
         "block_stop_if_dirty.py",
@@ -157,6 +204,7 @@ REGISTRY = {  # ---- 1
         "require_work_order.py",
         "require_coverage_on_done.py",
         "require_design_propagation.py",  # TASK-63
+        "require_draft_first.py",  # TASK-75: command_target_dir calls it
     ],
     "git_subcommand_index": [
         "pre_commit_check.py",

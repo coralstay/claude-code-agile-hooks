@@ -6,7 +6,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """PreToolUse (matcher: Bash, no `if` filter)
 Phase 3-1 + 3-4: commits must happen on a task/<ID> branch, and (if the
@@ -33,6 +33,14 @@ and an unneeded branch/test check is recoverable while a skipped one is not.
 
 Known gaps (decision-1): `bash -c "git commit"`, `eval`, aliases, scripts,
 backtick substitution, and runners such as `xargs git commit` are not seen.
+
+TASK-75: the commit is judged on the repository it targets, not the session
+cwd - the cwd moved by earlier `cd <dir>` on the same line and the commit's
+own `git -C <dir>`, taken at its git top-level (so a subdirectory or linked
+worktree counts): that repository's active task, branch and testCommand. A
+target that isn't a backlog project passes; one that can't be known
+statically (`cd "$X"`, `git -C "$D"`, `cd -`, a missing directory) is denied
+with the reason.
 
 Fully self-contained: no imports from any other file in this repo."""
 
@@ -151,12 +159,282 @@ def command_runs_git(command, subcommand):
     return False
 
 
+def project_root(path):
+    """TASK-75 B1: the git top-level holding `path` (a directory or a file,
+    existing or not) - the nearest of `path` and its parents with a `.git`
+    entry, a directory or (linked worktree, submodule) a file. None outside
+    any repository or for an empty path. Walks the logical path (no
+    realpath) and runs no subprocess."""
+    if not path:
+        return None
+    current = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
 def is_backlog_project(cwd):
-    if not cwd:
-        return False
-    return os.path.isdir(os.path.join(cwd, ".git")) and os.path.isfile(
-        os.path.join(cwd, "backlog", "config.yml")
+    """TASK-75 B1: True if `cwd` lies in a git repository (judged at its
+    top-level, project_root) with backlog/config.yml - so a subdirectory
+    or a linked worktree of a backlog project is that project too."""
+    root = project_root(cwd)
+    return root is not None and os.path.isfile(
+        os.path.join(root, "backlog", "config.yml")
     )
+
+
+def command_target_dir(command, cwd):
+    """TASK-75 B2/B4/B6: [(segment, directory)] for every shell segment of
+    `command` (the segments split_segments gives, after heredoc bodies are
+    dropped and `\\`-newline continuations joined). `directory` is the one
+    the segment acts on: the session `cwd`, moved by the earlier
+    `cd`/`pushd <dir>` of the same line (relative to the directory before
+    it), then for git its `-C <dir>` options in order, and for backlog a
+    `BACKLOG_CWD=<dir>` in front of it (also behind `env`) or exported
+    earlier on the line (relative to the segment's directory).
+
+    A cd counts only where bash keeps it: not inside `( )` or `$( )` once
+    they close, not in a pipeline (`cd x | ...`), not in a list sent to the
+    background (`... &`).
+
+    `directory` is None when it can't be known statically: a path with
+    `$`, a backtick, a glob or `{` (`cd "$X"`, `cd $(...)`), `cd -`,
+    `popd`, `pushd` without a directory, a cd with more than one argument,
+    a relative cd while CDPATH is set, a directory that doesn't exist, a cd
+    that may not have run (after `||` or a shell keyword such as `then`; a
+    cd behind `&&` once its `&&` chain ends; any cd once an `||` other than
+    `|| exit` / `|| return` follows it), a bare `BACKLOG_CWD=...` assignment
+    (exported or not is unknown), and git with `--git-dir`, `--work-tree`,
+    `GIT_DIR=` or `GIT_WORK_TREE=`. A line that can't be tokenized gives
+    [(None, cwd)], or [(None, None)] when its text mentions a directory
+    changer."""
+
+    def resolve(base, path):
+        if path is None:
+            return None
+        if path.startswith("~"):
+            path = os.path.expanduser(path)
+        if not path or path.startswith("~") or any(c in path for c in "$`*?[{"):
+            return None
+        if not os.path.isabs(path):
+            if not base:
+                return None
+            path = os.path.join(base, path)
+        path = os.path.normpath(path)
+        return path if os.path.isdir(path) else None
+
+    def operands(args):
+        words = []
+        i = 0
+        while i < len(args):
+            tok = args[i]
+            if tok and set(tok) <= set("<>&"):
+                if words and words[-1].isdigit():
+                    words.pop()
+                i += 2
+                continue
+            words.append(tok)
+            i += 1
+        return words
+
+    def cd_target(name, args, base):
+        words = operands(args)
+        while words and words[0].startswith("-") and words[0] != "-":
+            if words.pop(0) == "--":
+                break
+        if name == "popd" or len(words) > 1:
+            return None
+        if not words:
+            return None if name == "pushd" else resolve(None, os.path.expanduser("~"))
+        word = words[0]
+        if word == "-" or (name == "pushd" and word[:1] in ("+", "-")):
+            return None
+        word = os.path.expanduser(word)
+        if os.environ.get("CDPATH") and word.split("/")[0] not in ("", ".", ".."):
+            return None
+        return resolve(base, word)
+
+    stripped = strip_heredoc_bodies(command or "").replace("\\\n", "")
+    try:
+        tokens = tokenize(stripped)
+    except ValueError:
+        changer = re.search(
+            r"\b(?:cd|pushd|popd)\b|(?:^|\s)-C\b|--git-dir|--work-tree"
+            r"|GIT_DIR|GIT_WORK_TREE|BACKLOG_CWD",
+            stripped,
+        )
+        return [(None, None if changer else cwd)]
+
+    def operator(run):
+        if "||" in run:
+            return ("op", "or")
+        if "&&" in run:
+            return ("op", "and")
+        if "|" in run:
+            return ("op", "pipe")
+        if "&" in run:
+            return ("op", "bg")
+        return ("op", "seq")
+
+    # a separator token can hold several operators and parens (`)&&(`)
+    events = []
+    current = []
+    for tok in tokens:
+        if not (tok and set(tok) <= set(";&|()\n")):
+            current.append(tok)
+            continue
+        if current:
+            events.append(("segment", current))
+            current = []
+        for part in re.findall(r"[()]|[^()]+", tok):
+            events.append(("paren", part) if part in "()" else operator(part))
+    if current:
+        events.append(("segment", current))
+
+    keywords = {"if", "then", "else", "elif", "do", "while", "until"}
+    directory, backlog_cwd, git_env = cwd, "", False
+    snapshot = (directory, backlog_cwd, git_env)
+    fragile = None
+    previous = "seq"
+    stack = []
+    pairs = []
+    for index, (kind, value) in enumerate(events):
+        following = events[index + 1] if index + 1 < len(events) else ("op", "seq")
+        if kind == "paren":
+            if value == "(":
+                stack.append((directory, backlog_cwd, git_env, snapshot, fragile))
+                snapshot = (directory, backlog_cwd, git_env)
+                fragile = None
+                previous = "seq"
+            elif stack:
+                directory, backlog_cwd, git_env, snapshot, fragile = stack.pop()
+            continue
+        if kind == "op":
+            if value == "or" and fragile is not None:
+                nxt = following[1] if following[0] == "segment" else []
+                head = command_head(nxt)
+                if head >= len(nxt) or nxt[head] not in ("exit", "return"):
+                    directory = None
+            elif value == "seq":
+                if fragile == "end":
+                    directory = None
+                fragile = None
+                snapshot = (directory, backlog_cwd, git_env)
+            elif value == "bg":
+                directory, backlog_cwd, git_env = snapshot
+                fragile = None
+            previous = value
+            continue
+
+        segment = value
+        start = 0
+        while start < len(segment) and segment[start] in keywords:
+            start += 1
+        head = start + command_head(segment[start:])
+        name = segment[head] if head < len(segment) else ""
+        target = directory
+        if os.path.basename(name) == "git":
+            if git_env or any(
+                t.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for t in segment[:head]
+            ):
+                target = None
+            j = head + 1
+            while target is not None and j < len(segment):
+                tok = segment[j]
+                if tok == "-C":
+                    target = resolve(target, segment[j + 1] if j + 1 < len(segment) else None)
+                    j += 2
+                elif tok in ("--git-dir", "--work-tree") or tok.startswith(
+                    ("--git-dir=", "--work-tree=")
+                ):
+                    target = None
+                elif tok in ("-c", "--namespace"):
+                    j += 2
+                elif tok.startswith("-"):
+                    j += 1
+                else:
+                    break
+        elif os.path.basename(name) in ("backlog", "backlog.md"):
+            env_value = backlog_cwd
+            for tok in segment[:head]:
+                if tok.startswith("BACKLOG_CWD="):
+                    env_value = tok[len("BACKLOG_CWD=") :]
+            if env_value is None:
+                target = None
+            elif env_value:
+                target = resolve(target, env_value)
+        pairs.append((segment, target))
+
+        if previous == "pipe" or following == ("op", "pipe"):
+            continue
+        conditional = start > 0 or previous in ("and", "or")
+        if name in ("cd", "pushd", "popd"):
+            if start > 0 or previous == "or":
+                directory = None
+            else:
+                directory = cd_target(name, segment[head + 1 :], directory)
+                fragile = "end" if previous == "and" else "or"
+        elif name in ("export", "unset") or head == len(segment):
+            for tok in segment[start:]:
+                key, eq, val = tok.partition("=")
+                if key == "BACKLOG_CWD":
+                    if name == "unset":
+                        backlog_cwd = ""
+                    elif conditional or name != "export" or not eq:
+                        backlog_cwd = None
+                    else:
+                        backlog_cwd = val
+                elif key in ("GIT_DIR", "GIT_WORK_TREE") and name != "unset":
+                    git_env = True
+    return pairs
+
+
+def target_roots(command, cwd, match, fallback):
+    """TASK-75: [(root, [results])] - the gated segments of `command`
+    (`match(segment)` is not None) grouped by the git top-level of the
+    directory each one targets (command_target_dir), in first-seen order.
+    A target that isn't a backlog project is dropped, whatever the session
+    cwd is (B7). A gated segment whose directory can't be known statically
+    is denied (B6). An untokenizable line counts the hook's own text-match
+    results (`fallback`) against its single pseudo-segment."""
+    groups = []
+    for segment, directory in command_target_dir(command, cwd):
+        if segment is None:
+            found = list(fallback)
+        else:
+            value = match(segment)
+            found = [] if value is None else [value]
+        if not found:
+            continue
+        if directory is None:
+            deny(
+                "[claude-code-agile-hooks] 이 명령이 어느 저장소를 겨누는지 정적으로 알 수 "
+                '없어 거부합니다(cd "$X" · cd $(...) · cd - · git -C "$D" · '
+                "BACKLOG_CWD=$Y · 없는 디렉터리 · || 뒤나 조건부 cd 등). 대상 디렉터리를 "
+                "리터럴 경로로 적거나(cd /path/to/repo && ...), 그 저장소에서 명령을 "
+                "따로 실행하세요."
+            )
+        root = project_root(directory) or directory
+        if not is_backlog_project(root):
+            continue
+        for known, values in groups:
+            if known == root:
+                values.extend(found)
+                break
+        else:
+            groups.append((root, found))
+    return groups
+
+
+def segment_commits(segment):
+    """TASK-75: True for a `git commit` segment in command position, else
+    None (the match function target_roots takes)."""
+    j = git_subcommand_index(segment)
+    return True if j is not None and segment[j] == "commit" else None
 
 
 def has_active_task(cwd):
@@ -224,26 +502,28 @@ def main():
         sys.exit(0)
     if not has_command("backlog"):  # ---- 7
         sys.exit(0)
-    if not is_backlog_project(cwd):
-        sys.exit(0)
 
-    if has_active_task(cwd):  # ---- 8
-        branch = current_branch(cwd)
-        if not branch.startswith("task/"):  # ---- 9
+    for root, _ in target_roots(command, cwd, segment_commits, [True]):  # ---- 8
+        check_repo(root)
+    sys.exit(0)
+
+
+def check_repo(root):
+    if has_active_task(root):  # ---- 9
+        branch = current_branch(root)
+        if not branch.startswith("task/"):  # ---- 10
             deny(
                 f"[claude-code-agile-hooks] 커밋하기 전에 태스크 브랜치(task/TASK-ID)로 전환하세요. 현재 브랜치: {branch}"
             )
 
-    test_command = configured_test_command(cwd)
+    test_command = configured_test_command(root)
     if test_command:
-        exit_code, output = run_shell(cwd, test_command)
-        if exit_code != 0:  # ---- 10
+        exit_code, output = run_shell(root, test_command)
+        if exit_code != 0:  # ---- 11
             deny(
                 f"[claude-code-agile-hooks] 커밋 전 테스트 실패 ('{test_command}', exit {exit_code}):\n"
                 + output[-800:]
             )
-
-    sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -272,13 +552,17 @@ if __name__ == "__main__":
 #   설명: 이 훅은 if 필터 없이 모든 Bash 호출에 등록돼 있어서(TASK-39) 커밋이 아닌 줄은 파싱 직후 바로 exit 0 해야 파이썬 프로세스 비용이 한 번의 짧은 파싱으로 끝난다.
 #   관련: TASK-39
 # 7 backlog 부재 시 fail-open
-#   설명: backlog CLI가 없거나 backlog 프로젝트가 아니면 이 워크플로 대상이 아니므로 통과시킨다. 워크플로 밖의 저장소 커밋을 막으면 안 된다.
+#   설명: backlog CLI가 없거나 커밋 대상이 backlog 프로젝트가 아니면 이 워크플로 대상이 아니므로 통과시킨다. 워크플로 밖의 저장소 커밋을 막으면 안 된다.
 #   개념: fail-open
-# 8 In Progress 태스크가 있을 때만 브랜치 강제
+# 8 세션 cwd가 아니라 커밋 대상 저장소로 판정
+#   설명: 같은 줄의 앞선 cd와 git -C로 커밋이 겨누는 디렉터리를 정하고 그 git top-level의 브랜치 · 카드 · testCommand로 판정한다. 대상이 backlog 프로젝트가 아니면 세션 cwd가 프로젝트여도 통과하고, 대상을 정적으로 알 수 없으면(cd "$X" 등) target_roots가 거부한다. 여러 저장소를 겨누면 저장소마다 검사한다.
+#   관련: TASK-75 (B2 · B6 · B7), hooks/dedup_drift_guard.py (command_target_dir · target_roots)
+#   개념: 대상 저장소, fail-closed
+# 9 In Progress 태스크가 있을 때만 브랜치 강제
 #   설명: 진행 중 태스크가 없으면 브랜치 규칙을 적용하지 않는다. 태스크 없이 하는 작업까지 task/ 브랜치로 몰지 않기 위함이다.
 #   관련: hooks/require_active_task.py
-# 9 task/ 브랜치 접두사 검사
+# 10 task/ 브랜치 접두사 검사
 #   설명: Phase 3-1 규칙: 커밋은 task/<ID> 브랜치에서만 한다. ID 형식까지 검사하지 않고 접두사만 보는 것은 의도다.
-# 10 테스트 실패 시 커밋 차단
+# 11 테스트 실패 시 커밋 차단
 #   설명: Phase 3-4: 프로젝트가 testCommand로 옵트인했을 때만 실행하고, 실패하면 exit 2로 커밋을 막는다. 출력은 뒤 800자만 보여 줘 에러 메시지가 길어지지 않게 한다.
 #   관련: .claude-code-agile-hooks.json (testCommand)
