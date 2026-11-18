@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 import io
 import json
@@ -135,10 +135,13 @@ def test_is_backlog_project_false(tmp_path):
     assert ppc.is_backlog_project(str(tmp_path)) is False
 
 
-def test_denies_bare_git_dash_c_push_when_not_done(monkeypatch, capsys):
+def test_denies_bare_git_dash_c_push_when_not_done(monkeypatch, capsys, tmp_path):
     # Regression: `git -C <path> push ...` previously slipped past because
     # settings.json's `if` filter only recognized `git push` as the literal
     # prefix. The hook must catch this itself now.
+    # TASK-75: the -C directory is the push target, so it has to exist.
+    project = tmp_path / "project"
+    project.mkdir()
     monkeypatch.setattr(ppc, "has_command", lambda name: True)
     monkeypatch.setattr(ppc, "is_backlog_project", lambda cwd: True)
     monkeypatch.setattr(ppc, "current_branch", lambda cwd: "task/TASK-3")
@@ -150,7 +153,7 @@ def test_denies_bare_git_dash_c_push_when_not_done(monkeypatch, capsys):
     stdin_data = {
         "cwd": "/x",
         "tool_input": {
-            "command": "git -C /home/user/project push -u origin task/TASK-3"
+            "command": f"git -C {project} push -u origin task/TASK-3"
         },
     }
     code = run_main(monkeypatch, stdin_data)
@@ -370,9 +373,11 @@ def test_non_push_line_exits_before_any_lookup(monkeypatch, command):
     "command",
     ["/usr/bin/git push origin x", "true && git push origin x", "cd y && git push"],
 )
-def test_path_and_compound_push_reach_the_gate(monkeypatch, capsys, command):
+def test_path_and_compound_push_reach_the_gate(monkeypatch, capsys, command, tmp_path):
     """The forms the old `if: Bash(git *)` filter hid (path call) or that
-    it matched only per subcommand are still judged by main()."""
+    it matched only per subcommand are still judged by main(). TASK-75:
+    `cd y` must name an existing directory to be a known push target."""
+    (tmp_path / "y").mkdir()
     monkeypatch.setattr(ppc, "has_command", lambda name: True)
     monkeypatch.setattr(ppc, "is_backlog_project", lambda cwd: True)
     monkeypatch.setattr(ppc, "current_branch", lambda cwd: "task/TASK-3")
@@ -381,7 +386,8 @@ def test_path_and_compound_push_reach_the_gate(monkeypatch, capsys, command):
         "task_view",
         lambda cwd, tid: {"task": {"status": "In Progress", "finalSummary": ""}},
     )
-    assert run_main(monkeypatch, {"cwd": "/x", "tool_input": {"command": command}}) == 2
+    payload = {"cwd": str(tmp_path), "tool_input": {"command": command}}
+    assert run_main(monkeypatch, payload) == 2
     assert "TASK-3" in capsys.readouterr().err
 
 

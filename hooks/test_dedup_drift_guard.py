@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 import io
 import json
@@ -194,6 +194,23 @@ BASELINE_BODIES = {
         def same_task(token, task_id):
             return False
         """,
+    # TASK-75: target repository helpers
+    "project_root": """
+        def project_root(path):
+            return None
+        """,
+    "command_target_dir": """
+        def command_target_dir(command, cwd):
+            return []
+        """,
+    "target_roots": """
+        def target_roots(command, cwd, match, fallback):
+            return []
+        """,
+    "edit_target_root": """
+        def edit_target_root(path, cwd):
+            return cwd
+        """,
 }
 
 DIFFERENT_HAS_COMMAND_BODY = """
@@ -367,6 +384,7 @@ def test_registry_covers_task34_pre_push_command_position_helpers():
         "require_work_order.py",  # TASK-60
         "require_coverage_on_done.py",  # TASK-62
         "require_design_propagation.py",  # TASK-63
+        "require_draft_first.py",  # TASK-75
     ]
     assert "command_invokes_git_subcommand" not in ddg.REGISTRY
 
