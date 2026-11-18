@@ -3,10 +3,10 @@ id: TASK-75
 title: >-
   게이트를 세션 cwd가 아니라 명령 · 파일의 대상 저장소로 판정한다(cd · git -C · BACKLOG_CWD · 하위 디렉터리 ·
   워크트리, 모르면 거부)
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-06T01:07:00Z'
-updated_date: '2026-11-18T01:33:00Z'
+updated_date: '2026-11-18T06:37:00Z'
 labels:
   - security
   - workflow
@@ -51,7 +51,7 @@ documentation:
 ## Definition of Done
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
-- [ ] #2 [수동 검증] README(Known gaps 갱신: 세션 cwd 문제 해소, 남는 한계는 bash -c · eval · 스크립트) · CLAUDE.md.snippet 반영
+- [x] #2 [수동 검증] README(Known gaps 갱신: 세션 cwd 문제 해소, 남는 한계는 bash -c · eval · 스크립트) · CLAUDE.md.snippet 반영
 - [x] #3 [수동 검증] 설치 후 실전: ~/githubs(비프로젝트) 세션에서 'cd <프로젝트> && backlog task edit … -s "In Progress"'가 AI 서명 승인으로 거부됨, 'cd "$X" && …'도 거부됨을 확인
 <!-- DOD:END -->
 
@@ -98,4 +98,13 @@ project_root와 command_target_dir 두 공유 함수로 '대상 저장소'를 �
   2. 'X=…; cd "$X" && backlog task edit …' → require_work_order 거부 '어느 저장소를 겨누는지 정적으로 알 수 없어 거부'
   3. 유저가 ! 로 만든 AI 키 서명 'Plan-Approved: SB-1'(1e93190, %GK=SHA256:ve62tQ1O…= ai-claude-code) 뒤 같은 명령 → 거부 '사람 키가 아닌 키의 서명입니다'
 - 부수 확인: 팩토리·agent-orchestrator 병합 브랜치 삭제 push 가 세션 cwd 와 다른 저장소에서도 막히지 않음(전날은 pre_push_check 가 세션 저장소 카드로 막았다)
+
+## 2026-11-18 DoD #2
+유저가 문서(README 새 절 '게이트는 명령 · 파일이 겨누는 저장소로 판정합니다'·Known gaps·CLAUDE.md.snippet) 진행을 승인('그렇게 진행해'). 설치된 ~/.claude/CLAUDE.md 의 마커 블록은 유저가 손으로 고친 판이라(plan mode·draft 흐름 등) 재설치로 덮으면 그 내용이 사라진다 — snippet 의 새 안내는 블록에 손으로 한 줄 더하는 쪽을 유저에게 권함
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+훅 게이트가 세션 cwd 가 아니라 명령·파일이 실제로 겨누는 저장소로 판정한다. 공유 함수 project_root(.git 파일·폴더를 위로 찾아 하위 디렉터리·워크트리도 인식)와 command_target_dir(cd·pushd·git -C·BACKLOG_CWD 를 세그먼트별로 누적, 서브셸·파이프 범위 유지)를 dedup REGISTRY 에 두고, commit·push 게이트 2개, backlog 명령 게이트 7개, Edit/Write 게이트 3개, 루트 인식 2개 훅을 전환했다. 대상을 정적으로 알 수 없으면(변수·명령 치환·cd -·없는 디렉터리 등) 거부하고, 대상이 backlog 프로젝트가 아니면 게이트를 걸지 않는다. 테스트 3272 통과·커버리지 100%. 설치 후 실전에서 비프로젝트 세션의 'cd <프로젝트> && … In Progress'가 승인 없음·AI 서명 승인 모두 거부되고 'cd "$X"'도 거부됨을 확인했다. 남은 같은 종류의 빈틈(pre_push_coverage_check, require_design_propagation, pre_git_safety_check push 검사 등)과 bash -c·eval·스크립트 안 명령은 README Known gaps 에 기록.
+<!-- SECTION:FINAL_SUMMARY:END -->
