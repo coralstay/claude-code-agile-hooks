@@ -6,7 +6,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-62: the coverage gate also runs when a task is moved to Done, not only
@@ -19,7 +19,10 @@ Applies to a `backlog task edit <ID> ... -s Done` (`--status Done`,
 require_test_first.py (heredoc bodies dropped, continuations joined,
 segments split, env assignments and wrappers skipped, `backlog` compared by
 basename; unbalanced quotes: a text match stands in) - in a backlog.md
-project (`.git` + `backlog/config.yml` in cwd). Any task ID counts: coverage
+project (`.git` + `backlog/config.yml` at the git top-level of the directory
+the command aims at - TASK-75: an earlier `cd <dir>` or `BACKLOG_CWD=<dir>`
+on the line, else the session cwd; an aim that can't be known statically is
+denied, exit 2). Any task ID counts: coverage
 is a property of the whole project, not of the branch's task. Indirection
 (`bash -c`, `eval`, scripts) and the backlog MCP server / web UI are not
 seen.
@@ -66,11 +69,31 @@ DONE_FALLBACK_RE = re.compile(  # ---- 1
 )
 
 
+def project_root(path):
+    """TASK-75 B1: the git top-level holding `path` (a directory or a file,
+    existing or not) - the nearest of `path` and its parents with a `.git`
+    entry, a directory or (linked worktree, submodule) a file. None outside
+    any repository or for an empty path. Walks the logical path (no
+    realpath) and runs no subprocess."""
+    if not path:
+        return None
+    current = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
 def is_backlog_project(cwd):
-    if not cwd:
-        return False
-    return os.path.isdir(os.path.join(cwd, ".git")) and os.path.isfile(
-        os.path.join(cwd, "backlog", "config.yml")
+    """TASK-75 B1: True if `cwd` lies in a git repository (judged at its
+    top-level, project_root) with backlog/config.yml - so a subdirectory
+    or a linked worktree of a backlog project is that project too."""
+    root = project_root(cwd)
+    return root is not None and os.path.isfile(
+        os.path.join(root, "backlog", "config.yml")
     )
 
 
@@ -344,6 +367,254 @@ def coverage_verdict(cwd, command, languages, report_dir):
     return exit_code, output, None
 
 
+def command_target_dir(command, cwd):
+    """TASK-75 B2/B4/B6: [(segment, directory)] for every shell segment of
+    `command` (the segments split_segments gives, after heredoc bodies are
+    dropped and `\\`-newline continuations joined). `directory` is the one
+    the segment acts on: the session `cwd`, moved by the earlier
+    `cd`/`pushd <dir>` of the same line (relative to the directory before
+    it), then for git its `-C <dir>` options in order, and for backlog a
+    `BACKLOG_CWD=<dir>` in front of it (also behind `env`) or exported
+    earlier on the line (relative to the segment's directory).
+
+    A cd counts only where bash keeps it: not inside `( )` or `$( )` once
+    they close, not in a pipeline (`cd x | ...`), not in a list sent to the
+    background (`... &`).
+
+    `directory` is None when it can't be known statically: a path with
+    `$`, a backtick, a glob or `{` (`cd "$X"`, `cd $(...)`), `cd -`,
+    `popd`, `pushd` without a directory, a cd with more than one argument,
+    a relative cd while CDPATH is set, a directory that doesn't exist, a cd
+    that may not have run (after `||` or a shell keyword such as `then`; a
+    cd behind `&&` once its `&&` chain ends; any cd once an `||` other than
+    `|| exit` / `|| return` follows it), a bare `BACKLOG_CWD=...` assignment
+    (exported or not is unknown), and git with `--git-dir`, `--work-tree`,
+    `GIT_DIR=` or `GIT_WORK_TREE=`. A line that can't be tokenized gives
+    [(None, cwd)], or [(None, None)] when its text mentions a directory
+    changer."""
+
+    def resolve(base, path):
+        if path is None:
+            return None
+        if path.startswith("~"):
+            path = os.path.expanduser(path)
+        if not path or path.startswith("~") or any(c in path for c in "$`*?[{"):
+            return None
+        if not os.path.isabs(path):
+            if not base:
+                return None
+            path = os.path.join(base, path)
+        path = os.path.normpath(path)
+        return path if os.path.isdir(path) else None
+
+    def operands(args):
+        words = []
+        i = 0
+        while i < len(args):
+            tok = args[i]
+            if tok and set(tok) <= set("<>&"):
+                if words and words[-1].isdigit():
+                    words.pop()
+                i += 2
+                continue
+            words.append(tok)
+            i += 1
+        return words
+
+    def cd_target(name, args, base):
+        words = operands(args)
+        while words and words[0].startswith("-") and words[0] != "-":
+            if words.pop(0) == "--":
+                break
+        if name == "popd" or len(words) > 1:
+            return None
+        if not words:
+            return None if name == "pushd" else resolve(None, os.path.expanduser("~"))
+        word = words[0]
+        if word == "-" or (name == "pushd" and word[:1] in ("+", "-")):
+            return None
+        word = os.path.expanduser(word)
+        if os.environ.get("CDPATH") and word.split("/")[0] not in ("", ".", ".."):
+            return None
+        return resolve(base, word)
+
+    stripped = strip_heredoc_bodies(command or "").replace("\\\n", "")
+    try:
+        tokens = tokenize(stripped)
+    except ValueError:
+        changer = re.search(
+            r"\b(?:cd|pushd|popd)\b|(?:^|\s)-C\b|--git-dir|--work-tree"
+            r"|GIT_DIR|GIT_WORK_TREE|BACKLOG_CWD",
+            stripped,
+        )
+        return [(None, None if changer else cwd)]
+
+    def operator(run):
+        if "||" in run:
+            return ("op", "or")
+        if "&&" in run:
+            return ("op", "and")
+        if "|" in run:
+            return ("op", "pipe")
+        if "&" in run:
+            return ("op", "bg")
+        return ("op", "seq")
+
+    # a separator token can hold several operators and parens (`)&&(`)
+    events = []
+    current = []
+    for tok in tokens:
+        if not (tok and set(tok) <= set(";&|()\n")):
+            current.append(tok)
+            continue
+        if current:
+            events.append(("segment", current))
+            current = []
+        for part in re.findall(r"[()]|[^()]+", tok):
+            events.append(("paren", part) if part in "()" else operator(part))
+    if current:
+        events.append(("segment", current))
+
+    keywords = {"if", "then", "else", "elif", "do", "while", "until"}
+    directory, backlog_cwd, git_env = cwd, "", False
+    snapshot = (directory, backlog_cwd, git_env)
+    fragile = None
+    previous = "seq"
+    stack = []
+    pairs = []
+    for index, (kind, value) in enumerate(events):
+        following = events[index + 1] if index + 1 < len(events) else ("op", "seq")
+        if kind == "paren":
+            if value == "(":
+                stack.append((directory, backlog_cwd, git_env, snapshot, fragile))
+                snapshot = (directory, backlog_cwd, git_env)
+                fragile = None
+                previous = "seq"
+            elif stack:
+                directory, backlog_cwd, git_env, snapshot, fragile = stack.pop()
+            continue
+        if kind == "op":
+            if value == "or" and fragile is not None:
+                nxt = following[1] if following[0] == "segment" else []
+                head = command_head(nxt)
+                if head >= len(nxt) or nxt[head] not in ("exit", "return"):
+                    directory = None
+            elif value == "seq":
+                if fragile == "end":
+                    directory = None
+                fragile = None
+                snapshot = (directory, backlog_cwd, git_env)
+            elif value == "bg":
+                directory, backlog_cwd, git_env = snapshot
+                fragile = None
+            previous = value
+            continue
+
+        segment = value
+        start = 0
+        while start < len(segment) and segment[start] in keywords:
+            start += 1
+        head = start + command_head(segment[start:])
+        name = segment[head] if head < len(segment) else ""
+        target = directory
+        if os.path.basename(name) == "git":
+            if git_env or any(
+                t.startswith(("GIT_DIR=", "GIT_WORK_TREE=")) for t in segment[:head]
+            ):
+                target = None
+            j = head + 1
+            while target is not None and j < len(segment):
+                tok = segment[j]
+                if tok == "-C":
+                    target = resolve(target, segment[j + 1] if j + 1 < len(segment) else None)
+                    j += 2
+                elif tok in ("--git-dir", "--work-tree") or tok.startswith(
+                    ("--git-dir=", "--work-tree=")
+                ):
+                    target = None
+                elif tok in ("-c", "--namespace"):
+                    j += 2
+                elif tok.startswith("-"):
+                    j += 1
+                else:
+                    break
+        elif os.path.basename(name) in ("backlog", "backlog.md"):
+            env_value = backlog_cwd
+            for tok in segment[:head]:
+                if tok.startswith("BACKLOG_CWD="):
+                    env_value = tok[len("BACKLOG_CWD=") :]
+            if env_value is None:
+                target = None
+            elif env_value:
+                target = resolve(target, env_value)
+        pairs.append((segment, target))
+
+        if previous == "pipe" or following == ("op", "pipe"):
+            continue
+        conditional = start > 0 or previous in ("and", "or")
+        if name in ("cd", "pushd", "popd"):
+            if start > 0 or previous == "or":
+                directory = None
+            else:
+                directory = cd_target(name, segment[head + 1 :], directory)
+                fragile = "end" if previous == "and" else "or"
+        elif name in ("export", "unset") or head == len(segment):
+            for tok in segment[start:]:
+                key, eq, val = tok.partition("=")
+                if key == "BACKLOG_CWD":
+                    if name == "unset":
+                        backlog_cwd = ""
+                    elif conditional or name != "export" or not eq:
+                        backlog_cwd = None
+                    else:
+                        backlog_cwd = val
+                elif key in ("GIT_DIR", "GIT_WORK_TREE") and name != "unset":
+                    git_env = True
+    return pairs
+
+
+def target_roots(command, cwd, match, fallback):
+    """TASK-75: [(root, [results])] - the gated segments of `command`
+    (`match(segment)` is not None) grouped by the git top-level of the
+    directory each one targets (command_target_dir), in first-seen order.
+    A target that isn't a backlog project is dropped, whatever the session
+    cwd is (B7). A gated segment whose directory can't be known statically
+    is denied (B6). An untokenizable line counts the hook's own text-match
+    results (`fallback`) against its single pseudo-segment."""
+    groups = []
+    for segment, directory in command_target_dir(command, cwd):
+        if segment is None:
+            found = list(fallback)
+        else:
+            value = match(segment)
+            found = [] if value is None else [value]
+        if not found:
+            continue
+        if directory is None:
+            deny(
+                "[claude-code-agile-hooks] 이 명령이 어느 저장소를 겨누는지 정적으로 알 수 "
+                '없어 거부합니다(cd "$X" · cd $(...) · cd - · git -C "$D" · '
+                "BACKLOG_CWD=$Y · 없는 디렉터리 · || 뒤나 조건부 cd 등). 대상 디렉터리를 "
+                "리터럴 경로로 적거나(cd /path/to/repo && ...), 그 저장소에서 명령을 "
+                "따로 실행하세요."
+            )
+        root = project_root(directory) or directory
+        if not is_backlog_project(root):
+            continue
+        for known, values in groups:
+            if known == root:
+                values.extend(found)
+                break
+        else:
+            groups.append((root, found))
+    return groups
+
+
+def deny(message):
+    print(message, file=sys.stderr)
+    sys.exit(2)
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -354,42 +625,44 @@ def main():
     if data.get("tool_name") != "Bash" or not isinstance(tool_input, dict):
         sys.exit(0)
     # cheap parse first: most Bash lines leave before any file or subprocess
-    if not done_targets(tool_input.get("command") or ""):  # ---- 10
+    command = tool_input.get("command") or ""
+    targets = done_targets(command)
+    if not targets:  # ---- 10
         sys.exit(0)
     cwd = data.get("cwd", "")
-    if not is_backlog_project(cwd):  # ---- 11
-        sys.exit(0)
+    roots = target_roots(command, cwd, segment_done_target, targets)  # ---- 11
+    payloads = [p for p in (repo_payload(root) for root, _ in roots) if p is not None]
+    denials = [p for p in payloads if "hookSpecificOutput" in p]
+    if payloads:
+        print(json.dumps((denials or payloads)[0]))  # ---- 12
+    sys.exit(0)
 
-    command = configured_coverage_command(cwd)
-    languages = detect_languages(cwd)
-    if not command:  # ---- 12
-        if languages:
-            print(json.dumps(missing_command_payload(languages)))
-        sys.exit(0)
+
+def repo_payload(root):
+    """The PreToolUse output for a Done move in the project at `root`: a
+    deny decision, a pass report, or None (nothing to say)."""
+    command = configured_coverage_command(root)
+    languages = detect_languages(root)
+    if not command:  # ---- 13
+        return missing_command_payload(languages) if languages else None
 
     exit_code, output, problem = coverage_verdict(
-        cwd, command, languages, configured_report_dir(cwd)
+        root, command, languages, configured_report_dir(root)
     )
     report = f"{TAG} 커버리지 리포트 ('{command}', exit {exit_code}):\n" + output[-4000:]
     if problem is None:
         # pass: show the measured report, leave the permission decision alone
-        print(json.dumps({"systemMessage": report}))  # ---- 13
-        sys.exit(0)
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",  # ---- 14
-                    "permissionDecisionReason": (
-                        f"{TAG} -s Done 전에 커버리지 게이트를 통과해야 합니다: "
-                        f"{problem}\n" + report
-                    ),
-                }
-            }
-        )
-    )
-    sys.exit(0)
+        return {"systemMessage": report}  # ---- 14
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",  # ---- 15
+            "permissionDecisionReason": (
+                f"{TAG} -s Done 전에 커버리지 게이트를 통과해야 합니다: "
+                f"{problem}\n" + report
+            ),
+        }
+    }
 
 
 if __name__ == "__main__":
@@ -428,16 +701,19 @@ if __name__ == "__main__":
 # 10 Bash는 싼 파싱으로 먼저 거름
 #   설명: 대부분의 Bash 호출은 Done 이동이 아니므로 파일 · 서브프로세스 접근 전에 파싱만으로 종료한다. 어느 task ID든 대상이 된다 - 커버리지는 프로젝트 전체의 속성이다.
 #   개념: 조기 종료
-# 11 backlog 프로젝트가 아니면 통과
-#   설명: `.git`과 backlog/config.yml이 있는 프로젝트에만 적용한다. 다른 프로젝트의 Done 명령은 건드리지 않는다.
-#   관련: hooks/dedup_drift_guard.py REGISTRY(is_backlog_project)
-#   개념: fail-open
-# 12 명령이 없을 때의 분기
+# 11 대상이 backlog 프로젝트가 아니면 통과
+#   설명: 같은 줄의 앞선 cd와 BACKLOG_CWD로 Done 이동이 겨누는 디렉터리를 정하고, 그 git top-level이 backlog 프로젝트일 때만 그 저장소의 coverageCommand로 판정한다. 다른 프로젝트의 Done 명령은 세션 cwd와 무관하게 건드리지 않고, 대상을 정적으로 알 수 없으면 target_roots가 거부한다(exit 2).
+#   관련: TASK-75 (B3 · B4 · B6 · B7), hooks/dedup_drift_guard.py REGISTRY(is_backlog_project · command_target_dir · target_roots)
+#   개념: fail-open, 대상 저장소
+# 12 출력은 한 번만
+#   설명: 한 줄이 여러 프로젝트의 Done을 겨누면 저장소마다 판정하고, stdout JSON은 하나뿐이어야 하므로 거부가 있으면 첫 거부를, 없으면 첫 리포트를 낸다.
+#   관련: TASK-75
+# 13 명령이 없을 때의 분기
 #   설명: 언어가 감지되면 deny 페이로드를 출력하고, 감지된 언어가 없으면 이전처럼 옵트인으로 조용히 통과한다. 어느 쪽이든 exit 0이고 결정은 JSON이 전달한다.
 #   관련: TASK-62
 #   개념: 옵트인, 필수 언어
-# 13 통과 시 허가 결정을 하지 않음
+# 14 통과 시 허가 결정을 하지 않음
 #   설명: 측정된 리포트만 보여 주고 permissionDecision을 내지 않는다. 이 훅이 다른 훅이나 사용자 설정의 판단을 allow로 덮어쓰지 않게 하려는 결정이다.
-# 14 Done 이동 거부
+# 15 Done 이동 거부
 #   설명: 커버리지 미달이면 JSON deny로 Done 전환을 막고 사유와 실제 리포트를 함께 보여 준다.
 #   관련: hooks/pre_push_coverage_check.py
