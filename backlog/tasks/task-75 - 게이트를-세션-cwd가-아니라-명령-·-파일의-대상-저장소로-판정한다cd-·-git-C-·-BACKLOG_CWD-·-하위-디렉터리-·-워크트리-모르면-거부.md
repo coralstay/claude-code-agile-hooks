@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-06T01:07:00Z'
-updated_date: '2026-11-18T01:05:00Z'
+updated_date: '2026-11-18T01:33:00Z'
 labels:
   - security
   - workflow
@@ -52,7 +52,7 @@ documentation:
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
 - [ ] #2 [수동 검증] README(Known gaps 갱신: 세션 cwd 문제 해소, 남는 한계는 bash -c · eval · 스크립트) · CLAUDE.md.snippet 반영
-- [ ] #3 [수동 검증] 설치 후 실전: ~/githubs(비프로젝트) 세션에서 'cd <프로젝트> && backlog task edit … -s "In Progress"'가 AI 서명 승인으로 거부됨, 'cd "$X" && …'도 거부됨을 확인
+- [x] #3 [수동 검증] 설치 후 실전: ~/githubs(비프로젝트) 세션에서 'cd <프로젝트> && backlog task edit … -s "In Progress"'가 AI 서명 승인으로 거부됨, 'cd "$X" && …'도 거부됨을 확인
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -90,4 +90,12 @@ project_root와 command_target_dir 두 공유 함수로 '대상 저장소'를 �
 - 범위 밖으로 남김(README Known gaps 에 기록, 후속 판단): pre_push_coverage_check(다른 저장소 push 때 세션 저장소 커버리지를 돌림, AC#2 와 같은 종류), require_design_propagation, pre_git_safety_check push 검사, dedup_drift_guard, case_insensitive_guard. 비따옴표 git -C $(pwd) commit 은 세그먼트가 갈려 commit 을 못 봄(기존 탐지 빈틈). 세션 환경에 이미 export 된 BACKLOG_CWD·GIT_DIR 은 무시
 - 동작 변화: 아직 없는 디렉터리로 cd 한 뒤의 게이트 대상 명령은 거부된다(예: mkdir x && cd x && git init && git commit)
 - 남은 것: DoD #2(문서 수동 검토)·#3(설치 후 실전) — 유저
+
+## 2026-11-18 설치 후 실전 확인 (DoD #3)
+- 유저가 task/TASK-75 에서 install.sh 실행(훅 복사·settings 병합 완료, CLAUDE.md 블록은 이미 있어 건너뜀 — snippet 의 새 줄은 아직 ~/.claude/CLAUDE.md 에 없음)
+- 세션 cwd ~/githubs(비프로젝트), 일회용 샌드박스 ~/githubs-work/ao-sandbox-dod(make-sandbox.sh, SB-1 To Do)
+  1. 'cd ~/githubs-work/ao-sandbox-dod && backlog task edit SB-1 -s "In Progress"'(승인 커밋 없음) → require_implementation_plan 거부 '계획 승인이 없습니다'. 고치기 전에는 세션 cwd 가 비프로젝트라 검사 자체를 건너뛰었다
+  2. 'X=…; cd "$X" && backlog task edit …' → require_work_order 거부 '어느 저장소를 겨누는지 정적으로 알 수 없어 거부'
+  3. 유저가 ! 로 만든 AI 키 서명 'Plan-Approved: SB-1'(1e93190, %GK=SHA256:ve62tQ1O…= ai-claude-code) 뒤 같은 명령 → 거부 '사람 키가 아닌 키의 서명입니다'
+- 부수 확인: 팩토리·agent-orchestrator 병합 브랜치 삭제 push 가 세션 cwd 와 다른 저장소에서도 막히지 않음(전날은 pre_push_check 가 세션 저장소 카드로 막았다)
 <!-- SECTION:NOTES:END -->
