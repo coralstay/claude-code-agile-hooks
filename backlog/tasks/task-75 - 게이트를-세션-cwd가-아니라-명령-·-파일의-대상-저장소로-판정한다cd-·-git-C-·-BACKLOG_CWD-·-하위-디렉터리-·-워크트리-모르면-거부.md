@@ -3,10 +3,10 @@ id: TASK-75
 title: >-
   게이트를 세션 cwd가 아니라 명령 · 파일의 대상 저장소로 판정한다(cd · git -C · BACKLOG_CWD · 하위 디렉터리 ·
   워크트리, 모르면 거부)
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-06T01:07:00Z'
-updated_date: '2026-11-06T04:36:00Z'
+updated_date: '2026-11-18T00:13:00Z'
 labels:
   - security
   - workflow
