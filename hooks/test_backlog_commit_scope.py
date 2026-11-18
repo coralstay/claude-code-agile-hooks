@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 import io
 import json
@@ -326,6 +326,7 @@ def test_cd_before_commit_disables_simulation(monkeypatch, repo):
     write(repo, DRAFT, DRAFT_BODY)
     write(repo, "src/app.py", "print(2)\n")
     git(repo, "add", DRAFT)
+    (repo / "elsewhere").mkdir()  # TASK-75: an existing cd target in the same repo
     command = "cd elsewhere && git add src/app.py && git commit -m x"
     assert run_main(monkeypatch, repo, command) == 0
 

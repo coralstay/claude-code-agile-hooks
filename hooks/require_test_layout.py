@@ -6,14 +6,16 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """PreToolUse (matcher: Edit|Write)
 TASK-61: test files keep a fixed layout - summary header, then the tests
 written from the card's AC/DoD, then the tests that only fill coverage.
 
-Applies only in a backlog.md project (`.git` + `backlog/config.yml` in cwd)
-and only to test files of five languages:
+Applies only in a backlog.md project (`.git` + `backlog/config.yml` at the
+git top-level of the edited file - TASK-75: not the session cwd, so a
+subdirectory or linked worktree session counts and another repository's file
+doesn't) and only to test files of five languages:
 
 - target paths: the project's `testFirst.testGlobs` (`.claude-code-agile-
   hooks.json`, legacy `.claude-rails.json`; same glob semantics as
@@ -101,11 +103,31 @@ AC_SECTION = "== AC/DoD =="
 COVERAGE_SECTION = "== Coverage =="
 
 
+def project_root(path):
+    """TASK-75 B1: the git top-level holding `path` (a directory or a file,
+    existing or not) - the nearest of `path` and its parents with a `.git`
+    entry, a directory or (linked worktree, submodule) a file. None outside
+    any repository or for an empty path. Walks the logical path (no
+    realpath) and runs no subprocess."""
+    if not path:
+        return None
+    current = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
 def is_backlog_project(cwd):
-    if not cwd:
-        return False
-    return os.path.isdir(os.path.join(cwd, ".git")) and os.path.isfile(
-        os.path.join(cwd, "backlog", "config.yml")
+    """TASK-75 B1: True if `cwd` lies in a git repository (judged at its
+    top-level, project_root) with backlog/config.yml - so a subdirectory
+    or a linked worktree of a backlog project is that project too."""
+    root = project_root(cwd)
+    return root is not None and os.path.isfile(
+        os.path.join(root, "backlog", "config.yml")
     )
 
 
@@ -129,6 +151,19 @@ def is_outside_project(path, cwd):
     root = os.path.realpath(cwd)
     target = os.path.realpath(os.path.join(cwd, path))
     return os.path.commonpath([root, target]) != root  # ---- 4
+
+
+def edit_target_root(path, cwd):
+    """TASK-75 B5: the directory an Edit/Write gate judges - the git
+    top-level of the edited file (`path`, relative paths resolved against
+    the session `cwd`, symlinks resolved), not the session cwd. Without a
+    usable path, or for a file in no repository, the session cwd's
+    top-level (or `cwd` itself): such a file then falls outside that
+    project and the gates' outside-project check lets it through."""
+    target = cwd
+    if isinstance(path, str) and path and (cwd or os.path.isabs(path)):
+        target = os.path.realpath(os.path.join(cwd, path))
+    return project_root(target) or project_root(cwd) or cwd
 
 
 def is_glob_list(value):
@@ -377,21 +412,23 @@ def main():
     if tool_name not in ("Edit", "Write") or not isinstance(tool_input, dict):
         sys.exit(0)
     path = tool_input.get("file_path") or ""
-    if not isinstance(path, str) or not path or not is_backlog_project(cwd):
+    if not isinstance(path, str) or not path:
         sys.exit(0)
-    if is_outside_project(path, cwd):
+    root = edit_target_root(path, cwd)  # ---- 14
+    path = os.path.join(cwd, path)
+    if not is_backlog_project(root) or is_outside_project(path, root):
         sys.exit(0)
-    target = os.path.realpath(os.path.join(cwd, path))
-    rel = os.path.relpath(target, os.path.realpath(cwd)).replace(os.sep, "/")
+    target = os.path.realpath(path)
+    rel = os.path.relpath(target, os.path.realpath(root)).replace(os.sep, "/")
     lang = LANGUAGES.get(os.path.splitext(rel)[1])
-    if lang is None or not is_target(rel, load_test_globs(cwd)):
+    if lang is None or not is_target(rel, load_test_globs(root)):
         sys.exit(0)
 
     old = read_file(target) if os.path.isfile(target) else None
     new = result_text(tool_name, tool_input, old)
-    if new is None:  # ---- 14
+    if new is None:  # ---- 15
         sys.exit(0)
-    if old is not None and not adopted(old, lang) and not adopted(new, lang):  # ---- 15
+    if old is not None and not adopted(old, lang) and not adopted(new, lang):  # ---- 16
         hint(rel, lang)
         sys.exit(0)
     problems = layout_problems(new, lang)
@@ -449,10 +486,14 @@ if __name__ == "__main__":
 # 13 도구와 같은 치환 의미
 #   설명: replace_all이면 전부, 아니면 첫 번째만 바꾼 결과를 만들어 검사한다. 적용 후의 파일을 검사한다는 원칙의 구현이다.
 #   개념: 사후 상태 검사
-# 14 결과를 계산할 수 없으면 통과
+# 14 세션 cwd가 아니라 편집 파일의 저장소로 판정
+#   설명: 편집하는 파일(상대 경로는 세션 cwd 기준, 심볼릭 링크는 푼 뒤)이 속한 git top-level을 프로젝트로 보고, 그 저장소의 testGlobs와 상대 경로로 판정한다. 비프로젝트 세션이나 하위 디렉터리 세션에서도 backlog 프로젝트의 테스트 파일은 검사되고, 다른 저장소의 파일은 검사하지 않는다.
+#   관련: TASK-75 (B1 · B5), hooks/dedup_drift_guard.py (edit_target_root · project_root)
+#   개념: 대상 저장소
+# 15 결과를 계산할 수 없으면 통과
 #   설명: Write의 content가 문자열이 아니거나 Edit이 실패할 상황이면 판정하지 않는다.
 #   개념: fail-open
-# 15 적용 범위 결정
+# 16 적용 범위 결정
 #   설명: 새 파일은 항상 검사하고, 기존 파일은 변경 전이나 후에 규약을 도입한 흔적이 있을 때만 검사한다. 도입한 파일이 규약을 조용히 버리는 것은 막고, 옛 파일은 건드리지 않는다.
 #   관련: TASK-61
 #   개념: 도입 여부(adopted)

@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """TASK-59#3: require_stage_committed.py - a backlog stage command
 (draft create / draft promote / task edit -s "In Progress" | Done) is denied
@@ -65,7 +65,7 @@ STAGE_COMMANDS = [
     "backlog task edit 3 -s Done",
     "backlog task edit TASK-3 --status=Done",
     'backlog task edit TASK-3 --check-ac 1 --final-summary "끝" -s Done',
-    "cd /x && backlog draft create t",
+    "cd . && backlog draft create t",  # TASK-75: the cd target is judged
     "FOO=1 /opt/homebrew/bin/backlog draft promote 3",
     "sudo -E backlog.md drafts create t",
     "true; backlog tasks edit TASK-3 -s Done",

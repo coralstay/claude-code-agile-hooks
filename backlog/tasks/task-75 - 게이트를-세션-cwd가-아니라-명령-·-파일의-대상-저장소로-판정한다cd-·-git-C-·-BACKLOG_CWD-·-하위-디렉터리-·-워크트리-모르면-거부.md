@@ -3,10 +3,10 @@ id: TASK-75
 title: >-
   게이트를 세션 cwd가 아니라 명령 · 파일의 대상 저장소로 판정한다(cd · git -C · BACKLOG_CWD · 하위 디렉터리 ·
   워크트리, 모르면 거부)
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-11-06T01:07:00Z'
-updated_date: '2026-11-06T04:36:00Z'
+updated_date: '2026-11-18T06:37:00Z'
 labels:
   - security
   - workflow
@@ -38,21 +38,21 @@ documentation:
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 project_root(dir): git top-level을 저장소 루트로 정하는 공유 함수 — 하위 디렉터리 · 링크된 워크트리에서도 backlog 프로젝트로 인식하고, 게이트 훅의 is_backlog_project(cwd)를 project_root 기준으로 바꾼다(회수 원본 ~/.cache/claude-hook-patch는 참고만, 그대로 복사하지 않음)
-- [ ] #2 command_target_dir(command, cwd): 같은 줄의 앞선 cd <dir>와 git -C <dir>를 누적해 대상 디렉터리를 정하고, pre_commit_check · pre_push_check가 그 저장소의 브랜치 · 카드 · testCommand로 판정한다 — 'A 세션에서 cd B && git commit이 A의 testCommand를 돌림' · 'A의 task 브랜치 때문에 B push가 막힘'을 재현하는 테스트
-- [ ] #3 backlog 명령 게이트(require_implementation_plan · require_test_first · require_work_order · require_stage_committed · require_draft_first · require_coverage_on_done · backlog_commit_scope)가 대상 저장소로 판정한다 — 훅마다 'backlog 프로젝트가 아닌 세션 cwd에서 cd <프로젝트> && backlog …'가 그 프로젝트 규칙으로 거부되는 테스트
-- [ ] #4 BACKLOG_CWD=<dir> 대입(명령 앞 · env 래퍼)을 backlog 명령의 대상으로 본다
-- [ ] #5 Edit/Write 게이트(require_active_task · require_test_first 편집 검사 · require_test_layout 등)가 편집 파일이 속한 저장소로 판정한다
-- [ ] #6 게이트 대상 명령에서 대상 디렉터리를 정적으로 알 수 없으면(cd "$X", cd $(…), git -C "$D", BACKLOG_CWD=$Y) 거부하고 이유를 안내한다
-- [ ] #7 대상이 backlog 프로젝트가 아니면 세션 cwd가 프로젝트여도 그 명령에는 게이트를 걸지 않는다
-- [ ] #8 command_target_dir · project_root를 dedup REGISTRY 공유 함수로 등록하고 쓰는 훅이 모두 같은 구현을 쓴다
+- [x] #1 project_root(dir): git top-level을 저장소 루트로 정하는 공유 함수 — 하위 디렉터리 · 링크된 워크트리에서도 backlog 프로젝트로 인식하고, 게이트 훅의 is_backlog_project(cwd)를 project_root 기준으로 바꾼다(회수 원본 ~/.cache/claude-hook-patch는 참고만, 그대로 복사하지 않음)
+- [x] #2 command_target_dir(command, cwd): 같은 줄의 앞선 cd <dir>와 git -C <dir>를 누적해 대상 디렉터리를 정하고, pre_commit_check · pre_push_check가 그 저장소의 브랜치 · 카드 · testCommand로 판정한다 — 'A 세션에서 cd B && git commit이 A의 testCommand를 돌림' · 'A의 task 브랜치 때문에 B push가 막힘'을 재현하는 테스트
+- [x] #3 backlog 명령 게이트(require_implementation_plan · require_test_first · require_work_order · require_stage_committed · require_draft_first · require_coverage_on_done · backlog_commit_scope)가 대상 저장소로 판정한다 — 훅마다 'backlog 프로젝트가 아닌 세션 cwd에서 cd <프로젝트> && backlog …'가 그 프로젝트 규칙으로 거부되는 테스트
+- [x] #4 BACKLOG_CWD=<dir> 대입(명령 앞 · env 래퍼)을 backlog 명령의 대상으로 본다
+- [x] #5 Edit/Write 게이트(require_active_task · require_test_first 편집 검사 · require_test_layout 등)가 편집 파일이 속한 저장소로 판정한다
+- [x] #6 게이트 대상 명령에서 대상 디렉터리를 정적으로 알 수 없으면(cd "$X", cd $(…), git -C "$D", BACKLOG_CWD=$Y) 거부하고 이유를 안내한다
+- [x] #7 대상이 backlog 프로젝트가 아니면 세션 cwd가 프로젝트여도 그 명령에는 게이트를 걸지 않는다
+- [x] #8 command_target_dir · project_root를 dedup REGISTRY 공유 함수로 등록하고 쓰는 훅이 모두 같은 구현을 쓴다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
-- [ ] #2 [수동 검증] README(Known gaps 갱신: 세션 cwd 문제 해소, 남는 한계는 bash -c · eval · 스크립트) · CLAUDE.md.snippet 반영
-- [ ] #3 [수동 검증] 설치 후 실전: ~/githubs(비프로젝트) 세션에서 'cd <프로젝트> && backlog task edit … -s "In Progress"'가 AI 서명 승인으로 거부됨, 'cd "$X" && …'도 거부됨을 확인
+- [x] #1 coverageCommand 통과 · 커버리지 100%(line + branch)
+- [x] #2 [수동 검증] README(Known gaps 갱신: 세션 cwd 문제 해소, 남는 한계는 bash -c · eval · 스크립트) · CLAUDE.md.snippet 반영
+- [x] #3 [수동 검증] 설치 후 실전: ~/githubs(비프로젝트) 세션에서 'cd <프로젝트> && backlog task edit … -s "In Progress"'가 AI 서명 승인으로 거부됨, 'cd "$X" && …'도 거부됨을 확인
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -77,3 +77,34 @@ project_root와 command_target_dir 두 공유 함수로 '대상 저장소'를 �
 4. AC #5: Edit/Write 게이트를 파일 경로 기준으로 전환.
 5. README · snippet, coverageCommand 100%. 유저 설치 후 실전 확인.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 2026-11-18 구현·검증 (서브에이전트 구현, 아래는 내가 직접 다시 돌린 결과)
+- 커밋: 7ef933e(테스트) → 8a83957(공유 함수·commit/push 게이트) → 75ca99b(backlog 게이트·BACKLOG_CWD) → a97f036(Edit/Write 게이트·하위 디렉터리·워크트리) → 8abd2f9(README·snippet)
+- 테스트 먼저(서브에이전트 기록): AC#1+#8 30 failed → 통과, AC#2/#6/#7 77 failed → 통과, AC#3/#4 47 failed → 통과, AC#5 6 failed → 통과. 2026-11-17 실제 실패 3건(다른 저장소 push 가 세션 카드로 막힘, require_work_order 가 세션 저장소 작업 순서를 봄, require_implementation_plan 이 세션 프로젝트 draft 를 봄)을 테스트로 재현
+- coverageCommand: 3272 passed, TOTAL 7411 stmts·3510 branches, 100.00%(line+branch). source-header lint --strict rc=0. 표식 TASK-75#1~#8·#B1~#B7 모두 있음
+- 새 공유 함수(dedup REGISTRY 등록): project_root(path) — .git 파일·폴더를 위로 찾음(워크트리·서브모듈), command_target_dir(command, cwd) — 세그먼트마다 cd·pushd·git -C·BACKLOG_CWD 를 누적하고 서브셸·파이프·& 범위를 지킴, 변수·명령 치환·glob·cd -·없는 디렉터리·GIT_DIR 등은 '모름'(None), target_roots·edit_target_root
+- 전환한 훅: pre_commit_check, pre_push_check, require_draft_first, require_implementation_plan, require_work_order, require_stage_committed, require_test_first(Bash·편집), require_coverage_on_done, backlog_commit_scope, require_active_task, require_test_layout, 루트 인식만 block_stop_if_dirty·session_start
+- 범위 밖으로 남김(README Known gaps 에 기록, 후속 판단): pre_push_coverage_check(다른 저장소 push 때 세션 저장소 커버리지를 돌림, AC#2 와 같은 종류), require_design_propagation, pre_git_safety_check push 검사, dedup_drift_guard, case_insensitive_guard. 비따옴표 git -C $(pwd) commit 은 세그먼트가 갈려 commit 을 못 봄(기존 탐지 빈틈). 세션 환경에 이미 export 된 BACKLOG_CWD·GIT_DIR 은 무시
+- 동작 변화: 아직 없는 디렉터리로 cd 한 뒤의 게이트 대상 명령은 거부된다(예: mkdir x && cd x && git init && git commit)
+- 남은 것: DoD #2(문서 수동 검토)·#3(설치 후 실전) — 유저
+
+## 2026-11-18 설치 후 실전 확인 (DoD #3)
+- 유저가 task/TASK-75 에서 install.sh 실행(훅 복사·settings 병합 완료, CLAUDE.md 블록은 이미 있어 건너뜀 — snippet 의 새 줄은 아직 ~/.claude/CLAUDE.md 에 없음)
+- 세션 cwd ~/githubs(비프로젝트), 일회용 샌드박스 ~/githubs-work/ao-sandbox-dod(make-sandbox.sh, SB-1 To Do)
+  1. 'cd ~/githubs-work/ao-sandbox-dod && backlog task edit SB-1 -s "In Progress"'(승인 커밋 없음) → require_implementation_plan 거부 '계획 승인이 없습니다'. 고치기 전에는 세션 cwd 가 비프로젝트라 검사 자체를 건너뛰었다
+  2. 'X=…; cd "$X" && backlog task edit …' → require_work_order 거부 '어느 저장소를 겨누는지 정적으로 알 수 없어 거부'
+  3. 유저가 ! 로 만든 AI 키 서명 'Plan-Approved: SB-1'(1e93190, %GK=SHA256:ve62tQ1O…= ai-claude-code) 뒤 같은 명령 → 거부 '사람 키가 아닌 키의 서명입니다'
+- 부수 확인: 팩토리·agent-orchestrator 병합 브랜치 삭제 push 가 세션 cwd 와 다른 저장소에서도 막히지 않음(전날은 pre_push_check 가 세션 저장소 카드로 막았다)
+
+## 2026-11-18 DoD #2
+유저가 문서(README 새 절 '게이트는 명령 · 파일이 겨누는 저장소로 판정합니다'·Known gaps·CLAUDE.md.snippet) 진행을 승인('그렇게 진행해'). 설치된 ~/.claude/CLAUDE.md 의 마커 블록은 유저가 손으로 고친 판이라(plan mode·draft 흐름 등) 재설치로 덮으면 그 내용이 사라진다 — snippet 의 새 안내는 블록에 손으로 한 줄 더하는 쪽을 유저에게 권함
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+훅 게이트가 세션 cwd 가 아니라 명령·파일이 실제로 겨누는 저장소로 판정한다. 공유 함수 project_root(.git 파일·폴더를 위로 찾아 하위 디렉터리·워크트리도 인식)와 command_target_dir(cd·pushd·git -C·BACKLOG_CWD 를 세그먼트별로 누적, 서브셸·파이프 범위 유지)를 dedup REGISTRY 에 두고, commit·push 게이트 2개, backlog 명령 게이트 7개, Edit/Write 게이트 3개, 루트 인식 2개 훅을 전환했다. 대상을 정적으로 알 수 없으면(변수·명령 치환·cd -·없는 디렉터리 등) 거부하고, 대상이 backlog 프로젝트가 아니면 게이트를 걸지 않는다. 테스트 3272 통과·커버리지 100%. 설치 후 실전에서 비프로젝트 세션의 'cd <프로젝트> && … In Progress'가 승인 없음·AI 서명 승인 모두 거부되고 'cd "$X"'도 거부됨을 확인했다. 남은 같은 종류의 빈틈(pre_push_coverage_check, require_design_propagation, pre_git_safety_check push 검사 등)과 bash -c·eval·스크립트 안 명령은 README Known gaps 에 기록.
+<!-- SECTION:FINAL_SUMMARY:END -->

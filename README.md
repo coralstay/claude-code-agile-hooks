@@ -399,6 +399,42 @@ backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 �
 승격 전 상태로 판정하므로 교착이 없고, 미완료 태스크가 하나도 없는 새 프로젝트는 파일 없이도
 통과합니다. 작업 순서 커밋에 다른 변경이 섞이면 `backlog_commit_scope.py`가 막습니다.
 
+### 게이트는 명령 · 파일이 겨누는 저장소로 판정합니다
+
+예전에는 게이트 훅이 세션 cwd(Claude Code를 연 디렉터리)로 판정해서, backlog 프로젝트가 아닌
+세션에서 `cd <프로젝트> && backlog task edit … -s "In Progress"`를 하면 승인 검사 없이
+통과했고, 반대로 프로젝트 세션에서 `cd <다른 저장소> && git push origin --delete <브랜치>`가 세션
+저장소의 task 브랜치 때문에 막혔습니다. 이제(TASK-75) 이렇게 판정합니다.
+
+- **저장소 루트는 git top-level입니다**: 판정 디렉터리에서 위로 올라가 `.git`(디렉터리, 또는 링크된
+  워크트리 · 서브모듈의 `.git` 파일)이 있는 곳이 저장소이고, 거기에 `backlog/config.yml`이 있으면
+  backlog 프로젝트입니다. 하위 디렉터리나 링크된 워크트리에서 연 세션도 게이트가 걸립니다.
+- **Bash 게이트**(`pre_commit_check` · `pre_push_check` · `backlog_commit_scope` ·
+  `require_draft_first` · `require_implementation_plan` · `require_work_order` ·
+  `require_stage_committed` · `require_test_first` · `require_coverage_on_done`): 같은 줄의 앞선
+  `cd <dir>`/`pushd <dir>`(`&&` · `;` · 줄바꿈으로 이어진 것, 상대 경로는 앞선 cd 기준), git의
+  `-C <dir>`, backlog 명령의 `BACKLOG_CWD=<dir>`(명령 앞 · `env` 뒤 · 앞서 `export`)로 대상 디렉터리를
+  정하고, 그 저장소의 브랜치 · 카드 · 설정(`testCommand` · `coverageCommand` · `testFirst`)으로
+  판정합니다. `( … )` · `$( … )` 안, 파이프라인, `&` 백그라운드의 cd는 bash처럼 뒤로 이어지지 않습니다.
+- **대상이 backlog 프로젝트가 아니면** 세션 cwd가 프로젝트여도 그 명령에는 게이트를 걸지 않습니다.
+- **대상을 정적으로 알 수 없으면 막습니다**(fail-closed): `cd "$X"` · `cd $(…)` · 백틱 · glob ·
+  `cd -` · `popd` · 없는 디렉터리 · `||` 뒤나 `then` 안의 cd처럼 실행 여부가 갈리는 cd(단 `cd x || exit`는
+  인정) · `git -C "$D"` · `--git-dir` · `--work-tree` · `GIT_DIR=` · `BACKLOG_CWD=$Y` · export 없는
+  `BACKLOG_CWD=…;` 대입 · CDPATH가 설정된 상태의 상대 cd. 막을 때 이유와 함께 리터럴 경로로 쓰거나
+  그 저장소에서 따로 실행하라고 안내합니다.
+- **Edit/Write 게이트**(`require_active_task` · `require_test_first` · `require_test_layout`)는 편집하는
+  파일(상대 경로는 세션 cwd 기준, 심볼릭 링크는 푼 뒤)이 속한 저장소로 판정합니다.
+- 판정 함수 `project_root` · `command_target_dir` · `target_roots` · `edit_target_root`는 훅마다 같은
+  사본이고 `dedup_drift_guard.REGISTRY`가 어긋남을 막습니다.
+
+**남은 한계(Known gaps)**: 명령 문자열만 보므로(decision-1) `bash -c "cd X && …"` · `eval` · 스크립트 ·
+alias · 함수 안에서 옮긴 디렉터리는 보지 못합니다. `$( … )`를 따옴표 없이 인자로 쓴 줄(`git -C $(pwd)
+commit`)은 셸 구간이 갈라져 커밋 자체를 보지 못하는 기존 한계가 그대로입니다(따옴표로 감싼 `"$(…)"`는
+막힙니다). 세션 환경에 미리 export된 `BACKLOG_CWD` · `GIT_DIR`는 보지 않습니다. 세션 cwd로 판정하는 훅도
+남아 있습니다 — `pre_push_coverage_check.py`(push 전 커버리지), `require_design_propagation.py`(최상위
+design/ 전파), `pre_git_safety_check.py`, `dedup_drift_guard.py`, Stop 훅 `block_stop_if_dirty.py`와
+`session_start.py`(이 둘은 하위 디렉터리 · 워크트리 인식만 바뀌었습니다).
+
 ### 커버리지 100%(line + branch)를 강제합니다
 
 `pre_push_coverage_check.py`(push 전)와 `require_coverage_on_done.py`(`backlog task edit <ID> -s

@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 import io
 import json
@@ -303,7 +303,8 @@ RULED_CARD = make_card(
         "backlog task edit ao-27 -s done",
         "backlog task edit 27 -s Done --final-summary 'x'",
         "backlog task edit AO-27 --check-ac 2 -s 'Done'",
-        "cd x && /opt/homebrew/bin/backlog task edit AO-27 -s Done",
+        # TASK-75: the cd target is judged, so it stays in the project
+        "cd . && /opt/homebrew/bin/backlog task edit AO-27 -s Done",
         "FOO=1 backlog task edit AO-27 \\\n  -s Done",
     ],
 )
