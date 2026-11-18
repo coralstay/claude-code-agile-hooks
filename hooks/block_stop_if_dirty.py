@@ -6,7 +6,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """Stop
 Phase 3-4b: don't let Claude end its turn with uncommitted changes while a
@@ -24,6 +24,9 @@ this same Stop isn't guaranteed to land first):
   not a loop bug. The loop seen in practice came from background work
   owning the dirty tree, which the rule above covers.
 
+TASK-75: the session cwd is judged at its git top-level, so a session opened
+in a subdirectory or linked worktree of a backlog project is checked too.
+
 Fully self-contained: no imports from any other file in this repo."""
 
 import json
@@ -37,11 +40,31 @@ def has_command(name):
     return shutil.which(name) is not None
 
 
+def project_root(path):
+    """TASK-75 B1: the git top-level holding `path` (a directory or a file,
+    existing or not) - the nearest of `path` and its parents with a `.git`
+    entry, a directory or (linked worktree, submodule) a file. None outside
+    any repository or for an empty path. Walks the logical path (no
+    realpath) and runs no subprocess."""
+    if not path:
+        return None
+    current = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
 def is_backlog_project(cwd):
-    if not cwd:
-        return False
-    return os.path.isdir(os.path.join(cwd, ".git")) and os.path.isfile(
-        os.path.join(cwd, "backlog", "config.yml")
+    """TASK-75 B1: True if `cwd` lies in a git repository (judged at its
+    top-level, project_root) with backlog/config.yml - so a subdirectory
+    or a linked worktree of a backlog project is that project too."""
+    root = project_root(cwd)
+    return root is not None and os.path.isfile(
+        os.path.join(root, "backlog", "config.yml")
     )
 
 

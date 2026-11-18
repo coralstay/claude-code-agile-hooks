@@ -6,11 +6,13 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-18'
 # ---
 """SessionStart: if cwd is a backlog.md project, brief Claude with the
 official workflow guide and surface any integrity issues. Cannot block
 (SessionStart doesn't support it) - this is context injection only.
+TASK-75: cwd is judged at its git top-level, so a subdirectory or linked
+worktree of a backlog project counts.
 
 Fully self-contained: no imports from any other file in this repo."""
 
@@ -25,11 +27,31 @@ def has_command(name):
     return shutil.which(name) is not None
 
 
+def project_root(path):
+    """TASK-75 B1: the git top-level holding `path` (a directory or a file,
+    existing or not) - the nearest of `path` and its parents with a `.git`
+    entry, a directory or (linked worktree, submodule) a file. None outside
+    any repository or for an empty path. Walks the logical path (no
+    realpath) and runs no subprocess."""
+    if not path:
+        return None
+    current = os.path.abspath(path)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
 def is_backlog_project(cwd):
-    if not cwd:
-        return False
-    return os.path.isdir(os.path.join(cwd, ".git")) and os.path.isfile(
-        os.path.join(cwd, "backlog", "config.yml")
+    """TASK-75 B1: True if `cwd` lies in a git repository (judged at its
+    top-level, project_root) with backlog/config.yml - so a subdirectory
+    or a linked worktree of a backlog project is that project too."""
+    root = project_root(cwd)
+    return root is not None and os.path.isfile(
+        os.path.join(root, "backlog", "config.yml")
     )
 
 
