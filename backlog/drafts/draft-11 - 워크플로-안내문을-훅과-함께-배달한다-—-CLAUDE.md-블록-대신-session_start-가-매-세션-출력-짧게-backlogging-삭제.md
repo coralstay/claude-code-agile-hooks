@@ -6,6 +6,7 @@ title: >-
 status: Draft
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
+updated_date: '2026-11-21T04:24:00Z'
 labels:
   - workflow
   - docs
@@ -40,3 +41,39 @@ install.sh 재실행 → ~/.claude/CLAUDE.md 1~39행(마커 블록) 삭제(백�
 ## 하지 않는 것
 README 상세 규칙 재작성, 블록 밖 유저 원칙
 <!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 hooks/workflow_guide.md 가 승인된 계획의 항목(훅 메시지대로·우회 금지, 계획 → draft → 승격, 사람 서명, 실행·단계 커밋·범위 밖 질문, 대상 저장소·리터럴 경로, 완료·push·병합, 상세는 README)을 짧게(줄 수 상한) 담고 /backlogging 이 없다. 안내문의 규칙은 모두 README 에 있다(B1·B4)
+- [ ] #2 session_start.py 가 세션 위치와 무관하게 매번 안내문을 additionalContext 로 내고, backlog 프로젝트 안이면 기존 overview·무결성 경고를 이어 붙이며, 안내문이 없거나 읽기에 실패해도 세션을 막지 않는다(B2)
+- [ ] #3 CLAUDE.md.snippet 을 지우고 install.sh 는 ~/.claude/CLAUDE.md 를 쓰지 않는다. 옛 마커 블록이 남아 있으면 지우라는 안내만 출력한다(B3)
+- [ ] #4 README 의 안내문 배달 설명을 고치고, snippet 문구를 단언하던 테스트 4곳을 README·안내문 대상으로 바꾼다
+<!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 coverageCommand 통과·커버리지 100%(line + branch) 출력을 Notes 에 첨부
+- [ ] #2 [수동 검증] 설치 후 새 세션(비프로젝트 cwd·프로젝트 cwd 각각)에서 안내문이 보이는지 확인
+- [ ] #3 source-header lint --strict 0
+<!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+### Subjective
+유저(2026-11-18)가 훅과 CLAUDE.md 워크플로 안내문의 불일치를 풀자고 했다. 안내문은 짧게, 상세는 README·훅 메시지(반대 관점), /backlogging 삭제, 배달은 session_start 훅이 항상 출력.
+
+### Objective
+- install.sh: hooks/*.py 는 매번 cp, CLAUDE.md.snippet 은 마커가 없을 때만 ~/.claude/CLAUDE.md 에 덧붙임(install.sh:54-58). 설치된 블록은 2026-10-11 판, 저장소 원본은 101줄.
+- session_start.py: is_backlog_project(cwd) 일 때만 backlog instructions overview 를 additionalContext 로 낸다.
+- snippet 문구를 단언하는 테스트: test_require_stage_committed.py:251, test_require_implementation_plan.py:713, test_require_design_propagation.py:809, test_require_test_layout.py:285.
+
+### Assessment
+안내문을 훅과 같은 폴더에 두고 session_start 가 매 세션 출력하면 설치 경로가 하나가 되어 구조적으로 어긋날 수 없다. 사용자의 CLAUDE.md 는 install 이 건드리지 않는다(안내만). 짧은 안내문 + README SSOT + 차단 메시지로 역할을 나눈다.
+
+### Plan
+1. 테스트 먼저: 안내문 내용·길이·/backlogging 없음, session_start 비프로젝트/프로젝트/파일 없음, install 이 CLAUDE.md 를 쓰지 않음, 문서 단언 4곳 이동 — 실패 확인.
+2. workflow_guide.md 작성, session_start.py 수정, install.sh 3단계 교체, snippet 삭제, README.
+3. coverageCommand 100%, lint.
+4. 유저 설치 → 새 세션 두 곳에서 확인 → Done·PR.
+<!-- SECTION:PLAN:END -->
