@@ -6,12 +6,13 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-21'
 # ---
-# Installs claude-code-agile-hooks globally: copies hook scripts to ~/.claude/hooks/claude-code-agile-hooks,
-# merges settings.hooks.json into ~/.claude/settings.json additively via
-# scripts/merge_settings.py (other tools' hooks are kept, nothing is duplicated), and
-# appends the workflow snippet to ~/.claude/CLAUDE.md. Safe to re-run.
+# Installs claude-code-agile-hooks globally: copies hook scripts and the workflow guide
+# (hooks/workflow_guide.md, printed by session_start.py on every session) to
+# ~/.claude/hooks/claude-code-agile-hooks, and merges settings.hooks.json into
+# ~/.claude/settings.json additively via scripts/merge_settings.py (other tools' hooks
+# are kept, nothing is duplicated). Never writes ~/.claude/CLAUDE.md. Safe to re-run.
 set -euo pipefail  # ---- 1
 
 if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "help" ]; then
@@ -19,9 +20,12 @@ if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ "${1:-}" = "help" ]; then
 사용법 (Usage): agile-hooks-install [-h|--help]
 
 설치 동작:
-  1. 훅 스크립트(hooks/*.py) 및 work_order.py를 ~/.claude/hooks/claude-code-agile-hooks/ 에 복사
+  1. 훅 스크립트(hooks/*.py), 워크플로 안내문(hooks/workflow_guide.md), work_order.py를
+     ~/.claude/hooks/claude-code-agile-hooks/ 에 복사
+     (안내문은 session_start 훅이 세션마다 Claude에게 보여 줌)
   2. settings.hooks.json을 ~/.claude/settings.json에 병합 (기존 다른 훅 보존)
-  3. 워크플로 규칙(CLAUDE.md.snippet)을 ~/.claude/CLAUDE.md에 추가
+
+~/.claude/CLAUDE.md는 건드리지 않음 (옛 안내문 마커 블록이 남아 있으면 지우라고 안내만 함)
 EOF
   exit 0
 fi
@@ -46,17 +50,19 @@ cp "$REPO_DIR"/hooks/*.py "$TARGET_HOOKS_DIR/"
 echo "    훅 본체 + 테스트(test_*.py)를 같은 디렉토리에 나란히 설치함 (로컬 실제 구성과 동일)"
 # TASK-60: 작업 순서 생성기. require_work_order.py가 옆자리의 work_order.py를 안내하므로 같은 곳에 둔다
 cp "$REPO_DIR/scripts/work_order.py" "$TARGET_HOOKS_DIR/"
+# TASK-76: 워크플로 안내문. session_start.py가 옆자리의 이 파일을 세션마다 additionalContext로 낸다
+cp "$REPO_DIR/hooks/workflow_guide.md" "$TARGET_HOOKS_DIR/"
+echo "    워크플로 안내문(workflow_guide.md)도 함께 설치함 — session_start 훅이 세션마다 보여 줌"
 
 echo "==> settings.json에 hooks 병합 (추가 전용 — 다른 도구의 훅은 보존)"
 python3 "$REPO_DIR/scripts/merge_settings.py" "$SETTINGS_FILE" "$REPO_DIR/settings.hooks.json"  # ---- 3
 
-echo "==> CLAUDE.md에 워크플로 규칙 추가"
+# TASK-76: 안내문은 이제 session_start 훅이 낸다. ~/.claude/CLAUDE.md는 쓰지도 지우지도 않고,
+# 예전 설치가 붙인 마커 블록이 남아 있으면 안내만 한다(사용자 판단).
 MARKER="<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->"
 if [ -f "$CLAUDE_MD" ] && grep -q "$MARKER" "$CLAUDE_MD"; then  # ---- 4
-  echo "    이미 설치되어 있어 건너뜀 (갱신하려면 마커 블록을 지우고 다시 실행)"
-else
-  cat "$REPO_DIR/CLAUDE.md.snippet" >> "$CLAUDE_MD"
-  echo "    추가 완료: $CLAUDE_MD"
+  echo "==> 안내: $CLAUDE_MD 에 옛 워크플로 안내문 블록(CLAUDE-CODE-AGILE-HOOKS:BEGIN ~ END)이 남아 있습니다."
+  echo "    안내문은 이제 session_start 훅이 세션마다 보여 주므로 이 블록은 직접 지워도 됩니다 (자동으로 고치지 않음)."
 fi
 
 # TASK-54: claude-rails에서 claude-code-agile-hooks로 이름이 바뀌었다. 옛 설치 흔적은 안내만 하고
@@ -64,7 +70,7 @@ fi
 LEGACY_MARKER="<!-- CLAUDE-RAILS:BEGIN -->"
 if [ -f "$CLAUDE_MD" ] && grep -q "$LEGACY_MARKER" "$CLAUDE_MD"; then  # ---- 5
   echo "==> 안내: $CLAUDE_MD 에 옛 claude-rails 마커 블록(CLAUDE-RAILS:BEGIN ~ END)이 남아 있습니다."
-  echo "    새 CLAUDE-CODE-AGILE-HOOKS 블록과 내용이 겹치니 옛 블록을 직접 지워 주세요 (자동으로 고치지 않음)."
+  echo "    안내문은 이제 session_start 훅이 보여 주므로 옛 블록을 직접 지워 주세요 (자동으로 고치지 않음)."
 fi
 LEGACY_HOOKS_DIR="$HOME/.claude/hooks/claude-rails"
 if [ -d "$LEGACY_HOOKS_DIR" ]; then
@@ -94,8 +100,9 @@ echo "==> 설치 완료."
 # 3 설정 병합 호출
 #   설명: settings.hooks.json을 settings.json에 추가 전용으로 병합한다. 다른 도구의 훅은 보존하고 중복은 만들지 않아 재실행해도 안전하다.
 #   관련: scripts/merge_settings.py
-# 4 CLAUDE.md 중복 추가 방지
-#   설명: 시작 마커가 이미 있으면 snippet을 다시 붙이지 않는다. 그래서 재실행해도 CLAUDE.md에 블록이 쌓이지 않는다. 갱신하려면 사용자가 마커 블록을 직접 지워야 한다.
+# 4 옛 안내문 블록 검사
+#   설명: 예전 설치가 ~/.claude/CLAUDE.md에 붙인 CLAUDE-CODE-AGILE-HOOKS 마커 블록이 남아 있으면 지워도 된다고 안내만 한다. 안내문은 이제 훅과 함께 설치되는 workflow_guide.md를 session_start 훅이 세션마다 내므로 블록은 낡은 사본일 뿐이다. 사용자의 CLAUDE.md는 쓰지도 지우지도 않는다.
+#   관련: hooks/session_start.py, hooks/workflow_guide.md, TASK-76
 # 5 옛 claude-rails 흔적 검사
 #   설명: 이름 변경(TASK-54) 전 설치가 남긴 마커 블록이 있으면 안내만 출력한다. 사용자의 CLAUDE.md를 자동으로 고치거나 지우지 않는다.
 # 6 사람 키 지문 목록 확인
