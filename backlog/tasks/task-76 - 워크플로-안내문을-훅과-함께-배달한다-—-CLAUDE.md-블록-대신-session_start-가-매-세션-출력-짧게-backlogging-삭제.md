@@ -6,11 +6,16 @@ title: >-
 status: To Do
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
-updated_date: '2026-11-21T04:24:00Z'
+updated_date: '2026-11-21T04:29:00Z'
 labels:
   - workflow
   - docs
 dependencies: []
+references:
+  - TASK-75
+documentation:
+  - /Users/flynn_macpro/.claude/plans/agile-hooks-workflow-guide-delivery.md
+  - README.md
 ---
 
 ## Description
