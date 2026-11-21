@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-21'
 # ---
 import io
 import json
@@ -22,14 +22,22 @@ def run_main(monkeypatch, stdin_data):
     return exc_info.value.code
 
 
-def test_exits_silently_when_backlog_not_installed(monkeypatch, capsys):
+@pytest.fixture
+def no_guide(monkeypatch, tmp_path):
+    """TASK-76: session_start always prints hooks/workflow_guide.md. These
+    tests check the backlog-project part alone, so the hook is pointed at a
+    directory without a guide (the guide itself: test_workflow_guide.py)."""
+    monkeypatch.setattr(ss, "__file__", str(tmp_path / "no-guide" / "session_start.py"))
+
+
+def test_exits_silently_when_backlog_not_installed(monkeypatch, capsys, no_guide):
     monkeypatch.setattr(ss, "has_command", lambda name: False)
     code = run_main(monkeypatch, {"cwd": "/x"})
     assert code == 0
     assert capsys.readouterr().out == ""
 
 
-def test_exits_silently_when_not_backlog_project(monkeypatch, capsys):
+def test_exits_silently_when_not_backlog_project(monkeypatch, capsys, no_guide):
     monkeypatch.setattr(ss, "has_command", lambda name: True)
     monkeypatch.setattr(ss, "is_backlog_project", lambda cwd: False)
     code = run_main(monkeypatch, {"cwd": "/x"})
@@ -37,7 +45,7 @@ def test_exits_silently_when_not_backlog_project(monkeypatch, capsys):
     assert capsys.readouterr().out == ""
 
 
-def test_emits_context_json_for_backlog_project(monkeypatch, capsys):
+def test_emits_context_json_for_backlog_project(monkeypatch, capsys, no_guide):
     monkeypatch.setattr(ss, "has_command", lambda name: True)
     monkeypatch.setattr(ss, "is_backlog_project", lambda cwd: True)
 

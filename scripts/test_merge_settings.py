@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-21'
 # ---
 """Tests for scripts/merge_settings.py (install.sh's settings.json hooks merge).
 
@@ -380,9 +380,8 @@ def test_install_sh_preserves_foreign_hooks(tmp_path):
     assert (
         home / ".claude" / "hooks" / "claude-code-agile-hooks" / "require_active_task.py"
     ).is_file()
-    assert (home / ".claude" / "CLAUDE.md").read_text().count(
-        "<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->"
-    ) == 1
+    # TASK-76: install.sh never writes CLAUDE.md (session_start prints the guide)
+    assert not (home / ".claude" / "CLAUDE.md").exists()
 
 
 def test_install_sh_only_notifies_about_legacy_install(tmp_path):
@@ -406,9 +405,7 @@ def test_install_sh_only_notifies_about_legacy_install(tmp_path):
     assert "CLAUDE-RAILS:BEGIN" in result.stdout
     assert str(legacy_dir) in result.stdout
     assert (legacy_dir / "require_active_task.py").read_text() == "# old copy\n"
-    text = claude_md.read_text()
-    assert text.startswith(legacy_block)
-    assert text.count("<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->") == 1
+    assert claude_md.read_text() == legacy_block  # TASK-76: CLAUDE.md is never written
 
 
 def test_install_sh_no_legacy_notice_on_clean_home(tmp_path):
