@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
-updated_date: '2026-11-21T04:32:00Z'
+updated_date: '2026-11-21T04:48:00Z'
 labels:
   - workflow
   - docs
@@ -49,17 +49,17 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 hooks/workflow_guide.md 가 승인된 계획의 항목(훅 메시지대로·우회 금지, 계획 → draft → 승격, 사람 서명, 실행·단계 커밋·범위 밖 질문, 대상 저장소·리터럴 경로, 완료·push·병합, 상세는 README)을 짧게(줄 수 상한) 담고 /backlogging 이 없다. 안내문의 규칙은 모두 README 에 있다(B1·B4)
-- [ ] #2 session_start.py 가 세션 위치와 무관하게 매번 안내문을 additionalContext 로 내고, backlog 프로젝트 안이면 기존 overview·무결성 경고를 이어 붙이며, 안내문이 없거나 읽기에 실패해도 세션을 막지 않는다(B2)
-- [ ] #3 CLAUDE.md.snippet 을 지우고 install.sh 는 ~/.claude/CLAUDE.md 를 쓰지 않는다. 옛 마커 블록이 남아 있으면 지우라는 안내만 출력한다(B3)
-- [ ] #4 README 의 안내문 배달 설명을 고치고, snippet 문구를 단언하던 테스트 4곳을 README·안내문 대상으로 바꾼다
+- [x] #1 hooks/workflow_guide.md 가 승인된 계획의 항목(훅 메시지대로·우회 금지, 계획 → draft → 승격, 사람 서명, 실행·단계 커밋·범위 밖 질문, 대상 저장소·리터럴 경로, 완료·push·병합, 상세는 README)을 짧게(줄 수 상한) 담고 /backlogging 이 없다. 안내문의 규칙은 모두 README 에 있다(B1·B4)
+- [x] #2 session_start.py 가 세션 위치와 무관하게 매번 안내문을 additionalContext 로 내고, backlog 프로젝트 안이면 기존 overview·무결성 경고를 이어 붙이며, 안내문이 없거나 읽기에 실패해도 세션을 막지 않는다(B2)
+- [x] #3 CLAUDE.md.snippet 을 지우고 install.sh 는 ~/.claude/CLAUDE.md 를 쓰지 않는다. 옛 마커 블록이 남아 있으면 지우라는 안내만 출력한다(B3)
+- [x] #4 README 의 안내문 배달 설명을 고치고, snippet 문구를 단언하던 테스트 4곳을 README·안내문 대상으로 바꾼다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 coverageCommand 통과·커버리지 100%(line + branch) 출력을 Notes 에 첨부
+- [x] #1 coverageCommand 통과·커버리지 100%(line + branch) 출력을 Notes 에 첨부
 - [ ] #2 [수동 검증] 설치 후 새 세션(비프로젝트 cwd·프로젝트 cwd 각각)에서 안내문이 보이는지 확인
-- [ ] #3 source-header lint --strict 0
+- [x] #3 source-header lint --strict 0
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -82,3 +82,18 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 3. coverageCommand 100%, lint.
 4. 유저 설치 → 새 세션 두 곳에서 확인 → Done·PR.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 2026-11-21 구현·검증 (서브에이전트 구현, 아래는 내가 직접 다시 돌린 결과)
+- 커밋: 0d9f7ca(테스트) → 3e461ba(workflow_guide.md·session_start) → bb35a62(install.sh·snippet 삭제) → c88e892(README)
+- 테스트 먼저(서브에이전트 기록): 전체 22 failed(새 테스트 20 + README·install 단언) → 구현 후 통과
+- coverageCommand: 3293 passed, TOTAL 7426 stmts·3514 branches 100%. source-header lint --strict rc=0
+- 손 실행: echo '{"cwd":"/private/tmp"}' | python3 hooks/session_start.py → 비프로젝트 위치에서도 안내문 19줄 출력, /backlogging 없음
+- 안내문은 프론트매터를 떼고 출력, 없거나 못 읽으면 조용히 건너뜀. 프로젝트면 overview 를 뒤에 붙임
+- install.sh: CLAUDE.md 를 쓰지 않음, 안내문 복사, 옛 마커 블록이 있으면 안내만. 유저는 2026-11-21 이미 ~/.claude/CLAUDE.md 1~39행 블록을 지움(백업 ~/githubs-backup/2026-11-21-CLAUDE.md.bak)
+- snippet 에서 README 로 옮긴 규칙: 브리핑 명령, plan mode 먼저, 승격 직후 ref·doc, 승인 전 실행 금지, task view 선행, AC 단위 반복, testCommand, 미커밋 턴 종료 금지, 범위 밖 질문, 완료 순서, Done 뒤 push, 병합은 사람, 훅 메시지대로·우회 금지
+- 남은 낡은 언급(범위 밖, 유저 판단): design/3-아키텍처-설계서/01-시스템-구성.md:21, 02-동작-명세.md:28, design/4-구현-계획서/03-미결-사항.md:35, backlog/docs/doc-2 …:815 가 CLAUDE.md.snippet 을 언급
+- 남은 것: DoD #2(설치 후 새 세션 두 곳에서 안내문 확인) — 유저
+<!-- SECTION:NOTES:END -->
