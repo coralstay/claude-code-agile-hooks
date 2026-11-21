@@ -1,9 +1,9 @@
 ---
-id: DRAFT-11
+id: TASK-76
 title: >-
   워크플로 안내문을 훅과 함께 배달한다 — CLAUDE.md 블록 대신 session_start 가 매 세션 출력, 짧게,
   /backlogging 삭제
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
 updated_date: '2026-11-21T04:24:00Z'
