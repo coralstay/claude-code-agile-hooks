@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
-updated_date: '2026-11-21T04:48:00Z'
+updated_date: '2026-11-21T04:57:00Z'
 labels:
   - workflow
   - docs
@@ -53,6 +53,7 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 - [x] #2 session_start.py 가 세션 위치와 무관하게 매번 안내문을 additionalContext 로 내고, backlog 프로젝트 안이면 기존 overview·무결성 경고를 이어 붙이며, 안내문이 없거나 읽기에 실패해도 세션을 막지 않는다(B2)
 - [x] #3 CLAUDE.md.snippet 을 지우고 install.sh 는 ~/.claude/CLAUDE.md 를 쓰지 않는다. 옛 마커 블록이 남아 있으면 지우라는 안내만 출력한다(B3)
 - [x] #4 README 의 안내문 배달 설명을 고치고, snippet 문구를 단언하던 테스트 4곳을 README·안내문 대상으로 바꾼다
+- [ ] #5 설계 문서·상세 레퍼런스에서 CLAUDE.md.snippet 언급(design/3-아키텍처-설계서/01-시스템-구성.md, 02-동작-명세.md, design/4-구현-계획서/03-미결-사항.md, backlog/docs/doc-2)을 새 배달 방식(hooks/workflow_guide.md + session_start)으로 고친다(유저 결정 2026-11-21: 이번 카드에서 마무리)
 <!-- AC:END -->
 
 ## Definition of Done
