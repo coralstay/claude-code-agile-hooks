@@ -2,8 +2,8 @@
 id: doc-2
 title: claude-code-agile-hooks 상세 레퍼런스
 type: specification
-created_date: '2026-09-19 04:46'
-updated_date: '2026-10-05 08:00'
+created_date: 2026-09-19 04:46
+updated_date: '2026-11-21T04:57:00Z'
 ---
 # claude-code-agile-hooks 상세 레퍼런스
 
@@ -812,12 +812,12 @@ claude-code-agile-hooks/
 ├── README.md                # 이 문서 (단일 소스)
 ├── install.sh                # ~/.claude/에 설치하는 스크립트
 ├── settings.hooks.json       # ~/.claude/settings.json에 병합되는 hooks 블록
-├── CLAUDE.md.snippet         # ~/.claude/CLAUDE.md에 추가되는 워크플로 안내
 ├── .claude-code-agile-hooks.json.example
 ├── pyproject.toml            # pytest testpaths + coverage 설정(fail_under=100)
 ├── scripts/                   # 훅이 아닌 보조 스크립트 (설치되지 않음)
 │   └── merge_settings.py / test_merge_settings.py   # install.sh의 추가 전용 settings 병합
 └── hooks/                     # 33개 훅 + 훅별 test_*.py와 계약 테스트, 전부 flat
+    └── workflow_guide.md      # session_start 가 매 세션 맥락으로 주는 짧은 워크플로 안내문(TASK-76, 예전 CLAUDE.md.snippet)
     ├── session_start.py / test_session_start.py                    # 🔒 backlog 전용
     ├── require_active_task.py / test_require_active_task.py        # 🔒 backlog 전용
     ├── pre_commit_check.py / test_pre_commit_check.py               # 🔒 backlog 전용
