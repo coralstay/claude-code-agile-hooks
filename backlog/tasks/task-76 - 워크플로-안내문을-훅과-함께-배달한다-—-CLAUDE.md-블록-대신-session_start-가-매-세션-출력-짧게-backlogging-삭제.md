@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
-updated_date: '2026-11-21T04:57:00Z'
+updated_date: '2026-11-21T05:00:00Z'
 labels:
   - workflow
   - docs
@@ -53,7 +53,7 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 - [x] #2 session_start.py 가 세션 위치와 무관하게 매번 안내문을 additionalContext 로 내고, backlog 프로젝트 안이면 기존 overview·무결성 경고를 이어 붙이며, 안내문이 없거나 읽기에 실패해도 세션을 막지 않는다(B2)
 - [x] #3 CLAUDE.md.snippet 을 지우고 install.sh 는 ~/.claude/CLAUDE.md 를 쓰지 않는다. 옛 마커 블록이 남아 있으면 지우라는 안내만 출력한다(B3)
 - [x] #4 README 의 안내문 배달 설명을 고치고, snippet 문구를 단언하던 테스트 4곳을 README·안내문 대상으로 바꾼다
-- [ ] #5 설계 문서·상세 레퍼런스에서 CLAUDE.md.snippet 언급(design/3-아키텍처-설계서/01-시스템-구성.md, 02-동작-명세.md, design/4-구현-계획서/03-미결-사항.md, backlog/docs/doc-2)을 새 배달 방식(hooks/workflow_guide.md + session_start)으로 고친다(유저 결정 2026-11-21: 이번 카드에서 마무리)
+- [x] #5 설계 문서·상세 레퍼런스에서 CLAUDE.md.snippet 언급(design/3-아키텍처-설계서/01-시스템-구성.md, 02-동작-명세.md, design/4-구현-계획서/03-미결-사항.md, backlog/docs/doc-2)을 새 배달 방식(hooks/workflow_guide.md + session_start)으로 고친다(유저 결정 2026-11-21: 이번 카드에서 마무리)
 <!-- AC:END -->
 
 ## Definition of Done
@@ -97,4 +97,11 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 - snippet 에서 README 로 옮긴 규칙: 브리핑 명령, plan mode 먼저, 승격 직후 ref·doc, 승인 전 실행 금지, task view 선행, AC 단위 반복, testCommand, 미커밋 턴 종료 금지, 범위 밖 질문, 완료 순서, Done 뒤 push, 병합은 사람, 훅 메시지대로·우회 금지
 - 남은 낡은 언급(범위 밖, 유저 판단): design/3-아키텍처-설계서/01-시스템-구성.md:21, 02-동작-명세.md:28, design/4-구현-계획서/03-미결-사항.md:35, backlog/docs/doc-2 …:815 가 CLAUDE.md.snippet 을 언급
 - 남은 것: DoD #2(설치 후 새 세션 두 곳에서 안내문 확인) — 유저
+
+## 2026-11-21 AC #5
+- design/3-아키텍처-설계서/01-시스템-구성.md: '지침 블록 CLAUDE.md.snippet' 행을 '워크플로 안내문 hooks/workflow_guide.md'(session_start 가 매 세션 주입, 훅과 함께 설치) 행으로, 설치 행에 'CLAUDE.md 는 쓰지 않음'
+- 02-동작-명세.md 원천: hooks/workflow_guide.md(TASK-76 전에는 CLAUDE.md.snippet)
+- 03-미결-사항.md Q-1 ⑤: 안내문 첫 문단으로 반영했다고 기록(안내는 강제가 아니라 ①~④는 남음)
+- doc-2: backlog doc update 로 파일 구성 트리에서 snippet 을 빼고 hooks/workflow_guide.md 추가(CLI 가 파일 이름을 제목에 맞춰 claude-code-agile-hooks-상세-레퍼런스.md 로 바꿈, 내용 변경은 그 두 줄과 프론트매터 날짜뿐)
+- 저장소에 남은 CLAUDE.md.snippet 언급은 '없어야 한다'고 단언하는 테스트 3곳과 이력 설명뿐. 테스트 3293 passed, lint rc=0
 <!-- SECTION:NOTES:END -->
