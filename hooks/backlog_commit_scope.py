@@ -6,7 +6,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-18'
+# updated_date: '2026-11-22'
 # ---
 """PreToolUse (matcher: Bash, no `if` filter)
 TASK-29 (B): in a backlog.md project, "draft created" and "draft promoted"
@@ -942,7 +942,25 @@ def main():
     sys.exit(0)
 
 
+def merge_in_progress(root):
+    """TASK-77: True only when git confirms a merge is in progress in `root`
+    (MERGE_HEAD resolves). Any failure - not a repository, git missing, a
+    timeout - is False, so the caller keeps checking (B3)."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", root, "rev-parse", "-q", "--verify", "MERGE_HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
 def check_repo(root, command, cwd):
+    if merge_in_progress(root):  # ---- 19
+        return
     # the replayed `git add`s ran in the session cwd: only replay them onto
     # the index of the repository that cwd belongs to
     plan = staging_plan(command) if (project_root(cwd) or cwd) == root else None
@@ -1014,3 +1032,7 @@ if __name__ == "__main__":
 # 18 시뮬레이션이 필요한 경우만 임시 인덱스 사용
 #   설명: 같은 줄에 앞선 add 나 commit -a 가 없으면 재생할 단계가 없으므로 실제 인덱스를 바로 검사한다. 이 훅은 PreToolUse 이지 git pre-commit 이 아니라서 터미널·GUI 커밋은 보지 못하는 점은 알려진 한계다(TASK-29).
 #   관련: TASK-29
+# 19 충돌 병합을 마무리하는 커밋은 검사하지 않음
+#   설명: 대상 저장소에 MERGE_HEAD 가 있으면 이 커밋은 충돌을 푼 병합의 마무리다. 그 스테이징에는 병합되는 브랜치의 변경(상태 전환 · archive · 코드)이 한꺼번에 들어오지만 각 커밋은 원래 브랜치에서 이미 규칙 1~5를 통과했다. 충돌 없는 병합은 git 이 직접 커밋해 훅이 보지 않으므로, 충돌 여부라는 우연으로 막히던 것을 없앤다. MERGE_HEAD 확인이 실패하면 병합으로 보지 않고 검사한다.
+#   관련: TASK-77, source-header TASK-42 · upkeep TASK-8(정리 브랜치 병합)
+#   개념: fail-closed
