@@ -5,11 +5,12 @@ authors: [coralstay]
 license: AGPL-3.0-only
 status: draft
 created_date: '2026-11-21'
-updated_date: '2026-11-21'
+updated_date: '2026-11-22'
 ---
 ## Backlog.md 워크플로 (claude-code-agile-hooks)
 
-이 환경은 backlog 카드 중심의 워크플로를 훅으로 강제한다. 훅이 막으면 메시지대로 따르고 우회하지 않는다.
+backlog 프로젝트(저장소 루트에 `backlog/config.yml`이 있는 곳)를 대상으로 하는 작업은 카드 중심 워크플로를 훅이 강제하고,
+그 밖에서는 안전 훅(위험 명령 · 비밀값 · 설정 보호 등)만 작동한다. 훅이 막으면 메시지대로 따르고 우회하지 않는다.
 
 1. **브리핑**: 새 요청을 받으면 `backlog overview` · `backlog search`로 현황부터 본다.
 2. **계획**: plan mode로 계획을 먼저 보여 주고, 승인되면 `backlog draft create`로 draft에 담는다(SOAP 계획 · AC · DoD).
