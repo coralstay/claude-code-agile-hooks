@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-21'
 # ---
 import io
 import json
@@ -710,7 +710,7 @@ def test_copied_helpers_are_in_dedup_registry():
         assert "require_implementation_plan.py" in dedup_drift_guard.REGISTRY[name], name
 
 
-@pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
+@pytest.mark.parametrize("name", ["README.md"])  # TASK-76: CLAUDE.md.snippet 삭제, README가 SSOT
 def test_docs_carry_soap_template_and_approval_command(name):
     """TASK-58#7 TASK-58#5"""
     text = read_repo(name)

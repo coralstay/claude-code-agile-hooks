@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-21'
 # ---
 # TASK-61: 테스트 파일 구조(헤더 → AC/DoD → Coverage)를 강제하는 require_test_layout.py
 import io
@@ -282,7 +282,7 @@ def test_task61_5_readme_has_a_passing_example_per_language():
         assert rtl.MARKER_RE.search(body), lang
 
 
-@pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
+@pytest.mark.parametrize("name", ["README.md"])  # TASK-76: CLAUDE.md.snippet 삭제, README가 SSOT
 def test_task61_5_convention_is_documented(name):
     """TASK-61#5: header line, both section markers and the DoD marker."""
     text = read_repo(name)

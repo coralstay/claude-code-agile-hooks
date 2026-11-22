@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-18'
+# updated_date: '2026-11-21'
 # ---
 """TASK-59#3: require_stage_committed.py - a backlog stage command
 (draft create / draft promote / task edit -s "In Progress" | Done) is denied
@@ -248,8 +248,13 @@ def test_readme_lists_the_hook_and_the_stage_commit_procedure():
     assert "draft 1장 작성 →" in readme
 
 
-def test_claude_md_snippet_procedure_has_stage_commits():
-    """TASK-59#4: the installed CLAUDE.md block tells the agent to commit per stage."""
-    snippet = read_doc("CLAUDE.md.snippet")
-    assert "**단계마다 커밋한다**" in snippet
-    assert "드래프트 한 장마다 커밋 하나다" in snippet
+@pytest.mark.parametrize("name", ["README.md", "hooks/workflow_guide.md"])
+def test_docs_tell_the_agent_to_commit_per_stage(name):
+    """TASK-59#4: README and the workflow guide session_start prints
+    (TASK-76, formerly the CLAUDE.md block) say to commit per stage."""
+    assert "단계마다 커밋" in read_doc(name)
+
+
+def test_readme_says_one_new_draft_per_commit():
+    """TASK-59#4: README carries the one-new-draft-per-commit rule."""
+    assert "새 드래프트 파일(`backlog/drafts/`)이 2장 이상 든 커밋을" in read_doc("README.md")

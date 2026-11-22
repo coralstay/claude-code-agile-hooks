@@ -102,7 +102,7 @@ flowchart TB
 
 | 생애주기                            | 훅                                                                 | 범위       | 하는 일                           |
 | ----------------------------------- | ------------------------------------------------------------------ | ---------- | --------------------------------- |
-| SessionStart                        | [`session_start.py`](hooks/session_start.py)                       | 🔒 backlog | 워크플로 가이드/무결성 이슈 주입  |
+| SessionStart                        | [`session_start.py`](hooks/session_start.py)                       | 🔒 backlog | 워크플로 안내문(모든 세션) + backlog 프로젝트면 공식 가이드/무결성 이슈 주입 |
 | SessionStart                        | [`session_logger.py`](hooks/session_logger.py)                     | 범용       | 세션 시작 로그                    |
 | SessionStart                        | [`dead_rules_audit.py`](hooks/dead_rules_audit.py)                 | 범용       | 규칙 준수 스코어카드 시작         |
 | SessionStart                        | [`standup_autopilot.py`](hooks/standup_autopilot.py)               | 범용       | 전날 미해결 항목 재주입           |
@@ -180,6 +180,52 @@ cd ~/githubs/claude-code-agile-hooks && ./install.sh
 자리에서 새 경로(`~/.claude/hooks/claude-code-agile-hooks/`)로 바뀌므로 훅이 두 번 돌지 않습니다. 옛 설치
 디렉토리와 `~/.claude/CLAUDE.md`의 옛 `CLAUDE-RAILS` 마커 블록은 설치 스크립트가 안내만 하고
 건드리지 않으니, 새 설치본이 동작하는 것을 확인하신 뒤 직접 지워 주세요.
+
+### 워크플로 안내문은 훅과 함께 설치됩니다
+
+Claude에게 주는 짧은 워크플로 안내문은 [`hooks/workflow_guide.md`](hooks/workflow_guide.md)입니다.
+`install.sh`가 훅과 같은 디렉터리(`~/.claude/hooks/claude-code-agile-hooks/`)에 복사하고,
+[`session_start.py`](hooks/session_start.py)가 세션을 시작할 때마다 이 파일을 SessionStart의
+`additionalContext`로 넣습니다. 세션을 어디서 열었든(backlog 프로젝트가 아니어도) 항상 넣고, backlog
+프로젝트 안이면 그 뒤에 `backlog instructions overview` 출력을 이어 붙이며 `backlog doctor` 결과는
+systemMessage로 보여 드립니다. 안내문 파일이 없거나 읽을 수 없으면 조용히 건너뛰고, 세션 시작을 막지
+않습니다. 맨 위의 소스 헤더(frontmatter)는 떼고 본문만 넣습니다.
+
+예전에는 안내문을 `~/.claude/CLAUDE.md`의 마커 블록에 처음 한 번만 붙였습니다.
+훅은 설치할 때마다 바뀌는데 블록은 그대로라 둘이 어긋났습니다. 이제 `install.sh`는
+`~/.claude/CLAUDE.md`를 쓰지도 지우지도 않습니다. 예전 설치가 남긴
+`<!-- CLAUDE-CODE-AGILE-HOOKS:BEGIN -->` ~ `END` 블록이 있으면 지워도 된다고 안내만 하니, 직접 지워 주세요.
+
+안내문은 짧게 두고(줄 수 상한을 테스트로 지킵니다), 상세 규칙은 이 README와 훅의 차단 메시지가
+맡습니다. 안내문의 규칙은 모두 이 README에 있어야 하고(README가 SSOT), 테스트가 확인합니다. 안내문이
+요약하는 워크플로는 다음과 같습니다.
+
+- **훅이 막으면** 메시지대로 따르고 우회하지 않습니다.
+- **브리핑**: 새 요청을 받으면 `backlog overview` · `backlog search`(필요하면 `backlog board view`)로
+  현황부터 봅니다.
+- **계획 → draft → 승격**: plan mode로 계획을 먼저 보여 드리고, 승인되면 `backlog draft create`로
+  draft에 SOAP 계획 · AC · DoD를 담습니다(`backlog task create`로 바로 만들면 막힙니다). 유저가 draft를
+  승인하면 `backlog draft promote <ID>`로 승격하고, 바로 관련 결정은 `--add-ref`
+  (예: `backlog task edit <ID> --add-ref decision-N`), 관련 문서 · 외부 링크는 `--doc`으로 카드에 잇습니다. 그래야 나중에
+  `backlog task view <ID> --plain` 한 번으로 필요한 컨텍스트가 모두 올라옵니다.
+- **계획 승인**: `Plan-Approved: <ID>` 커밋은 사람이 자기 키로 서명해 만듭니다(아래 계획 승인 절).
+  Claude는 만들지 않고 유저에게 리뷰와 계획 승인을 요청합니다. 승인 전에는 실행하지 않습니다.
+- **실행**: `backlog task view <ID> --plain`으로 카드를 먼저 읽고(읽지 않으면 `require_active_task.py`가
+  Edit/Write를 막습니다) → `-s "In Progress"` → `task/<ID>` 브랜치 → AC마다 테스트(`<ID>#<n>` ·
+  `<ID>#B<k>` 표식) → 구현 → 커밋을 반복합니다. 단계마다 커밋하고(아래 단계별 커밋 절),
+  커밋하지 않은 채 턴을 끝내지 않습니다(`block_stop_if_dirty.py`가 막습니다). `testCommand`가 있으면 테스트가 실패할 때
+  커밋이 막힙니다. AC 밖의 일이 보이면 조용히 범위를 넓히지 말고 유저에게 먼저 묻습니다(훅으로 강제하지
+  못하는 판단입니다).
+- **대상 저장소**: 훅은 세션 위치가 아니라 명령 · 파일이 겨누는 저장소로 판정합니다. 다른 저장소는
+  리터럴 경로로 다룹니다(`cd <dir> && …`, `git -C <dir>`). 변수로 쓴 경로(`cd "$X"`)처럼 대상을 정적으로
+  알 수 없으면 막힙니다(아래 대상 저장소 절).
+- **완료**: 테스트 통과 로그 같은 객관적 증거를 확인한 뒤 `--check-ac` · `--check-dod`로 체크하고
+  `--final-summary`를 쓴 다음 `-s Done`으로 옮기고, 그 태스크 파일만 담아 커밋합니다. push는 Done 뒤에만
+  합니다(Done + final summary가 없으면 `pre_push_check.py`가 막습니다). PR 병합은 사람이 합니다.
+- **명령 제안 형식**: 유저에게 제안하는 명령은 펜스 코드블록으로만 쓰고 하네스 예약 태그(`<bash-input>`
+  등)는 출력하지 않습니다. 예약 태그는 유저가 `!`로 직접 실행한 명령이나 하네스 주입 메시지를 표시하는
+  형식이라, 어시스턴트가 만들면 "유저가 실행했다"는 기록을 위조하게 됩니다. 펜스 · 인라인 코드 밖에서 쓰면
+  `reserved_tag_guard.py`가 턴 종료를 막고 정정을 요구합니다.
 
 테스트와 커버리지는 저장소 루트에서 확인합니다. 설정은 [`pyproject.toml`](pyproject.toml)에
 있고, `hooks/`·`scripts/` 전체의 줄·분기 커버리지가 100% 미만이면 실패합니다.

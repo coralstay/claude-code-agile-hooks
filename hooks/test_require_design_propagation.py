@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-06'
-# updated_date: '2026-11-06'
+# updated_date: '2026-11-21'
 # ---
 """TASK-63: require_design_propagation.py - a top-level design/ change must
 be propagated to the affected component design/ before the top-level task
@@ -806,7 +806,7 @@ def test_registered_on_pretooluse_bash_without_filter():
     assert "if" not in hooks[0]
 
 
-@pytest.mark.parametrize("name", ["README.md", "CLAUDE.md.snippet"])
+@pytest.mark.parametrize("name", ["README.md"])  # TASK-76: CLAUDE.md.snippet 삭제, README가 SSOT
 def test_docs_carry_the_rule_and_trailer_format(name):
     """TASK-63#3"""
     text = read_repo_file(name)
