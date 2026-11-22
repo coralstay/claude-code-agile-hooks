@@ -423,6 +423,10 @@ backlog MCP 서버나 웹 UI로 만든 카드는 `draft promote`를 거치지 �
   막습니다. 또 스테이징된 `backlog/tasks/` 파일의 frontmatter `status:`가 HEAD와 달라져 `In
   Progress`나 `Done`이 되면 상태 전환 커밋으로 보고, 그 태스크 파일 하나 말고 다른 변경이 섞이면
   막습니다(HEAD에 없던 파일은 이전 상태가 없는 것으로 봅니다).
+  예외(TASK-77): 대상 저장소에 `MERGE_HEAD`가 있으면 — 충돌 병합을 풀고 마무리하는 커밋이면 — 이 검사들을
+  건너뜁니다. 병합되는 커밋들은 원래 브랜치에서 이미 한 커밋씩 이 규칙을 통과했고, 충돌 없는 병합은 git이 직접
+  커밋해 훅이 보지 않으므로 충돌 여부에 따라 막히던 것을 없앤 것입니다. `MERGE_HEAD` 확인이 실패하면 병합으로
+  보지 않고 그대로 검사합니다.
 - `require_stage_committed.py`(명령 쪽): 명령 위치의 `backlog draft create`·`backlog draft
   promote`·`backlog task edit <ID> -s "In Progress"`/`-s Done` 앞에서 `git status --porcelain --
   backlog/`에 커밋 안 된 변경이 있으면 먼저 커밋하라고 막습니다. `backlog/` 밖의 작업 파일은 보지
