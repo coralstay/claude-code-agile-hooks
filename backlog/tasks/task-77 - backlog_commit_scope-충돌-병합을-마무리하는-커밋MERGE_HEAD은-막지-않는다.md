@@ -1,7 +1,7 @@
 ---
-id: DRAFT-11
+id: TASK-77
 title: 'backlog_commit_scope: 충돌 병합을 마무리하는 커밋(MERGE_HEAD)은 막지 않는다'
-status: Draft
+status: To Do
 assignee: []
 created_date: '2026-11-22T11:36:00Z'
 updated_date: '2026-11-22T11:37:00Z'
