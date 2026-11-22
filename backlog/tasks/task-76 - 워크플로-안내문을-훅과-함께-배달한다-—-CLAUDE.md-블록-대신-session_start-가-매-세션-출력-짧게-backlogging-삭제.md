@@ -3,10 +3,10 @@ id: TASK-76
 title: >-
   워크플로 안내문을 훅과 함께 배달한다 — CLAUDE.md 블록 대신 session_start 가 매 세션 출력, 짧게,
   /backlogging 삭제
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
-updated_date: '2026-11-21T05:00:00Z'
+updated_date: '2026-11-22T10:41:00Z'
 labels:
   - workflow
   - docs
@@ -59,7 +59,7 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 ## Definition of Done
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 통과·커버리지 100%(line + branch) 출력을 Notes 에 첨부
-- [ ] #2 [수동 검증] 설치 후 새 세션(비프로젝트 cwd·프로젝트 cwd 각각)에서 안내문이 보이는지 확인
+- [x] #2 [수동 검증] 설치 후 새 세션(비프로젝트 cwd·프로젝트 cwd 각각)에서 안내문이 보이는지 확인
 - [x] #3 source-header lint --strict 0
 <!-- DOD:END -->
 
@@ -104,4 +104,17 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 - 03-미결-사항.md Q-1 ⑤: 안내문 첫 문단으로 반영했다고 기록(안내는 강제가 아니라 ①~④는 남음)
 - doc-2: backlog doc update 로 파일 구성 트리에서 snippet 을 빼고 hooks/workflow_guide.md 추가(CLI 가 파일 이름을 제목에 맞춰 claude-code-agile-hooks-상세-레퍼런스.md 로 바꿈, 내용 변경은 그 두 줄과 프론트매터 날짜뿐)
 - 저장소에 남은 CLAUDE.md.snippet 언급은 '없어야 한다'고 단언하는 테스트 3곳과 이력 설명뿐. 테스트 3293 passed, lint rc=0
+
+## 2026-11-22 설치 후 새 세션 확인 (DoD #2)
+- 유저가 install.sh 실행(2026-11-21 14:18 KST, ~/.claude/hooks/…/workflow_guide.md·session_start.py 가 저장소와 cmp 동일, ~/.claude/CLAUDE.md 에 옛 마커 블록 0건)
+- 설치된 훅 직접 실행(SessionStart 페이로드): ~/githubs → 안내문 19줄, ~/githubs/dev-tools/dev-toolchain → 안내문 + backlog overview 61줄
+- 실제 새 세션: 'cd ~/githubs && claude -p …'(헤드리스 새 세션)에게 시작 맥락을 물었더니 '## Backlog.md 워크플로 (claude-code-agile-hooks)'와 '1. **브리핑**: …' 줄을 그대로 옮겨 적음
+- 유저가 '새 터미널에서 안내문이 안 보인다'고 한 것: SessionStart additionalContext 는 터미널 화면에 표시되지 않고 Claude 맥락으로만 들어간다. 그리고 그때 연 세션(~ , 첫 기록 2026-11-21T04:19Z)은 설치(05:18Z) 전에 시작된 세션을 이어 연 것이었다(설치 후 새로 시작된 세션 기록 없음)
+- 부수 발견: 다른 SessionStart 훅(standup-autopilot 등) 출력이 32KB 를 넘어 잘려 파일로 저장된다. 안내문은 별도 블록이라 온전히 들어왔다
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+워크플로 안내문을 ~/.claude/CLAUDE.md 에 한 번 붙이던 방식(CLAUDE.md.snippet)을 없애고, 훅 폴더의 hooks/workflow_guide.md(19줄)를 session_start 훅이 세션 위치와 무관하게 매 세션 맥락으로 넣게 했다. 안내문이 훅과 함께 설치되므로 훅과 판이 어긋나지 않는다. 안내문은 짧게 두고(30줄 상한 테스트) 상세 규칙은 README 가 SSOT, /backlogging·낡은 포팅 메모는 뺐다. install.sh 는 사용자의 CLAUDE.md 를 쓰지 않고 옛 블록이 있으면 안내만 한다. 설계 문서·상세 레퍼런스의 snippet 언급도 고쳤다. 테스트 3293·커버리지 100%, 실제 새 세션이 안내문을 받는 것을 확인했다.
+<!-- SECTION:FINAL_SUMMARY:END -->
