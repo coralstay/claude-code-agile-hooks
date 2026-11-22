@@ -4,11 +4,15 @@ title: 'backlog_commit_scope: 충돌 병합을 마무리하는 커밋(MERGE_HEAD
 status: To Do
 assignee: []
 created_date: '2026-11-22T11:36:00Z'
-updated_date: '2026-11-22T11:37:00Z'
+updated_date: '2026-11-22T11:41:00Z'
 labels:
   - hooks
   - merge
 dependencies: []
+references:
+  - TASK-75
+documentation:
+  - /Users/flynn_macpro/.claude/plans/agile-hooks-merge-commit-scope.md
 ---
 
 ## Description
