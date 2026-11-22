@@ -5,7 +5,7 @@
 # license: AGPL-3.0-only
 # status: draft
 # created_date: '2026-11-21'
-# updated_date: '2026-11-21'
+# updated_date: '2026-11-22'
 # ---
 # TASK-76: 워크플로 안내문을 훅과 함께 배달한다(session_start가 매 세션 출력, CLAUDE.md 블록 대신)
 #
@@ -276,6 +276,17 @@ def test_install_help_no_longer_mentions_the_snippet():
     assert "CLAUDE.md.snippet" not in result.stdout
     assert "workflow_guide.md" in result.stdout
     assert "건드리지 않음" in result.stdout
+
+
+def test_guide_opening_states_where_the_card_gates_apply():
+    """TASK-76#6: the guide reaches every session, so its opening must say the
+    card workflow is enforced only for work aimed at a backlog project (repo
+    root with backlog/config.yml) and that only the general safety hooks act
+    elsewhere - not that the whole environment is gated."""
+    opening = guide_body().split("\n1. ", 1)[0]
+    assert "backlog/config.yml" in opening
+    assert "안전" in opening
+    assert "이 환경은 backlog 카드 중심의 워크플로를 훅으로 강제한다" not in opening
 
 
 def test_readme_describes_the_new_delivery():
