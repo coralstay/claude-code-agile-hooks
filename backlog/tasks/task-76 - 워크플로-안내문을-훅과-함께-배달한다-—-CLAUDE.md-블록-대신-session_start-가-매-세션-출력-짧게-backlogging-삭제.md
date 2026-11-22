@@ -3,10 +3,10 @@ id: TASK-76
 title: >-
   워크플로 안내문을 훅과 함께 배달한다 — CLAUDE.md 블록 대신 session_start 가 매 세션 출력, 짧게,
   /backlogging 삭제
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-21T04:23:00Z'
-updated_date: '2026-11-22T10:52:00Z'
+updated_date: '2026-11-22T11:00:00Z'
 labels:
   - workflow
   - docs
@@ -54,7 +54,7 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 - [x] #3 CLAUDE.md.snippet 을 지우고 install.sh 는 ~/.claude/CLAUDE.md 를 쓰지 않는다. 옛 마커 블록이 남아 있으면 지우라는 안내만 출력한다(B3)
 - [x] #4 README 의 안내문 배달 설명을 고치고, snippet 문구를 단언하던 테스트 4곳을 README·안내문 대상으로 바꾼다
 - [x] #5 설계 문서·상세 레퍼런스에서 CLAUDE.md.snippet 언급(design/3-아키텍처-설계서/01-시스템-구성.md, 02-동작-명세.md, design/4-구현-계획서/03-미결-사항.md, backlog/docs/doc-2)을 새 배달 방식(hooks/workflow_guide.md + session_start)으로 고친다(유저 결정 2026-11-21: 이번 카드에서 마무리)
-- [ ] #6 안내문 첫 문장이 실제 동작과 맞다: 카드 워크플로 강제는 backlog 프로젝트(저장소 루트에 backlog/config.yml)를 대상으로 하는 작업에만, 그 밖에서는 범용(안전) 훅만 작동한다고 적는다(유저 결정 2026-11-22)
+- [x] #6 안내문 첫 문장이 실제 동작과 맞다: 카드 워크플로 강제는 backlog 프로젝트(저장소 루트에 backlog/config.yml)를 대상으로 하는 작업에만, 그 밖에서는 범용(안전) 훅만 작동한다고 적는다(유저 결정 2026-11-22)
 <!-- AC:END -->
 
 ## Definition of Done
@@ -112,6 +112,11 @@ README 상세 규칙 재작성, 블록 밖 유저 원칙
 - 실제 새 세션: 'cd ~/githubs && claude -p …'(헤드리스 새 세션)에게 시작 맥락을 물었더니 '## Backlog.md 워크플로 (claude-code-agile-hooks)'와 '1. **브리핑**: …' 줄을 그대로 옮겨 적음
 - 유저가 '새 터미널에서 안내문이 안 보인다'고 한 것: SessionStart additionalContext 는 터미널 화면에 표시되지 않고 Claude 맥락으로만 들어간다. 그리고 그때 연 세션(~ , 첫 기록 2026-11-21T04:19Z)은 설치(05:18Z) 전에 시작된 세션을 이어 연 것이었다(설치 후 새로 시작된 세션 기록 없음)
 - 부수 발견: 다른 SessionStart 훅(standup-autopilot 등) 출력이 32KB 를 넘어 잘려 파일로 저장된다. 안내문은 별도 블록이라 온전히 들어왔다
+
+## 2026-11-22 AC #6
+- 안내문이 모든 세션에 들어가게 되면서 첫 문장('이 환경은 … 강제한다')이 비프로젝트 위치에서는 실제보다 강했다. 'backlog 프로젝트(저장소 루트에 backlog/config.yml)를 대상으로 하는 작업은 카드 워크플로를 훅이 강제하고, 그 밖에서는 안전 훅만 작동한다'로 고침
+- 테스트 먼저: test_guide_opening_states_where_the_card_gates_apply 실패 확인 → 수정 후 통과. 전체 3294 passed, 100%, lint rc=0
+- 설치본 갱신은 유저의 install.sh 재실행 필요
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
