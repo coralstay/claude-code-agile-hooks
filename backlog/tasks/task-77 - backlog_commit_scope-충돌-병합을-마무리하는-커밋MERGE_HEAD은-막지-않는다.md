@@ -4,7 +4,7 @@ title: 'backlog_commit_scope: 충돌 병합을 마무리하는 커밋(MERGE_HEAD
 status: In Progress
 assignee: []
 created_date: '2026-11-22T11:36:00Z'
-updated_date: '2026-11-22T11:42:00Z'
+updated_date: '2026-11-22T11:46:00Z'
 labels:
   - hooks
   - merge
@@ -34,14 +34,14 @@ cherry-pick·revert·rebase 진행 중 예외, 다른 훅의 병합 처리
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 충돌 병합을 마무리하는 git commit(상태 전환 + 다른 변경이 섞인 스테이징)이 대상 저장소에 MERGE_HEAD 가 있으면 통과한다. 실제 git 저장소에서 충돌 병합을 만들어 재현하는 테스트가 있다(B1)
-- [ ] #2 병합 중이 아니면 같은 스테이징이 지금처럼 거부되고, MERGE_HEAD 확인이 실패하면 기존 검사로 이어진다(B2·B3)
-- [ ] #3 README 에 예외와 이유(병합되는 커밋은 각 브랜치에서 이미 검사됨)가 있고 coverageCommand 100%·source-header lint 0 이다
+- [x] #1 충돌 병합을 마무리하는 git commit(상태 전환 + 다른 변경이 섞인 스테이징)이 대상 저장소에 MERGE_HEAD 가 있으면 통과한다. 실제 git 저장소에서 충돌 병합을 만들어 재현하는 테스트가 있다(B1)
+- [x] #2 병합 중이 아니면 같은 스테이징이 지금처럼 거부되고, MERGE_HEAD 확인이 실패하면 기존 검사로 이어진다(B2·B3)
+- [x] #3 README 에 예외와 이유(병합되는 커밋은 각 브랜치에서 이미 검사됨)가 있고 coverageCommand 100%·source-header lint 0 이다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 coverageCommand 출력을 Notes 에 첨부
+- [x] #1 coverageCommand 출력을 Notes 에 첨부
 - [ ] #2 [수동 검증] 설치 후 source-header TASK-42 에서 task/TASK-20 병합 마무리 커밋이 실제로 통과함을 확인
 <!-- DOD:END -->
 
@@ -65,3 +65,13 @@ cherry-pick·revert·rebase 진행 중 예외, 다른 훅의 병합 처리
 3. README, coverageCommand 100%, lint.
 4. 유저 설치 → TASK-42 재시도로 실전 확인 → Done → PR.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## 2026-11-22 구현·검증
+- 테스트 먼저: hooks/test_backlog_commit_scope_merge.py(실제 git 저장소에서 task 상태 전환 + 코드 + work-order.md 충돌 병합을 만들어 재현). 구현 전 4 failed(통과 기대 2개·README·merge_in_progress) / 2 passed(기존 동작 유지 테스트)
+- 구현: merge_in_progress(root) = git -C root rev-parse -q --verify MERGE_HEAD 성공일 때만 True, OSError·TimeoutExpired·실패는 False. check_repo 첫 줄에서 True 면 통과(표식 19·노트 19)
+- coverageCommand: 3300 passed, TOTAL 7434 stmts·3516 branches 100%, backlog_commit_scope.py 100%. source-header lint --strict rc=0
+- 남은 것: DoD #2 — 유저 설치 후 source-header TASK-42 의 task/TASK-20 병합 마무리 커밋 재시도
+<!-- SECTION:NOTES:END -->
