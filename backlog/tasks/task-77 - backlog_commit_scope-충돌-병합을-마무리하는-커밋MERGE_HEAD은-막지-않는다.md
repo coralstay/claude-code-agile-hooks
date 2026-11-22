@@ -1,10 +1,10 @@
 ---
 id: TASK-77
 title: 'backlog_commit_scope: 충돌 병합을 마무리하는 커밋(MERGE_HEAD)은 막지 않는다'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-22T11:36:00Z'
-updated_date: '2026-11-22T11:46:00Z'
+updated_date: '2026-11-22T11:48:00Z'
 labels:
   - hooks
   - merge
@@ -42,7 +42,7 @@ cherry-pick·revert·rebase 진행 중 예외, 다른 훅의 병합 처리
 ## Definition of Done
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 출력을 Notes 에 첨부
-- [ ] #2 [수동 검증] 설치 후 source-header TASK-42 에서 task/TASK-20 병합 마무리 커밋이 실제로 통과함을 확인
+- [x] #2 [수동 검증] 설치 후 source-header TASK-42 에서 task/TASK-20 병합 마무리 커밋이 실제로 통과함을 확인
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -74,4 +74,14 @@ cherry-pick·revert·rebase 진행 중 예외, 다른 훅의 병합 처리
 - 구현: merge_in_progress(root) = git -C root rev-parse -q --verify MERGE_HEAD 성공일 때만 True, OSError·TimeoutExpired·실패는 False. check_repo 첫 줄에서 True 면 통과(표식 19·노트 19)
 - coverageCommand: 3300 passed, TOTAL 7434 stmts·3516 branches 100%, backlog_commit_scope.py 100%. source-header lint --strict rc=0
 - 남은 것: DoD #2 — 유저 설치 후 source-header TASK-42 의 task/TASK-20 병합 마무리 커밋 재시도
+
+## 2026-11-22 설치 후 실전 확인 (DoD #2)
+- 유저가 task/TASK-77 에서 install.sh 실행, 설치본 backlog_commit_scope.py 가 저장소와 cmp 동일
+- source-header task/TASK-42 에서 git merge --no-ff task/TASK-20 → backlog/work-order.md 충돌 → work-order 재생성·git add → git commit --no-edit 이 통과(2085b8b 'Merge branch task/TASK-20 into task/TASK-42'). 같은 커밋이 설치 전에는 '상태 전환 커밋에 다른 변경이 섞였다'로 거부됐다
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+backlog_commit_scope 훅이 충돌 병합을 마무리하는 커밋(대상 저장소에 MERGE_HEAD)은 규칙 1~5 로 막지 않게 했다. 병합되는 커밋은 원래 브랜치에서 이미 한 커밋씩 검사를 통과했고, 충돌 없는 병합은 git 이 직접 커밋해 훅이 보지 않으므로 충돌 여부라는 우연에 따라 막히던 것을 없앴다. 병합 중이 아니거나 MERGE_HEAD 확인이 실패하면 기존대로 검사한다. 테스트는 실제 git 충돌 병합으로 재현, 3300 통과·100%. 설치 후 source-header TASK-42 의 task/TASK-20 병합 마무리 커밋이 실제로 통과했다.
+<!-- SECTION:FINAL_SUMMARY:END -->
