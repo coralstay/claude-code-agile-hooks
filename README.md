@@ -219,6 +219,10 @@ systemMessage로 보여 드립니다. 안내문 파일이 없거나 읽을 수 �
 - **대상 저장소**: 훅은 세션 위치가 아니라 명령 · 파일이 겨누는 저장소로 판정합니다. 다른 저장소는
   리터럴 경로로 다룹니다(`cd <dir> && …`, `git -C <dir>`). 변수로 쓴 경로(`cd "$X"`)처럼 대상을 정적으로
   알 수 없으면 막힙니다(아래 대상 저장소 절).
+- **저장소별 담당**: 저장소마다 담당 에이전트(Claude · Antigravity · 다른 Claude 세션)가 있습니다. 담당은
+  `dev-toolchain workspace owner <경로>`로 확인합니다. `claude`가 아니면 편집 · 커밋하지 않고 읽기 · 보고만 하며,
+  `unknown`이면 유저에게 묻습니다. 담당 표의 원본은 dev-toolchain `workspace/repos.tsv`의 담당 열이고(decision-25),
+  안내문에는 표를 옮겨 적지 않고 조회 명령만 둡니다. 훅으로 강제하지 않는 안내입니다.
 - **완료**: 테스트 통과 로그 같은 객관적 증거를 확인한 뒤 `--check-ac` · `--check-dod`로 체크하고
   `--final-summary`를 쓴 다음 `-s Done`으로 옮기고, 그 태스크 파일만 담아 커밋합니다. push는 Done 뒤에만
   합니다(Done + final summary가 없으면 `pre_push_check.py`가 막습니다). PR 병합은 사람이 합니다.

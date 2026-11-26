@@ -1,4 +1,4 @@
-<!-- work-order-hash: 22e08ed7ff8373a04acd8c34e56e04685d363410c3b49b31e0c3b1e1c537ce34 -->
+<!-- work-order-hash: 2989d7a4cc73c1bbd88873dc5f3cf5e3c56d1cc186d5a886f7aef1f76bef7f1a -->
 # 작업 순서
 
 `work_order.py`가 backlog/tasks의 의존(`dependencies`)으로 만든 파일이다 — 직접 고치지 말고 다시 생성한다. 같은 단계의 태스크는 병렬로, 단계는 위에서 아래로 순차로 진행한다. Done 태스크와 없는 태스크에 대한 의존은 충족된 것으로 본다.
@@ -12,4 +12,5 @@
 | 1 | TASK-69 | testFirst Done 게이트에서 '(수동)'으로 끝나는 AC · DoD는 테스트 표식을 요구하지 않는다(비즈니스 규칙은 예외 없음) |
 | 1 | TASK-70 | task 브랜치의 커밋 메시지에 그 태스크 ID가 없으면 git commit을 거부한다(RAIL-025) |
 | 1 | TASK-73 | 수동 검증 Done 게이트: [수동 검증] 항목은 증거 줄 + 사람 서명 Manual-Verified(Card-Digest)로 통과, 승인 시점 대비 변경 · 브랜치 무관 Done 차단 |
+| 1 | TASK-78 | 워크플로 안내문에 저장소별 담당 규칙 한 줄 — Claude 담당이 아닌 저장소는 편집하지 않는다 |
 | 2 | TASK-66 | require_design_propagation: 태스크 변경을 브랜치 범위가 아니라 커밋 메시지의 태스크 ID로 고른다(쌓인 브랜치 · 브랜치 없음 대응) |

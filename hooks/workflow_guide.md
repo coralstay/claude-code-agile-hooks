@@ -5,7 +5,7 @@ authors: [coralstay]
 license: AGPL-3.0-only
 status: draft
 created_date: '2026-11-21'
-updated_date: '2026-11-22'
+updated_date: '2026-11-26'
 ---
 ## Backlog.md 워크플로 (claude-code-agile-hooks)
 
@@ -23,6 +23,7 @@ backlog 프로젝트(저장소 루트에 `backlog/config.yml`이 있는 곳)를 
    - AC 밖의 일이 보이면 범위를 넓히지 말고 유저에게 먼저 묻는다.
 5. **대상 저장소**: 훅은 세션 위치가 아니라 명령 · 파일이 겨누는 저장소로 판정한다. 다른 저장소는 리터럴 경로로
    다룬다(`cd <dir> && …`, `git -C <dir>`). 변수로 쓴 경로(`cd "$X"`)는 막힌다.
+   - 저장소마다 담당 에이전트가 있다(`dev-toolchain workspace owner <경로>`). `claude`가 아니면 편집 · 커밋하지 않고 읽기 · 보고만 하며, `unknown`이면 유저에게 묻는다.
 6. **완료**: 테스트 통과 같은 증거를 본 뒤 AC · DoD를 체크하고 `--final-summary`를 쓰고 Done으로 옮긴다.
    push는 Done 뒤에만 하고, PR 병합은 사람이 한다.
 
