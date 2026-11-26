@@ -1,10 +1,10 @@
 ---
 id: TASK-78
 title: 워크플로 안내문에 저장소별 담당 규칙 한 줄 — Claude 담당이 아닌 저장소는 편집하지 않는다
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-26T08:22:00Z'
-updated_date: '2026-11-26T09:27:00Z'
+updated_date: '2026-11-26T09:28:00Z'
 labels:
   - workflow
   - agents
