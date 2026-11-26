@@ -4,7 +4,7 @@ title: 워크플로 안내문에 저장소별 담당 규칙 한 줄 — Claude �
 status: In Progress
 assignee: []
 created_date: '2026-11-26T08:22:00Z'
-updated_date: '2026-11-26T09:11:00Z'
+updated_date: '2026-11-26T09:27:00Z'
 labels:
   - workflow
   - agents
@@ -44,7 +44,7 @@ Claude 가 매 세션 받는 안내문(hooks/workflow_guide.md, TASK-76)에 이 
 ## Definition of Done
 <!-- DOD:BEGIN -->
 - [x] #1 coverageCommand 100%·source-header lint 0 출력을 Notes 에 첨부
-- [ ] #2 [수동 검증] 설치 후 새 세션이 안내문에서 이 줄을 받는지 확인
+- [x] #2 [수동 검증] 설치 후 새 세션이 안내문에서 이 줄을 받는지 확인
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -72,4 +72,12 @@ Claude 가 매 세션 받는 안내문(hooks/workflow_guide.md, TASK-76)에 이 
 구현(2af2142): hooks/workflow_guide.md 5번 아래 한 줄(21줄, 상한 30), README 작업 흐름에 '저장소별 담당' 항목(repos.tsv · decision-25 명시). 테스트 hooks/test_workflow_guide_owner.py 4개 — 먼저 2 failed 확인(커밋 훅이 실패 커밋을 막아 구현과 한 커밋).
 검증 2026-11-26: coverageCommand → 3304 passed, TOTAL 7434 stmts 0 miss 100%. source-header lint (test_workflow_guide_owner.py, workflow_guide.md) exit 0.
 남은 것: DoD #2 [수동 검증] 유저 install.sh 설치 → 새 세션에서 안내문 줄 확인.
+
+- 증거: TASK-78#D2 — 2026-11-26 유저 install.sh 설치 · 새 세션 확인. 재확인: cmp ~/.claude/hooks/claude-code-agile-hooks/workflow_guide.md hooks/workflow_guide.md → 같음, 설치된 session_start.py(cwd=/tmp) additionalContext 에 'workspace owner' 줄 1개. owner 명령: upkeep→claude, freeride/handcrafted-python→antigravity, /tmp→unknown(exit 1).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Claude 가 매 세션 받는 안내문(hooks/workflow_guide.md) 5번 아래와 README 작업 흐름에 저장소별 담당 규칙을 넣었다: dev-toolchain workspace owner <경로> 로 확인하고, claude 가 아니면 편집 · 커밋하지 않고 읽기 · 보고만, unknown 이면 유저에게 묻는다. 담당 표는 옮겨 적지 않고 repos.tsv(decision-25)를 가리킨다. 테스트 hooks/test_workflow_guide_owner.py 4개, 전체 3304 passed · 커버리지 100%, 설치 후 새 세션 확인.
+<!-- SECTION:FINAL_SUMMARY:END -->
