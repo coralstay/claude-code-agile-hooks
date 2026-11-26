@@ -4,7 +4,7 @@ title: 워크플로 안내문에 저장소별 담당 규칙 한 줄 — Claude �
 status: In Progress
 assignee: []
 created_date: '2026-11-26T08:22:00Z'
-updated_date: '2026-11-26T09:05:00Z'
+updated_date: '2026-11-26T09:11:00Z'
 labels:
   - workflow
   - agents
@@ -37,13 +37,13 @@ Claude 가 매 세션 받는 안내문(hooks/workflow_guide.md, TASK-76)에 이 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 hooks/workflow_guide.md 에 저장소별 담당 규칙 한 줄(dev-toolchain workspace owner <경로> 로 확인, claude 가 아니면 편집·커밋하지 않고 읽기·보고만, unknown 이면 유저에게 묻기)이 있고 담당 표를 복사하지 않으며 30줄 상한을 지킨다(B1·B2)
-- [ ] #2 README 에 같은 규칙이 있어 안내문-README 대조 테스트가 통과하고, 새 규칙을 검사하는 테스트가 있다
+- [x] #1 hooks/workflow_guide.md 에 저장소별 담당 규칙 한 줄(dev-toolchain workspace owner <경로> 로 확인, claude 가 아니면 편집·커밋하지 않고 읽기·보고만, unknown 이면 유저에게 묻기)이 있고 담당 표를 복사하지 않으며 30줄 상한을 지킨다(B1·B2)
+- [x] #2 README 에 같은 규칙이 있어 안내문-README 대조 테스트가 통과하고, 새 규칙을 검사하는 테스트가 있다
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 coverageCommand 100%·source-header lint 0 출력을 Notes 에 첨부
+- [x] #1 coverageCommand 100%·source-header lint 0 출력을 Notes 에 첨부
 - [ ] #2 [수동 검증] 설치 후 새 세션이 안내문에서 이 줄을 받는지 확인
 <!-- DOD:END -->
 
@@ -65,3 +65,11 @@ Claude 가 매 세션 받는 안내문(hooks/workflow_guide.md, TASK-76)에 이 
 2. workflow_guide.md·README 수정.
 3. coverageCommand 100%, lint, 유저 설치 → 새 세션 확인 → Done·PR.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+구현(2af2142): hooks/workflow_guide.md 5번 아래 한 줄(21줄, 상한 30), README 작업 흐름에 '저장소별 담당' 항목(repos.tsv · decision-25 명시). 테스트 hooks/test_workflow_guide_owner.py 4개 — 먼저 2 failed 확인(커밋 훅이 실패 커밋을 막아 구현과 한 커밋).
+검증 2026-11-26: coverageCommand → 3304 passed, TOTAL 7434 stmts 0 miss 100%. source-header lint (test_workflow_guide_owner.py, workflow_guide.md) exit 0.
+남은 것: DoD #2 [수동 검증] 유저 install.sh 설치 → 새 세션에서 안내문 줄 확인.
+<!-- SECTION:NOTES:END -->
