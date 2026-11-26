@@ -4,11 +4,15 @@ title: 워크플로 안내문에 저장소별 담당 규칙 한 줄 — Claude �
 status: To Do
 assignee: []
 created_date: '2026-11-26T08:22:00Z'
-updated_date: '2026-11-26T08:24:00Z'
+updated_date: '2026-11-26T08:44:00Z'
 labels:
   - workflow
   - agents
 dependencies: []
+documentation:
+  - >-
+    /Users/flynn_macpro/githubs/dev-tools/dev-toolchain/backlog/decisions/decision-25
+    - 저장소를-에이전트별로-나눠-갖는다-담당은-workspace-repos.tsv-담당-열이-SSOT.md
 ---
 
 ## Description
